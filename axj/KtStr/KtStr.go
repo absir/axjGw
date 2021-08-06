@@ -1,6 +1,8 @@
 package KtStr
 
 import (
+	"axj/Kt"
+	"container/list"
 	"io"
 	"unsafe"
 )
@@ -205,6 +207,18 @@ func LastIndex(s, substr string, from int) int {
 	return -1
 }
 
+func IndexOf(str []rune, chr rune) int {
+	len := len(str)
+	for i := 0; i < len; i++ {
+		c := str[i]
+		if c == chr {
+			return i
+		}
+	}
+
+	return -1
+}
+
 // 字符串拼接
 func WriteBytes(write io.ByteWriter, bs []byte, off, len int) io.ByteWriter {
 	for ; off < len; off++ {
@@ -212,4 +226,116 @@ func WriteBytes(write io.ByteWriter, bs []byte, off, len int) io.ByteWriter {
 	}
 
 	return write
+}
+
+// 字符串分隔
+func SplitStr(str string, sps string, trim bool, start int) *list.List {
+	return SplitStrBr(str, sps, trim, start, false, 0).(*list.List)
+}
+
+func SplitStrBr(str string, sps string, trim bool, start int, br bool, typ int) interface{} {
+	strs := list.New()
+	if br {
+		brc := Kt.If(typ == 1, '}', ']').(rune)
+		splitStrBrC([]rune(str), []rune(sps), trim, start, br, brc, strs)
+		return splitStrM(strs, brc)
+
+	} else {
+		splitStrBrC([]rune(str), []rune(sps), trim, start, br, '{', strs)
+	}
+
+	return Kt.ToArray(strs)
+}
+
+func splitStrM(strs *list.List, brc rune) interface{} {
+	if brc == '}' {
+		maps := map[interface{}]interface{}{}
+		if strs.Len() == 1 {
+			maps["value"] = strs.Front().Value
+
+		} else {
+			var key interface{} = nil
+			for el := strs.Front(); el != nil; el = el.Next() {
+				if key == nil {
+					key = el.Value
+
+				} else {
+					maps[key] = el.Value
+					key = nil
+				}
+			}
+		}
+
+		return maps
+	}
+
+	return Kt.ToArray(strs)
+}
+
+func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune, strs *list.List) int {
+	if str == nil || sps == nil || strs == nil {
+		return start
+	}
+
+	length := len(str)
+	var chr rune
+	si := start
+	ei := -1
+	for ; start < length; start++ {
+		chr = str[start]
+		if br {
+			if chr == '{' || chr == '[' {
+				sts := list.New()
+				chr = Kt.If(chr == '{', '}', ']').(rune)
+				start = splitStrBrC(str, sps, trim, start+1, br, chr, sts)
+				strs.PushBack(splitStrM(sts, chr))
+				ei = -2
+				continue
+
+			} else if chr == brc {
+				if si < ei {
+					strs.PushBack(string(str[si:ei]))
+
+				} else if ei == -1 {
+					strs.PushBack("")
+					ei = -2
+				}
+
+				return start
+			}
+		}
+
+		if IndexOf(sps, chr) < 0 {
+			if trim && chr == ' ' {
+				if si == start {
+					si++
+				}
+
+			} else {
+				ei = start + 1
+			}
+
+			continue
+		}
+
+		if si < ei {
+			strs.PushBack(string(str[si:ei]))
+			ei = -1
+
+		} else if ei >= -1 {
+			strs.PushBack("")
+			ei = -1
+
+		} else {
+			ei = start
+		}
+
+		si = start + 1
+	}
+
+	if si < ei {
+		strs.PushBack(string(str[si:ei]))
+	}
+
+	return start
 }

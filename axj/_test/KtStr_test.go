@@ -2,7 +2,9 @@ package _test
 
 import (
 	"axj/KtStr"
+	json2 "encoding/json"
 	"testing"
+	"github.com/buger/jsonparser"
 )
 
 func TestCompareV(t *testing.T) {
@@ -73,6 +75,41 @@ func TestLastIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := KtStr.LastIndex(tt.args.s, tt.args.substr, tt.args.from); got != tt.want {
 				t.Errorf("LastIndex() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSplit(t *testing.T) {
+	type args struct {
+		s     string
+		sps   string
+		trim  bool
+		start int
+		br    bool
+		typ   int
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"1", args{" 1,2, 3 ", ",", true, 0, false, 0}, "[\"1\",\"2\",\"3\"]"},
+		{"1", args{" 1,,,2+ 3 ", ",=+", true, 0, false, 0}, "[\"1\",\"\",\"\",\"2\",\"3\"]"},
+		{"1", args{" 1,{1,2} ", ",=+", true, 0, true, 0}, "[\"1\",\"\",\"\",\"2\",\"3\"]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ret := KtStr.SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ)
+			bytes, err := json2.Marshal(ret)
+			if err != nil {
+				t.Error(err)
+			}
+
+			json := string(bytes)
+			if json != tt.want {
+				t.Errorf("SplitStrBr() = %v, want %v", json, tt.want)
 			}
 		})
 	}
