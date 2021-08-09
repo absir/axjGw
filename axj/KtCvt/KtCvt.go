@@ -2,13 +2,31 @@ package KtCvt
 
 import (
 	"axj/Kt"
+	"container/list"
 	"fmt"
 	"reflect"
 	"strconv"
 )
 
-func ToType(obj interface{}, typ reflect.Kind) interface{} {
-	switch typ {
+var Bool = reflect.TypeOf(*new(bool))
+var String = reflect.TypeOf(*new(string))
+var Int = reflect.TypeOf(*new(int))
+var Int8 = reflect.TypeOf(*new(int8))
+var Int16 = reflect.TypeOf(*new(int16))
+var Int32 = reflect.TypeOf(*new(int32))
+var Int64 = reflect.TypeOf(*new(int64))
+var UInt = reflect.TypeOf(*new(uint))
+var UInt8 = reflect.TypeOf(*new(uint8))
+var UInt16 = reflect.TypeOf(*new(uint16))
+var UInt32 = reflect.TypeOf(*new(uint32))
+var UInt64 = reflect.TypeOf(*new(uint64))
+var Float32 = reflect.TypeOf(*new(float32))
+var Float64 = reflect.TypeOf(*new(float64))
+var Complex64 = reflect.TypeOf(*new(complex64))
+var Complex128 = reflect.TypeOf(*new(complex128))
+
+func ToType(obj interface{}, typ reflect.Type) interface{} {
+	switch typ.Kind() {
 	case reflect.Bool:
 		return ToBool(obj)
 	case reflect.String:
@@ -44,8 +62,31 @@ func ToType(obj interface{}, typ reflect.Kind) interface{} {
 	case reflect.Interface:
 		return obj
 	default:
-		return Kt.If(obj == nil || typ != typ, nil, obj)
+		break
 	}
+
+	if obj == nil {
+		return nil
+	}
+
+	oTyp := reflect.TypeOf(obj)
+	if oTyp == typ {
+		return obj
+	}
+
+	if oTyp.ConvertibleTo(typ) {
+		return obj
+	}
+
+	if typ.Kind() == reflect.Array && typ.Elem().Kind() == reflect.Interface {
+		switch obj.(type) {
+		case *list.List:
+			return Kt.ToArray(obj.(*list.List))
+			break
+		}
+	}
+
+	return nil
 }
 
 func ToBool(obj interface{}) bool {
@@ -445,12 +486,17 @@ func ToComplex64(obj interface{}) complex64 {
 
 			return 0
 		case reflect.String:
-			f, err := strconv.ParseFloat(obj.(string), 10)
-			if err == nil {
-				return Complex64F(f)
+			c, err := strconv.ParseComplex(obj.(string), 10)
+			if err != nil {
+				f, err := strconv.ParseFloat(obj.(string), 10)
+				if err == nil {
+					return Complex64F(f)
+				}
+
+				c = complex(0, 0)
 			}
 
-			return 0
+			return complex64(c)
 		case reflect.Int:
 			return Complex64F(float64(obj.(int)))
 		case reflect.Int8:
@@ -498,12 +544,17 @@ func ToComplex128(obj interface{}) complex128 {
 
 			return 0
 		case reflect.String:
-			f, err := strconv.ParseFloat(obj.(string), 10)
-			if err == nil {
-				return Complex128F(f)
+			c, err := strconv.ParseComplex(obj.(string), 10)
+			if err != nil {
+				f, err := strconv.ParseFloat(obj.(string), 10)
+				if err == nil {
+					return Complex128F(f)
+				}
+
+				c = complex(0, 0)
 			}
 
-			return 0
+			return c
 		case reflect.Int:
 			return Complex128F(float64(obj.(int)))
 		case reflect.Int8:

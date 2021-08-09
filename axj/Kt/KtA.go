@@ -19,12 +19,15 @@ func If(a bool, b, c interface{}) interface{} {
 // 等于方法
 type Equals func(interface{}, interface{}) bool
 
+func IsEquals(from, to interface{}, equals Equals) bool {
+	return from == to || (equals != nil && equals(from, to))
+}
+
 // 数据查找
 func IndexOf(array []interface{}, el interface{}, equals Equals) int {
 	len := len(array)
 	for i := 0; i < len; i++ {
-		t := array[i]
-		if t == el || (equals != nil && equals(t, el)) {
+		if IsEquals(el, array[i], equals) {
 			return i
 		}
 	}

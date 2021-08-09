@@ -207,9 +207,14 @@ func LastIndex(s, substr string, from int) int {
 	return -1
 }
 
-func IndexOf(str []rune, chr rune) int {
+func IndexByte(str string, chr byte, from int) int {
+	i := from
+	if i < 0 {
+		i = 0
+	}
+
 	len := len(str)
-	for i := 0; i < len; i++ {
+	for ; i < len; i++ {
 		c := str[i]
 		if c == chr {
 			return i
@@ -219,13 +224,80 @@ func IndexOf(str []rune, chr rune) int {
 	return -1
 }
 
-// 字符串拼接
-func WriteBytes(write io.ByteWriter, bs []byte, off, len int) io.ByteWriter {
-	for ; off < len; off++ {
-		write.WriteByte(bs[off])
+func IndexBytes(str string, chrs []byte, from int) int {
+	i := from
+	if i < 0 {
+		i = 0
 	}
 
-	return write
+	lenC := len(chrs)
+	len := len(str)
+	for ; i < len; i++ {
+		c := str[i]
+		for j := 0; j < lenC; j++ {
+			if c == chrs[j] {
+				return i
+			}
+		}
+	}
+
+	return -1
+}
+
+func IndexRune(str []rune, chr rune, from int) int {
+	i := from
+	if i < 0 {
+		i = 0
+	}
+
+	len := len(str)
+	for ; i < len; i++ {
+		c := str[i]
+		if c == chr {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func IndexRunes(str []rune, chrs []rune, from int) int {
+	i := from
+	if i < 0 {
+		i = 0
+	}
+
+	lenC := len(chrs)
+	len := len(str)
+	for ; i < len; i++ {
+		c := str[i]
+		for j := 0; j < lenC; j++ {
+			if c == chrs[j] {
+				return i
+			}
+		}
+	}
+
+	return -1
+}
+
+func CountByte(str string, chr byte, start int, max int) int {
+	count := 0
+	for {
+		start = IndexByte(str, chr, start)
+		if start < 0 {
+			return count
+		}
+
+		count++
+		if max > 0 && max <= count {
+			return count
+		}
+
+		start++
+	}
+
+	return count
 }
 
 // 字符串分隔
@@ -305,7 +377,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 			}
 		}
 
-		if IndexOf(sps, chr) < 0 {
+		if IndexRune(sps, chr, 0) < 0 {
 			if trim && chr == ' ' {
 				if si == start {
 					si++
@@ -338,4 +410,13 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 	}
 
 	return start
+}
+
+// 字符串拼接
+func WriteBytes(write io.ByteWriter, bs []byte, off, len int) io.ByteWriter {
+	for ; off < len; off++ {
+		write.WriteByte(bs[off])
+	}
+
+	return write
 }
