@@ -4,11 +4,44 @@ import (
 	"axj/Kt"
 	"axj/KtStr"
 	"os"
+	"reflect"
 	"strings"
 )
 
 // 配置字典别名
 type Cfg map[string]interface{}
+
+func getValType( name string, cfg Cfg,  toType reflect.Type, dVal interface{},  tName string) interface{} {
+Object val = getVal(name, cfgMap);
+if (val == null) {
+return KtCvt.nullTo(toType, dVal, null);
+}
+
+Class toCls = KtCls.raw(toType);
+if (!KtCvt.is(val, toCls)) {
+if (toCls.isAssignableFrom(ArrayList.class)) {
+List<Object> list = new ArrayList<Object>();
+list.add(val);
+val = list;
+
+} else {
+val = SBinder.ME.toCvt(val, toType, dVal, tName, null);
+}
+
+if (val != null && cfgMap.containsKey(name)) {
+// CLoader转换不保存;避免内存泄漏
+if (!(val.getClass().getClassLoader() instanceof CLoader)) {
+cfgMap.put(name, val);
+}
+}
+}
+
+return val;
+}
+
+public static <T> T getValClass(String name, Map<String, Object> cfgMap, Class<T> toType, T dVal, String tName) {
+return (T) getValType(name, cfgMap, toType, dVal, tName);
+}
 
 // 配置获取
 func Get(cfg Cfg, name string) interface{} {
@@ -69,9 +102,9 @@ var valD interface{} = nil;
 	var value interface{} = nil;
 if (strings.Index(val, "?") > 0) {
 // 支持二运运算|三元运算
-List<String> vals = KtStr.splitStr(val, "?:", true, 0);
-val = vals.get(0);
-if (vals.size() == 3) {
+vals := KtStr.SplitStr(val, "?:", true, 0);
+val := vals[0];
+if (len(vals) == 3) {
 strict = false;
 valD = getValClass(val, cfgMap, boolean.class, false, null) ? vals.get(1): vals.get(2);
 

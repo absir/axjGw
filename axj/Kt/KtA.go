@@ -49,7 +49,7 @@ func ToArray(list *list.List) []interface{} {
 }
 
 // 转列表
-func toList(array []interface{}) *list.List {
+func ToList(array []interface{}) *list.List {
 	if array == nil {
 		return nil
 	}

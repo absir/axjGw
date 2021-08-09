@@ -2,6 +2,4 @@ module axj
 
 go 1.16
 
-require (
-	github.com/buger/jsonparser v1.1.1
-)
+require github.com/json-iterator/go v1.1.11 // indirect

@@ -1,10 +1,8 @@
-package _test
+package KtStr
 
 import (
-	"axj/KtStr"
-	json2 "encoding/json"
+	jsoniter "github.com/json-iterator/go"
 	"testing"
-	"github.com/buger/jsonparser"
 )
 
 func TestCompareV(t *testing.T) {
@@ -25,7 +23,7 @@ func TestCompareV(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := KtStr.CompareV(tt.args.from, tt.args.to); got != tt.want {
+			if got := CompareV(tt.args.from, tt.args.to); got != tt.want {
 				t.Errorf("CompareV() = %v, want %v", got, tt.want)
 			}
 		})
@@ -49,7 +47,7 @@ func TestIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := KtStr.Index(tt.args.s, tt.args.substr, tt.args.from); got != tt.want {
+			if got := Index(tt.args.s, tt.args.substr, tt.args.from); got != tt.want {
 				t.Errorf("Index() = %v, want %v", got, tt.want)
 			}
 		})
@@ -73,7 +71,7 @@ func TestLastIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := KtStr.LastIndex(tt.args.s, tt.args.substr, tt.args.from); got != tt.want {
+			if got := LastIndex(tt.args.s, tt.args.substr, tt.args.from); got != tt.want {
 				t.Errorf("LastIndex() = %v, want %v", got, tt.want)
 			}
 		})
@@ -96,13 +94,13 @@ func TestSplit(t *testing.T) {
 	}{
 		{"1", args{" 1,2, 3 ", ",", true, 0, false, 0}, "[\"1\",\"2\",\"3\"]"},
 		{"1", args{" 1,,,2+ 3 ", ",=+", true, 0, false, 0}, "[\"1\",\"\",\"\",\"2\",\"3\"]"},
-		{"1", args{" 1,{1,2} ", ",=+", true, 0, true, 0}, "[\"1\",\"\",\"\",\"2\",\"3\"]"},
+		{"1", args{" 1,{1,[2=3+++4]} ", ",=+", true, 0, true, 0}, "[\"1\",{\"1\":[\"2\",\"3\",\"\",\"\",\"4\"]}]"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ret := KtStr.SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ)
-			bytes, err := json2.Marshal(ret)
+			ret := SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ)
+			bytes, err := jsoniter.Marshal(ret)
 			if err != nil {
 				t.Error(err)
 			}

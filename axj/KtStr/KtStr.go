@@ -229,8 +229,8 @@ func WriteBytes(write io.ByteWriter, bs []byte, off, len int) io.ByteWriter {
 }
 
 // 字符串分隔
-func SplitStr(str string, sps string, trim bool, start int) *list.List {
-	return SplitStrBr(str, sps, trim, start, false, 0).(*list.List)
+func SplitStr(str string, sps string, trim bool, start int) []interface{} {
+	return SplitStrBr(str, sps, trim, start, false, 0).([]interface{})
 }
 
 func SplitStrBr(str string, sps string, trim bool, start int, br bool, typ int) interface{} {
