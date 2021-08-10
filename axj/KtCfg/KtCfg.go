@@ -4,7 +4,9 @@ import (
 	"axj/Kt"
 	"axj/KtCvt"
 	"axj/KtStr"
+	"bufio"
 	"container/list"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -393,4 +395,26 @@ func readFunc(cfg Cfg, readMap *map[string]Read) Read {
 			}
 		}
 	}
+}
+
+func ReadIn(in *bufio.Reader, cfg *Cfg, readMap *map[string]Read) *Cfg {
+	if in == nil {
+		return cfg
+	}
+
+	if cfg == nil {
+		cfg = new(Cfg)
+	}
+
+	fun := readFunc(*cfg, readMap)
+	for {
+		line, err := in.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+
+		fun(line)
+	}
+
+	return cfg
 }
