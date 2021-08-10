@@ -4,17 +4,34 @@ import (
 	"axj/Kt"
 	"axj/KtCvt"
 	"axj/KtStr"
+	"container/list"
 	"os"
 	"reflect"
 	"strings"
 )
 
 // 配置字典别名
-type Cfg map[string]interface{}
+type Cfg map[interface{}]interface{}
+
+func (c Cfg) Get(key interface{}) interface{} {
+	return c[key]
+}
+
+func (c Cfg) Put(key interface{}, val interface{}) interface{} {
+	_val := c[key]
+	c[key] = val
+	return _val
+}
+
+func (c Cfg) Remove(key interface{}) interface{} {
+	_val := c[key]
+	delete(c, key)
+	return _val
+}
 
 // 配置获取
-func Get(cfg Cfg, name string) interface{} {
-	val := Kt.If(cfg == nil, nil, cfg[name])
+func Get(cfg Kt.Map, name string) interface{} {
+	val := Kt.If(cfg == nil, nil, cfg.Get(name))
 	if val == nil {
 		if len(name) > 1 {
 			chr := name[0]
@@ -24,8 +41,25 @@ func Get(cfg Cfg, name string) interface{} {
 				break
 			case '@':
 			case '$':
-				return Kt.If(cfg == nil, nil, cfg[name[1:]])
+				return Kt.If(cfg == nil, nil, cfg.Get(name[1:]))
 				break
+			}
+		}
+
+		if cfg != nil {
+			i := -1
+			for {
+				i = KtStr.LastIndex(name, ".", i)
+				if i < 0 {
+					break
+				}
+
+				c := cfg.Get(name[0:i])
+				if c != nil {
+					if mp, is := c.(Kt.Map); is {
+						return Get(mp, name[i+1:])
+					}
+				}
 			}
 		}
 	}
@@ -33,18 +67,36 @@ func Get(cfg Cfg, name string) interface{} {
 	return val
 }
 
-func GetType(cfg Cfg, name string, typ reflect.Type, dVal interface{}, tName string) interface{} {
+func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}, tName string) interface{} {
 	val := Get(cfg, name)
 	if val != nil {
-		switch typ.Kind() {
-		case reflect.Array:
-			if reflect.TypeOf(val).Kind() != reflect.Array {
-				val = [1]interface{}{val}
-				cfg[name] = val
+		if typ == nil {
+			if _, is := val.(*list.List); !is {
+				if reflect.TypeOf(val).Kind() != reflect.Array {
+					if _, is := val.(*list.List); !is {
+						val = []interface{}{val}
+					}
+				}
+
+				ary := KtCvt.ToType(Kt.If(val == nil, dVal, val), typ).([]interface{})
+				val = Kt.ToList(ary)
+				cfg.Put(name, ary)
 			}
-			break
-		default:
-			break
+
+			return val
+
+		} else {
+			switch typ.Kind() {
+			case reflect.Array:
+				if reflect.TypeOf(val).Kind() != reflect.Array {
+					if _, is := val.(*list.List); !is {
+						val = []interface{}{val}
+					}
+				}
+				break
+			default:
+				break
+			}
 		}
 	}
 
@@ -138,7 +190,7 @@ type Read func(str string)
 
 var splits = []byte("=:")
 
-func readFunc(cfg Cfg, read Read) Read {
+func readFunc(cfg Cfg, readMap *map[string]Read) Read {
 	var bBuilder *strings.Builder
 	var bAppend int
 	var yB int
@@ -259,93 +311,84 @@ func readFunc(cfg Cfg, read Read) Read {
 					return
 				}
 
-				conds := KtStr.SplitStr(name, "|", true, index+1)
-				name = name.substring(0, index).trim()
-				for String
-			cond:
-				conds) {
-					index = cond.indexOf('&')
+				conds := KtStr.SplitByte(name, '|', true, index+1, 0)
+				name = strings.TrimSpace(name[0:index])
+				for _, cond := range conds {
+					index = strings.IndexByte(cond, '&')
 					if index > 0 {
-						String
-						val = KtCvt.to(getVal(cond.substring(0, index), cfgMap), String.class, null)
-						if val != null && KtStr.match(cond.substring(index+1), false, val) {
-							conds = null
+						val := KtCvt.ToString(Get(cfg, cond[0:index]))
+						if len(val) > 0 && KtStr.Match(cond[index+1:], false, val) {
+							conds = nil
 							break
 						}
 
-					} else if getValClass(cond, cfgMap, boolean.class, false, null) {
-						conds = null
+					} else if GetType(cfg, cond, KtCvt.Bool, false, "").(bool) {
+						conds = nil
 						break
 					}
 				}
 
-				if conds != null {
-					return null
+				if conds != nil {
+					return
 				}
 			}
 
-			s = s.substring(eIndex + 1)
-			s = getExp(KtStr.toArg(s), false, cfgMap)
-			if bBuilder != null {
-				if s.length() > 0 {
-					bBuilder.append("\r\n")
-					bBuilder.append(s)
+			str = str[eIndex+1:]
+			str = GetExp(cfg, KtStr.ToArg(str), false)
+			if bBuilder != nil {
+				if len(str) > 0 {
+					bBuilder.WriteString("\r\n")
+					bBuilder.WriteString(str)
 				}
 
-				s = bBuilder.toString()
-				bBuilder = null
+				str = bBuilder.String()
+				bBuilder = nil
 				bAppend = 0
 			}
 
-			if funcMap != null && name.charAt(0) == '@' {
-				KtB.Func1 < Void, String > func1 = funcMap.get(name)
-				if func1 != null {
-					func1.do1(s)
-					return null
+			if readMap != nil && name[0] == '@' {
+				read := (*readMap)[name]
+				if read != nil {
+					read(str)
+					return
 				}
 			}
 
-			Map
-			map = yMap == null ? cfgMap:
-			yMap
-			Object
-			o
+			mp := Kt.If(yMap == nil, cfg, yMap).(Kt.Map)
 			switch chr {
 			case '.':
-				o = map.get(name)
-				map.put(name, o == null ? s:
-				(o + s))
+				o := mp.Get(name)
+				mp.Put(name, Kt.If(o == nil, str, KtCvt.ToString(o)+str))
 				break
 			case '#':
-				o = map.get(name)
-				map.put(name, o == null ? s:
-				(o + "\r\n" + s))
+				o := mp.Get(name)
+				mp.Put(name, Kt.If(o == nil, str, KtCvt.ToString(o)+"\r\n"+str))
 				break
 			case ',':
-				o = getValClass(name, map, List.class, null, null)
-				if o == null {
-					o = new
-					ArrayList < Object > ()
-					map.put(name, o)
+				strs := KtStr.SplitStrBr(str, ",;", true, 0, false, 0).(*list.List)
+				o := GetType(mp, name, nil, nil, "").(*list.List)
+				if o == nil {
+					o = strs
+					mp.Put(name, o)
+
+				} else {
+					o.PushBackList(strs)
 				}
-				(List < Object >)
-				o).addAll(KtStr.splitStr(s, ",;", true, 0))
 				break
 			case '+':
-				o = getValClass(name, map, List.class, null, null)
-				if o == null {
-					o = new
-					ArrayList < Object > ()
-					map.put(name, o)
+				o := GetType(mp, name, nil, nil, "").(*list.List)
+				if o == nil {
+					o = new(list.List)
+					mp.Put(name, o)
 				}
-				(List < Object >)
-				o).add(s)
+
+				o.PushBack(str)
 				break
 			case '-':
-				map.remove(name)
+				mp.Remove(name)
 				break
 			default:
-				map.put(name, s)
+				mp.Put(name, str)
 				break
 			}
 		}

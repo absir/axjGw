@@ -1,6 +1,7 @@
 package KtStr
 
 import (
+	"axj/KtCvt"
 	jsoniter "github.com/json-iterator/go"
 	"testing"
 )
@@ -78,6 +79,81 @@ func TestLastIndex(t *testing.T) {
 	}
 }
 
+func TestSim(t *testing.T) {
+	type args struct {
+		str string
+		to  string
+	}
+	tests := []struct {
+		name string
+		args args
+		want float32
+	}{
+		{"abc", args{"abc", "add"}, 0.3333333},
+		{"123", args{"abcdefg", "abcdefg"}, 1},
+		{"123", args{"abcddfg", "abcdefg"}, 0.85714287},
+		{"123", args{"abdddfg", "abcdefg"}, 0.71428573},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ret := Sim(tt.args.str, tt.args.to)
+			if ret != tt.want {
+				t.Errorf("SplitStrBr() = %v, want %v", ret, tt.want)
+			}
+		})
+	}
+}
+
+func TestCap(t *testing.T) {
+	type args struct {
+		str string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"abc", args{"abc"}, "Abc"},
+		{"123", args{"123"}, "123"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ret := Cap(tt.args.str)
+			if ret != tt.want {
+				t.Errorf("SplitStrBr() = %v, want %v", ret, tt.want)
+			}
+		})
+	}
+}
+
+func TestUnCap(t *testing.T) {
+	type args struct {
+		str    string
+		strict bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"abc", args{"ABC", true}, "ABC"},
+		{"abc", args{"ABC", false}, "aBC"},
+		{"123", args{"AbC", true}, "abC"},
+		{"123", args{"AbC", false}, "abC"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ret := UnCap(tt.args.str, tt.args.strict)
+			if ret != tt.want {
+				t.Errorf("SplitStrBr() = %v, want %v", ret, tt.want)
+			}
+		})
+	}
+}
+
 func TestSplit(t *testing.T) {
 	type args struct {
 		s     string
@@ -100,7 +176,7 @@ func TestSplit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ret := SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ)
-			bytes, err := jsoniter.Marshal(ret)
+			bytes, err := jsoniter.Marshal(KtCvt.Safe(ret))
 			if err != nil {
 				t.Error(err)
 			}

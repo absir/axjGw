@@ -16,6 +16,22 @@ func If(a bool, b, c interface{}) interface{} {
 	return c
 }
 
+func Min(a, b, c int) int {
+	if a < b {
+		if c < a {
+			return c
+		}
+
+		return a
+	}
+
+	if c < b {
+		return c
+	}
+
+	return b
+}
+
 // 等于方法
 type Equals func(interface{}, interface{}) bool
 

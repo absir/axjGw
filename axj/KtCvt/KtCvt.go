@@ -24,6 +24,31 @@ var Float32 = reflect.TypeOf(*new(float32))
 var Float64 = reflect.TypeOf(*new(float64))
 var Complex64 = reflect.TypeOf(*new(complex64))
 var Complex128 = reflect.TypeOf(*new(complex128))
+var Array = reflect.TypeOf(*new([]interface{}))
+
+func Safe(obj interface{}) interface{} {
+	if mp, is := obj.(map[interface{}]interface{}); is {
+		nmp := map[string]interface{}{}
+		for key, val := range mp {
+			nmp[ToString(key)] = Safe(val)
+		}
+
+		return nmp
+	}
+
+	if list, is := obj.(*list.List); is {
+		array := make([]interface{}, list.Len())
+		i := 0
+		for el := list.Front(); el != nil; el = el.Next() {
+			array[i] = Safe(el.Value)
+			i++
+		}
+
+		return array
+	}
+
+	return obj
+}
 
 func ToType(obj interface{}, typ reflect.Type) interface{} {
 	switch typ.Kind() {

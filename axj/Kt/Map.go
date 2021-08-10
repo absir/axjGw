@@ -4,6 +4,12 @@ import (
 	"container/list"
 )
 
+type Map interface {
+	Get(key interface{}) interface{}
+	Put(key interface{}, val interface{}) interface{}
+	Remove(key interface{}) interface{}
+}
+
 type LinkedMap struct {
 	mList *list.List
 	mMap  map[interface{}]*list.Element
@@ -17,7 +23,17 @@ func (l LinkedMap) Front() *list.Element {
 	return l.mList.Front()
 }
 
-func (l LinkedMap) Get(key interface{}) (interface{}, bool) {
+func (l LinkedMap) Get(key interface{}) interface{} {
+	val, _ := l.GetC(key)
+	return val
+}
+
+func (l LinkedMap) Has(key interface{}) bool {
+	_, has := l.GetC(key)
+	return has
+}
+
+func (l LinkedMap) GetC(key interface{}) (interface{}, bool) {
 	el := l.mMap[key]
 	if el == nil {
 		return nil, false
@@ -49,7 +65,7 @@ func (l LinkedMap) Put(key interface{}, val interface{}) interface{} {
 	return _val
 }
 
-func (l LinkedMap) remove(key interface{}) interface{} {
+func (l LinkedMap) Remove(key interface{}) interface{} {
 	el := l.mMap[key]
 	if el == nil {
 		return nil
@@ -60,7 +76,7 @@ func (l LinkedMap) remove(key interface{}) interface{} {
 	return el.Value
 }
 
-func (l LinkedMap) clear() {
+func (l LinkedMap) Clear() {
 	l.mList.Init()
 	l.mMap = *new(map[interface{}]*list.Element)
 }
