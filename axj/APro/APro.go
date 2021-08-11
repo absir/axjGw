@@ -28,7 +28,7 @@ var path = ""
 /*
 APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 		return runtime.Caller(0)
-	}, "../config")
+	}, "../public")
 */
 func Caller(fun func(skip int) (pc uintptr, file string, line int, ok bool), dir string) {
 	if path != "" {

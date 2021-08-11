@@ -1,7 +1,6 @@
 package KtCvt
 
 import (
-	"axj/Kt"
 	"container/list"
 	"fmt"
 	"reflect"
@@ -51,43 +50,80 @@ func Safe(obj interface{}) interface{} {
 }
 
 func ToType(obj interface{}, typ reflect.Type) interface{} {
+	return ToUnsafe(obj, typ, false)
+}
+
+func ToUnsafe(obj interface{}, typ reflect.Type, unsafe bool) interface{} {
 	if typ == nil {
 		return obj
 	}
 
+	var oTyp reflect.Type = nil
 	switch typ.Kind() {
 	case reflect.Bool:
-		return ToBool(obj)
+		obj = ToBool(obj)
+		oTyp = Bool
+		break
 	case reflect.String:
-		return ToString(obj)
+		obj = ToString(obj)
+		oTyp = String
+		break
 	case reflect.Int:
-		return int(ToInt64(obj))
+		obj = int(ToInt64(obj))
+		oTyp = Int
+		break
 	case reflect.Int8:
-		return int8(ToInt32(obj))
+		obj = int8(ToInt32(obj))
+		oTyp = Int8
+		break
 	case reflect.Int16:
-		return int16(ToInt32(obj))
+		obj = int16(ToInt32(obj))
+		oTyp = Int16
+		break
 	case reflect.Int32:
-		return ToInt32(obj)
+		obj = ToInt32(obj)
+		oTyp = Int32
+		break
 	case reflect.Int64:
-		return ToInt64(obj)
+		obj = ToInt64(obj)
+		oTyp = Int64
+		break
 	case reflect.Uint:
-		return uint(ToUInt64(obj))
+		obj = uint(ToUInt64(obj))
+		oTyp = UInt
+		break
 	case reflect.Uint8:
-		return uint8(ToUInt64(obj))
+		obj = uint8(ToUInt64(obj))
+		oTyp = UInt8
+		break
 	case reflect.Uint16:
-		return uint16(ToUInt64(obj))
+		obj = uint16(ToUInt64(obj))
+		oTyp = UInt16
+		break
 	case reflect.Uint32:
-		return uint32(ToUInt64(obj))
+		obj = uint32(ToUInt64(obj))
+		oTyp = UInt32
+		break
 	case reflect.Uint64:
-		return ToUInt64(obj)
+		obj = ToUInt64(obj)
+		oTyp = UInt64
+		break
 	case reflect.Float32:
-		return ToFloat32(obj)
+		obj = ToFloat32(obj)
+		oTyp = Float32
+		break
 	case reflect.Float64:
-		return ToFloat32(obj)
+		return ToFloat64(obj)
+		oTyp = Float64
+		break
 	case reflect.Complex64:
-		return ToComplex64(obj)
+		obj = ToComplex64(obj)
+		oTyp = Complex64
+		break
 	case reflect.Complex128:
-		return ToComplex128(obj)
+		obj = ToComplex128(obj)
+		oTyp = Complex128
+		break
 	case reflect.Interface:
 		return obj
 	default:
@@ -98,24 +134,40 @@ func ToType(obj interface{}, typ reflect.Type) interface{} {
 		return nil
 	}
 
-	oTyp := reflect.TypeOf(obj)
+	if oTyp == nil {
+		oTyp = reflect.TypeOf(obj)
+	}
+
 	if oTyp == typ {
 		return obj
 	}
 
-	if oTyp.ConvertibleTo(typ) {
-		return obj
-	}
+	if typ.Kind() == reflect.Array {
+		if oTyp.Kind() == reflect.Array {
+			if oTyp.Elem() != typ.Elem() {
+				oIs := ForArrayIs(oTyp.Elem())
+				is := ForArrayIs(typ.Elem())
+				if oIs != nil && is != nil {
+					size := oIs.Size(obj)
+					array := is.New(size)
+					for i := 0; i < size; i++ {
+						is.Set(array, i, ToType(oIs.Get(obj, i), typ.Elem()))
+					}
 
-	if typ.Kind() == reflect.Array && typ.Elem().Kind() == reflect.Interface {
-		switch obj.(type) {
-		case *list.List:
-			return Kt.ToArray(obj.(*list.List))
-			break
+					return array
+				}
+			}
+
+		} else if lst, is := obj.(*list.List); is {
+			return ToArray(lst, typ.Elem())
 		}
 	}
 
-	return nil
+	if unsafe {
+		return obj
+	}
+
+	return reflect.ValueOf(obj).Convert(typ)
 }
 
 func ToBool(obj interface{}) bool {
@@ -848,4 +900,30 @@ func ToArray(lst *list.List, typ reflect.Type) interface{} {
 	}
 
 	return array
+}
+
+func BindMap(target reflect.Value, mp map[interface{}]interface{}) {
+	if target.Kind() == reflect.Ptr {
+		target = target.Elem()
+	}
+
+	if target.Kind() != reflect.Struct {
+		return
+	}
+
+	for key, val := range mp {
+		name := ToString(key)
+		if name == "" {
+			continue
+		}
+
+		field := target.FieldByName(name)
+		if !field.CanSet() {
+			continue
+		}
+
+		val = ToUnsafe(val, field.Type(), true)
+		// Convert 类型转化
+		field.Set(reflect.ValueOf(val).Convert(field.Type()))
+	}
 }
