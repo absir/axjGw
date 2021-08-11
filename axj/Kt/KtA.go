@@ -3,6 +3,8 @@ package Kt
 import (
 	"container/list"
 	"fmt"
+	"log"
+	"os"
 )
 
 const (
@@ -18,13 +20,20 @@ var Active = true
 
 var Started = true
 
+var info = log.New(os.Stdout, "", log.LstdFlags)
+
+// 日志
+func Log(v ...interface{}) {
+	info.Output(2, fmt.Sprintln(v...))
+}
+
 // 错误提示
 func Err(err error) {
 	if err == nil {
 		return
 	}
 
-	fmt.Errorf(err.Error())
+	log.Println(err)
 }
 
 // 三元表达式
@@ -61,8 +70,8 @@ func IsEquals(from, to interface{}, equals Equals) bool {
 
 // 数据查找
 func IndexOf(array []interface{}, el interface{}, equals Equals) int {
-	len := len(array)
-	for i := 0; i < len; i++ {
+	aLen := len(array)
+	for i := 0; i < aLen; i++ {
 		if IsEquals(el, array[i], equals) {
 			return i
 		}
@@ -72,14 +81,14 @@ func IndexOf(array []interface{}, el interface{}, equals Equals) int {
 }
 
 // 转数组
-func ToArray(list *list.List) []interface{} {
-	if list == nil {
+func ToArray(lst *list.List) []interface{} {
+	if lst == nil {
 		return nil
 	}
 
-	array := make([]interface{}, list.Len())
+	array := make([]interface{}, lst.Len())
 	i := 0
-	for el := list.Front(); el != nil; el = el.Next() {
+	for el := lst.Front(); el != nil; el = el.Next() {
 		array[i] = el.Value
 		i++
 	}
@@ -93,11 +102,11 @@ func ToList(array []interface{}) *list.List {
 		return nil
 	}
 
-	list := list.New()
-	len := len(array)
-	for i := 0; i < len; i++ {
-		list.PushBack(array[i])
+	lst := list.New()
+	lenA := len(array)
+	for i := 0; i < lenA; i++ {
+		lst.PushBack(array[i])
 	}
 
-	return list
+	return lst
 }

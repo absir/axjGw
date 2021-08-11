@@ -2,7 +2,7 @@ package KtStr
 
 import (
 	"axj/KtCvt"
-	jsoniter "github.com/json-iterator/go"
+	"axj/KtJson"
 	"testing"
 )
 
@@ -176,12 +176,11 @@ func TestSplit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ret := SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ)
-			bytes, err := jsoniter.Marshal(KtCvt.Safe(ret))
+			json, err := KtJson.ToJsonStr(KtCvt.Safe(ret))
 			if err != nil {
 				t.Error(err)
 			}
 
-			json := string(bytes)
 			if json != tt.want {
 				t.Errorf("SplitStrBr() = %v, want %v", json, tt.want)
 			}

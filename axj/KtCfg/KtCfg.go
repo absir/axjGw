@@ -15,6 +15,10 @@ import (
 // 配置字典别名
 type Cfg map[interface{}]interface{}
 
+func (c Cfg) Map() map[interface{}]interface{} {
+	return c
+}
+
 func (c Cfg) Get(key interface{}) interface{} {
 	return c[key]
 }
@@ -113,7 +117,7 @@ func GetExpRemain(cfg Cfg, exp string, strict bool, remain bool) string {
 	index := strings.Index(exp, "${")
 	length := len(exp)
 	if index >= 0 && index < length-2 {
-		sb := new(strings.Builder)
+		sb := &strings.Builder{}
 		sIndex := 0
 		for {
 			if index > sIndex {
@@ -192,7 +196,7 @@ type Read func(str string)
 
 var splits = []byte("=:")
 
-func readFunc(cfg Cfg, readMap *map[string]Read) Read {
+func ReadFunc(cfg Cfg, readMap *map[string]Read) Read {
 	var bBuilder *strings.Builder
 	var bAppend int
 	var yB int
@@ -211,7 +215,7 @@ func readFunc(cfg Cfg, readMap *map[string]Read) Read {
 				return
 
 			} else if chr == '{' && length == 2 && str[1] == '"' {
-				bBuilder = new(strings.Builder)
+				bBuilder = &strings.Builder{}
 				bAppend = 1
 				return
 			}
@@ -266,13 +270,13 @@ func readFunc(cfg Cfg, readMap *map[string]Read) Read {
 				if yB < b {
 					if yMap != nil {
 						if yMaps == nil {
-							yMaps = new(Kt.Stack)
+							yMaps = new(Kt.Stack).Init()
 						}
 
 						yMaps.Push(yMap)
 					}
 
-					lmap := new(Kt.LinkedMap)
+					lmap := new(Kt.LinkedMap).Init()
 					if yMap == nil {
 						cfg[name] = lmap
 
@@ -289,7 +293,7 @@ func readFunc(cfg Cfg, readMap *map[string]Read) Read {
 							yMaps.Clear()
 						}
 
-						yMap = new(Kt.LinkedMap)
+						yMap = new(Kt.LinkedMap).Init()
 						cfg[name] = yMap
 
 					} else {
@@ -380,7 +384,7 @@ func readFunc(cfg Cfg, readMap *map[string]Read) Read {
 			case '+':
 				o := GetType(mp, name, nil, nil, "").(*list.List)
 				if o == nil {
-					o = new(list.List)
+					o = list.New()
 					mp.Put(name, o)
 				}
 
@@ -403,17 +407,23 @@ func ReadIn(in *bufio.Reader, cfg *Cfg, readMap *map[string]Read) *Cfg {
 	}
 
 	if cfg == nil {
-		cfg = new(Cfg)
+		cfg = &Cfg{}
 	}
 
-	fun := readFunc(*cfg, readMap)
+	fun := ReadFunc(*cfg, readMap)
 	for {
 		line, err := in.ReadString('\n')
-		if err != nil || io.EOF == err {
-			break
+		if line != "" {
+			fun(line)
 		}
 
-		fun(line)
+		if err != nil {
+			if err != io.EOF {
+				Kt.Err(err)
+			}
+
+			break
+		}
 	}
 
 	return cfg

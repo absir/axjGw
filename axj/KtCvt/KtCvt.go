@@ -830,8 +830,8 @@ func ForArrayIs(typ reflect.Type) *ArrayIs {
 	return nil
 }
 
-func ToArray(list *list.List, typ reflect.Type) interface{} {
-	if list == nil {
+func ToArray(lst *list.List, typ reflect.Type) interface{} {
+	if lst == nil {
 		return nil
 	}
 
@@ -840,9 +840,9 @@ func ToArray(list *list.List, typ reflect.Type) interface{} {
 		return nil
 	}
 
-	array := is.New(list.Len())
+	array := is.New(lst.Len())
 	i := 0
-	for el := list.Front(); el != nil; el = el.Next() {
+	for el := lst.Front(); el != nil; el = el.Next() {
 		is.Set(array, i, ToType(el.Value, typ))
 		i++
 	}

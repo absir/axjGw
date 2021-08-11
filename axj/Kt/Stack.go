@@ -3,28 +3,29 @@ package Kt
 import "container/list"
 
 type Stack struct {
-	mList *list.List
+	lst *list.List
 }
 
-func (s Stack) init() {
-	s.mList = new(list.List)
+func (s *Stack) Init() *Stack {
+	s.lst = list.New()
+	return s
 }
 
-func (s Stack) Push(val interface{}) {
-	s.mList.PushBack(s)
+func (s *Stack) Push(val interface{}) {
+	s.lst.PushBack(s)
 }
 
-func (s Stack) Pop() interface{} {
-	el := s.mList.Back()
+func (s *Stack) Pop() interface{} {
+	el := s.lst.Back()
 	if el == nil {
 		return nil
 	}
-	s.mList.Remove(el)
+	s.lst.Remove(el)
 	return el.Value
 }
 
-func (s Stack) Peek() (interface{}, bool) {
-	el := s.mList.Back()
+func (s *Stack) Peek() (interface{}, bool) {
+	el := s.lst.Back()
 	if el == nil {
 		return nil, false
 	}
@@ -32,10 +33,10 @@ func (s Stack) Peek() (interface{}, bool) {
 	return el.Value, true
 }
 
-func (s Stack) Clear() {
-	s.mList.Init()
+func (s *Stack) Clear() {
+	s.lst.Init()
 }
 
-func (s Stack) IsEmpty() bool {
-	return s.mList.Front() == nil
+func (s *Stack) IsEmpty() bool {
+	return s.lst.Front() == nil
 }

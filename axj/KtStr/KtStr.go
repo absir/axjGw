@@ -315,8 +315,8 @@ func IndexByte(str string, chr byte, from int) int {
 		i = 0
 	}
 
-	len := len(str)
-	for ; i < len; i++ {
+	lenS := len(str)
+	for ; i < lenS; i++ {
 		c := str[i]
 		if c == chr {
 			return i
@@ -333,8 +333,8 @@ func IndexBytes(str string, chrs []byte, from int) int {
 	}
 
 	lenC := len(chrs)
-	len := len(str)
-	for ; i < len; i++ {
+	lenS := len(str)
+	for ; i < lenS; i++ {
 		c := str[i]
 		for j := 0; j < lenC; j++ {
 			if c == chrs[j] {
@@ -352,8 +352,8 @@ func IndexRune(str []rune, chr rune, from int) int {
 		i = 0
 	}
 
-	len := len(str)
-	for ; i < len; i++ {
+	lenS := len(str)
+	for ; i < lenS; i++ {
 		c := str[i]
 		if c == chr {
 			return i
@@ -370,8 +370,8 @@ func IndexRunes(str []rune, chrs []rune, from int) int {
 	}
 
 	lenC := len(chrs)
-	len := len(str)
-	for ; i < len; i++ {
+	lenS := len(str)
+	for ; i < lenS; i++ {
 		c := str[i]
 		for j := 0; j < lenC; j++ {
 			if c == chrs[j] {
@@ -444,11 +444,11 @@ func SplitStrBr(str string, sps string, trim bool, start int, br bool, typ int) 
 	strs := list.New()
 	if br {
 		brc := Kt.If(typ == 1, '}', ']').(rune)
-		splitStrBrC([]rune(str), []rune(sps), trim, start, br, brc, strs)
+		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, brc, strs)
 		return splitStrM(strs, brc)
 
 	} else {
-		splitStrBrC([]rune(str), []rune(sps), trim, start, br, '{', strs)
+		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, '{', strs)
 	}
 
 	return strs
@@ -501,7 +501,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 
 			} else if chr == brc {
 				if si < ei {
-					strs.PushBack(string(str[si:ei]))
+					strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
 
 				} else if ei == -1 {
 					strs.PushBack("")
@@ -526,7 +526,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 		}
 
 		if si < ei {
-			strs.PushBack(string(str[si:ei]))
+			strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
 			ei = -1
 
 		} else if ei >= -1 {
@@ -541,7 +541,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 	}
 
 	if si < ei {
-		strs.PushBack(string(str[si:ei]))
+		strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
 	}
 
 	return start
@@ -587,7 +587,7 @@ func ToArg(str string) string {
 		return str
 	}
 
-	sb := new(strings.Builder)
+	sb := &strings.Builder{}
 	qt := 0
 	chr := str[0]
 	if chr == '"' {
@@ -635,18 +635,18 @@ func ToArg(str string) string {
 }
 
 func ToArgs(str string) *list.List {
-	len := len(str)
-	if len <= 0 {
+	lenS := len(str)
+	if lenS <= 0 {
 		return nil
 	}
 
-	list := new(list.List)
+	lst := list.New()
 
 	var chr byte
 	qt := false
 	trans := false
 	s := 0
-	for i := 0; i < len; i++ {
+	for i := 0; i < lenS; i++ {
 		chr = str[i]
 		if qt {
 			if trans {
@@ -656,7 +656,7 @@ func ToArgs(str string) *list.List {
 				trans = true
 
 			} else if chr == '"' {
-				list.PushBack(str[s:i])
+				lst.PushBack(str[s:i])
 				qt = false
 				s = i
 			}
@@ -665,13 +665,13 @@ func ToArgs(str string) *list.List {
 			if chr == '"' {
 				qt = true
 				if s < i {
-					list.PushBack(str[s:i])
+					lst.PushBack(str[s:i])
 					s = i
 				}
 
 			} else if chr == ' ' {
 				if s < i {
-					list.PushBack(str[s:i])
+					lst.PushBack(str[s:i])
 				}
 
 				s = i
@@ -679,29 +679,29 @@ func ToArgs(str string) *list.List {
 		}
 	}
 
-	if s < len {
+	if s < lenS {
 		if qt && s > 0 {
-			list.PushBack(str[s-1 : len])
+			lst.PushBack(str[s-1 : lenS])
 
 		} else {
-			list.PushBack(str[s:len])
+			lst.PushBack(str[s:lenS])
 		}
 	}
 
-	return list
+	return lst
 }
 
 func Quote(str string) string {
-	len := len(str)
-	if len <= 0 {
+	lenS := len(str)
+	if lenS <= 0 {
 		return str
 	}
 
-	sb := new(strings.Builder)
+	sb := &strings.Builder{}
 	sb.WriteByte('"')
 
 	var chr byte
-	for i := 0; i < len; i++ {
+	for i := 0; i < lenS; i++ {
 		chr = str[i]
 		if chr == '\\' || chr == '"' {
 			sb.WriteByte('\\')

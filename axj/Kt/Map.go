@@ -11,30 +11,32 @@ type Map interface {
 }
 
 type LinkedMap struct {
-	mList *list.List
-	mMap  map[interface{}]*list.Element
+	lst *list.List
+	mp  map[interface{}]*list.Element
 }
 
-func (l LinkedMap) init() {
-	l.mList = new(list.List)
+func (l *LinkedMap) Init() *LinkedMap {
+	l.lst = list.New()
+	l.mp = map[interface{}]*list.Element{}
+	return l
 }
 
-func (l LinkedMap) Front() *list.Element {
-	return l.mList.Front()
+func (l *LinkedMap) Front() *list.Element {
+	return l.lst.Front()
 }
 
-func (l LinkedMap) Get(key interface{}) interface{} {
+func (l *LinkedMap) Get(key interface{}) interface{} {
 	val, _ := l.GetC(key)
 	return val
 }
 
-func (l LinkedMap) Has(key interface{}) bool {
+func (l *LinkedMap) Has(key interface{}) bool {
 	_, has := l.GetC(key)
 	return has
 }
 
-func (l LinkedMap) GetC(key interface{}) (interface{}, bool) {
-	el := l.mMap[key]
+func (l *LinkedMap) GetC(key interface{}) (interface{}, bool) {
+	el := l.mp[key]
 	if el == nil {
 		return nil, false
 	}
@@ -42,8 +44,8 @@ func (l LinkedMap) GetC(key interface{}) (interface{}, bool) {
 	return el.Value, true
 }
 
-func (l LinkedMap) GetVal(val interface{}, equals Equals) (interface{}, bool) {
-	for k, v := range l.mMap {
+func (l *LinkedMap) GetVal(val interface{}, equals Equals) (interface{}, bool) {
+	for k, v := range l.mp {
 		if IsEquals(val, v.Value, equals) {
 			return k, true
 		}
@@ -52,35 +54,35 @@ func (l LinkedMap) GetVal(val interface{}, equals Equals) (interface{}, bool) {
 	return nil, false
 }
 
-func (l LinkedMap) Put(key interface{}, val interface{}) interface{} {
-	el := l.mMap[key]
+func (l *LinkedMap) Put(key interface{}, val interface{}) interface{} {
+	el := l.mp[key]
 	if el == nil {
-		l.mMap[key] = l.mList.PushBack(key)
+		l.mp[key] = l.lst.PushBack(key)
 		return nil
 	}
 
 	_val := el.Value
 	el.Value = val
-	l.mList.MoveToBack(el)
+	l.lst.MoveToBack(el)
 	return _val
 }
 
-func (l LinkedMap) Remove(key interface{}) interface{} {
-	el := l.mMap[key]
+func (l *LinkedMap) Remove(key interface{}) interface{} {
+	el := l.mp[key]
 	if el == nil {
 		return nil
 	}
 
-	delete(l.mMap, key)
-	l.mList.Remove(el)
+	delete(l.mp, key)
+	l.lst.Remove(el)
 	return el.Value
 }
 
-func (l LinkedMap) Clear() {
-	l.mList.Init()
-	l.mMap = *new(map[interface{}]*list.Element)
+func (l *LinkedMap) Clear() {
+	l.lst.Init()
+	l.mp = map[interface{}]*list.Element{}
 }
 
-func (l LinkedMap) IsEmpty() bool {
-	return l.mList.Front() == nil
+func (l *LinkedMap) IsEmpty() bool {
+	return l.lst.Front() == nil
 }

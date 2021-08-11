@@ -13,9 +13,9 @@ func BytesToString(b []byte) string {
 }
 
 func StringToRunes(s string) []rune {
-	return *(*[]rune)(unsafe.Pointer(&s))
+	return []rune(s)
 }
 
 func RunesToString(b []rune) string {
-	return *(*string)(unsafe.Pointer(&b))
+	return string(b)
 }
