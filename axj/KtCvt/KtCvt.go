@@ -51,6 +51,10 @@ func Safe(obj interface{}) interface{} {
 }
 
 func ToType(obj interface{}, typ reflect.Type) interface{} {
+	if typ == nil {
+		return obj
+	}
+
 	switch typ.Kind() {
 	case reflect.Bool:
 		return ToBool(obj)
@@ -614,4 +618,234 @@ func ToComplex128(obj interface{}) complex128 {
 	}
 
 	return 0
+}
+
+type ArrayIs struct {
+	New  func(size int) interface{}
+	Size func(array interface{}) int
+	Get  func(array interface{}, i int) interface{}
+	Set  func(array interface{}, i int, el interface{})
+}
+
+var BoolIs = ArrayIs{func(size int) interface{} {
+	return make([]bool, size)
+}, func(array interface{}) int {
+	return len(array.([]bool))
+}, func(array interface{}, i int) interface{} {
+	return array.([]bool)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]bool)[i] = el.(bool)
+}}
+
+var StringIs = ArrayIs{func(size int) interface{} {
+	return make([]string, size)
+}, func(array interface{}) int {
+	return len(array.([]string))
+}, func(array interface{}, i int) interface{} {
+	return array.([]string)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]string)[i] = el.(string)
+}}
+
+var IntIs = ArrayIs{func(size int) interface{} {
+	return make([]int, size)
+}, func(array interface{}) int {
+	return len(array.([]int))
+}, func(array interface{}, i int) interface{} {
+	return array.([]int)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]int)[i] = el.(int)
+}}
+
+var Int8Is = ArrayIs{func(size int) interface{} {
+	return make([]int8, size)
+}, func(array interface{}) int {
+	return len(array.([]int8))
+}, func(array interface{}, i int) interface{} {
+	return array.([]int8)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]int8)[i] = el.(int8)
+}}
+
+var Int16Is = ArrayIs{func(size int) interface{} {
+	return make([]int16, size)
+}, func(array interface{}) int {
+	return len(array.([]int16))
+}, func(array interface{}, i int) interface{} {
+	return array.([]int16)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]int16)[i] = el.(int16)
+}}
+
+var Int32Is = ArrayIs{func(size int) interface{} {
+	return make([]int32, size)
+}, func(array interface{}) int {
+	return len(array.([]int32))
+}, func(array interface{}, i int) interface{} {
+	return array.([]int32)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]int32)[i] = el.(int32)
+}}
+
+var Int64Is = ArrayIs{func(size int) interface{} {
+	return make([]int64, size)
+}, func(array interface{}) int {
+	return len(array.([]int64))
+}, func(array interface{}, i int) interface{} {
+	return array.([]int64)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]int64)[i] = el.(int64)
+}}
+
+var UInt8Is = ArrayIs{func(size int) interface{} {
+	return make([]uint8, size)
+}, func(array interface{}) int {
+	return len(array.([]uint8))
+}, func(array interface{}, i int) interface{} {
+	return array.([]uint8)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]uint8)[i] = el.(uint8)
+}}
+
+var UInt16Is = ArrayIs{func(size int) interface{} {
+	return make([]uint16, size)
+}, func(array interface{}) int {
+	return len(array.([]uint16))
+}, func(array interface{}, i int) interface{} {
+	return array.([]uint16)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]uint16)[i] = el.(uint16)
+}}
+
+var UInt32Is = ArrayIs{func(size int) interface{} {
+	return make([]uint32, size)
+}, func(array interface{}) int {
+	return len(array.([]uint32))
+}, func(array interface{}, i int) interface{} {
+	return array.([]uint32)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]uint32)[i] = el.(uint32)
+}}
+
+var UInt64Is = ArrayIs{func(size int) interface{} {
+	return make([]uint64, size)
+}, func(array interface{}) int {
+	return len(array.([]uint64))
+}, func(array interface{}, i int) interface{} {
+	return array.([]uint64)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]uint64)[i] = el.(uint64)
+}}
+
+var Float32Is = ArrayIs{func(size int) interface{} {
+	return make([]float32, size)
+}, func(array interface{}) int {
+	return len(array.([]float32))
+}, func(array interface{}, i int) interface{} {
+	return array.([]float32)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]float32)[i] = el.(float32)
+}}
+
+var Float64Is = ArrayIs{func(size int) interface{} {
+	return make([]float64, size)
+}, func(array interface{}) int {
+	return len(array.([]float64))
+}, func(array interface{}, i int) interface{} {
+	return array.([]float64)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]float64)[i] = el.(float64)
+}}
+
+var Complex64Is = ArrayIs{func(size int) interface{} {
+	return make([]complex64, size)
+}, func(array interface{}) int {
+	return len(array.([]complex64))
+}, func(array interface{}, i int) interface{} {
+	return array.([]complex64)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]complex64)[i] = el.(complex64)
+}}
+
+var Complex128Is = ArrayIs{func(size int) interface{} {
+	return make([]complex128, size)
+}, func(array interface{}) int {
+	return len(array.([]complex128))
+}, func(array interface{}, i int) interface{} {
+	return array.([]complex128)[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]complex128)[i] = el.(complex128)
+}}
+
+var InterfaceIs = ArrayIs{func(size int) interface{} {
+	return make([]interface{}, size)
+}, func(array interface{}) int {
+	return len(array.([]interface{}))
+}, func(array interface{}, i int) interface{} {
+	return array.([]interface{})[i]
+}, func(array interface{}, i int, el interface{}) {
+	array.([]interface{})[i] = el.(interface{})
+}}
+
+func ForArrayIs(typ reflect.Type) *ArrayIs {
+	if typ == nil {
+		return &InterfaceIs
+	}
+
+	switch typ.Kind() {
+	case reflect.Bool:
+		return &BoolIs
+	case reflect.String:
+		return &StringIs
+	case reflect.Int:
+		return &IntIs
+	case reflect.Int8:
+		return &Int8Is
+	case reflect.Int16:
+		return &Int16Is
+	case reflect.Int32:
+		return &Int32Is
+	case reflect.Int64:
+		return &Int64Is
+	case reflect.Uint8:
+		return &UInt8Is
+	case reflect.Uint16:
+		return &UInt16Is
+	case reflect.Uint32:
+		return &UInt32Is
+	case reflect.Uint64:
+		return &UInt64Is
+	case reflect.Float32:
+		return &Float32Is
+	case reflect.Float64:
+		return &Float64Is
+	case reflect.Complex64:
+		return &Complex64Is
+	case reflect.Complex128:
+		return &Complex128Is
+	case reflect.Interface:
+		return &InterfaceIs
+	}
+
+	return nil
+}
+
+func ToArray(list *list.List, typ reflect.Type) interface{} {
+	if list == nil {
+		return nil
+	}
+
+	is := ForArrayIs(typ)
+	if is == nil {
+		return nil
+	}
+
+	array := is.New(list.Len())
+	i := 0
+	for el := list.Front(); el != nil; el = el.Next() {
+		is.Set(array, i, ToType(el.Value, typ))
+		i++
+	}
+
+	return array
 }

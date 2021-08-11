@@ -2,10 +2,11 @@ package KtStr
 
 import (
 	"axj/Kt"
+	"axj/KtCvt"
 	"axj/KtUnsafe"
 	"container/list"
-	"fmt"
 	"io"
+	"reflect"
 	"regexp"
 	"strings"
 	"unsafe"
@@ -402,8 +403,17 @@ func CountByte(str string, chr byte, start int, max int) int {
 }
 
 func SplitByte(str string, chr byte, trim bool, start int, max int) []string {
+	return SplitByteType(str, chr, trim, start, max, KtCvt.String).([]string)
+}
+
+func SplitByteType(str string, chr byte, trim bool, start int, max int, typ reflect.Type) interface{} {
+	is := KtCvt.ForArrayIs(typ)
+	if is == nil {
+		return nil
+	}
+
 	last := CountByte(str, chr, start, max)
-	strs := make([]string, last+1)
+	strs := is.New(last + 1)
 	last--
 	for i := 0; i < last; i++ {
 		end := IndexByte(str, chr, start)
@@ -412,7 +422,7 @@ func SplitByte(str string, chr byte, trim bool, start int, max int) []string {
 			s = strings.TrimSpace(s)
 		}
 
-		strs[i] = s
+		is.Set(strs, i, KtCvt.ToType(s, typ))
 		start = end + 1
 	}
 
@@ -421,7 +431,7 @@ func SplitByte(str string, chr byte, trim bool, start int, max int) []string {
 		s = strings.TrimSpace(s)
 	}
 
-	strs[last] = s
+	is.Set(strs, last, KtCvt.ToType(s, typ))
 	return strs
 }
 
@@ -746,7 +756,7 @@ func mathO(typ int8, match string, matchO interface{}) interface{} {
 			var err error
 			matchO, _ = regexp.Compile(match[1:])
 			if err != nil {
-				fmt.Errorf(err.Error())
+				Kt.Err(err)
 			}
 			break
 		case 5:
@@ -778,6 +788,8 @@ func matchStr(str string, typ int8, match string, matchO interface{}) bool {
 		return matchO != nil && matchO.(*regexp.Regexp).MatchString(str)
 	case 5:
 		return MatchSplits(str, matchO.([]string))
+	case 9:
+		return false
 	default:
 		return str == match
 	}
@@ -829,16 +841,16 @@ func matcherMs(exp string, reg bool, m bool, str string) *Matcher {
 		}
 
 		typ = 0
-		if reg && exp[0] == '$' {
-			matchO = mathO(4, match, nil)
-			if matchO != nil {
-				typ = 4
-				break
-			}
-		}
-
 		last := len(exp) - 1
 		if last >= 0 {
+			if reg && exp[0] == '$' {
+				matchO = mathO(4, match, nil)
+				if matchO != nil {
+					typ = 4
+					break
+				}
+			}
+
 			ms := CountByte(exp, '*', 0, 3)
 			if exp[0] == '*' {
 				if last == 0 {
@@ -875,6 +887,10 @@ func matcherMs(exp string, reg bool, m bool, str string) *Matcher {
 				typ = 5
 				break
 			}
+
+		} else {
+			typ = 9
+			break
 		}
 
 		match = exp

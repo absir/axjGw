@@ -2,10 +2,30 @@ package Kt
 
 import (
 	"container/list"
-	"os"
-	"os/signal"
-	"syscall"
+	"fmt"
 )
+
+const (
+	Develop int8 = 0
+	Debug   int8 = 1
+	Test    int8 = 2
+	Product int8 = 3
+)
+
+var Env = Develop
+
+var Active = true
+
+var Started = true
+
+// 错误提示
+func Err(err error) {
+	if err == nil {
+		return
+	}
+
+	fmt.Errorf(err.Error())
+}
 
 // 三元表达式
 func If(a bool, b, c interface{}) interface{} {
@@ -80,11 +100,4 @@ func ToList(array []interface{}) *list.List {
 	}
 
 	return list
-}
-
-// 关闭信号
-func Signal() os.Signal {
-	c := make(chan os.Signal, 0)
-	signal.Notify(c, syscall.SIGTERM)
-	return <-c
 }
