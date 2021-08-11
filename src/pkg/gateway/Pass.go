@@ -1,4 +1,4 @@
-package server
+package gateway
 
 import (
 	"github.com/apache/thrift/lib/go/thrift"
@@ -19,6 +19,7 @@ func (p Pass) init() {
 	thrift.NewTTransportFactory()
 	var client thrift.TTransport
 	var err error
+
 	if strings.HasPrefix(p.url, "http") {
 		client, err = thrift.NewTHttpClient(p.url)
 
