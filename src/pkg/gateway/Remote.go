@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"gw"
 )
 
@@ -9,7 +10,11 @@ type Remote struct {
 }
 
 func (r Remote) Req(ctx context.Context, uid int64, sid string, uri string, bytes []byte) (_r []byte, _err error) {
-	panic("implement me")
+	//helper, _ := thrift.GetResponseHelper(ctx)
+	//helper.THeaderResponseHelper
+	fmt.Println(sid)
+	fmt.Println(uri)
+	return nil, nil
 }
 
 func (r Remote) Send(ctx context.Context, uid int64, sid string, uri string, bytes []byte) (_err error) {

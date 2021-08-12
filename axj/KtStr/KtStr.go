@@ -756,7 +756,7 @@ func mathO(typ int8, match string, matchO interface{}) interface{} {
 			var err error
 			matchO, _ = regexp.Compile(match[1:])
 			if err != nil {
-				Kt.Err(err)
+				Kt.Err(err, true)
 			}
 			break
 		case 5:

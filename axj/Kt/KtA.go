@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 )
 
 const (
@@ -28,12 +29,22 @@ func Log(v ...interface{}) {
 }
 
 // 错误提示
-func Err(err error) {
+func Err(err error, stack bool) {
 	if err == nil {
 		return
 	}
 
 	log.Println(err)
+	if stack {
+		pc, file, line, ok := runtime.Caller(1)
+		if ok {
+			fun := runtime.FuncForPC(pc)
+			log.Println("\tat %s:%d (Method %s)\nCause by: %s\n", file, line, fun.Name(), err.Error())
+
+		} else {
+			log.Println("get call stack err ...")
+		}
+	}
 }
 
 // 三元表达式

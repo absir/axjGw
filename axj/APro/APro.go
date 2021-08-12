@@ -32,7 +32,7 @@ APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 */
 func Caller(fun func(skip int) (pc uintptr, file string, line int, ok bool), dir string) {
 	if path != "" {
-		Kt.Err(errors.New("path has got"))
+		Kt.Err(errors.New("path has got"), false)
 		return
 	}
 
@@ -48,7 +48,7 @@ func Tmp() string {
 		}
 
 		dir, err := filepath.EvalSymlinks(dir)
-		Kt.Err(err)
+		Kt.Err(err, true)
 		tmp = dir
 	}
 
@@ -58,7 +58,7 @@ func Tmp() string {
 func Path() string {
 	if path == "" {
 		file, err := os.Executable()
-		Kt.Err(err)
+		Kt.Err(err, true)
 		if file == "" || (strings.HasPrefix(file, Tmp()) && callerP != nil) {
 			if file != "" {
 				Kt.Log("exe : " + file)
@@ -89,7 +89,7 @@ func Path() string {
 
 		if file != "" {
 			file, err = filepath.EvalSymlinks(file)
-			Kt.Err(err)
+			Kt.Err(err, true)
 			if file != "" {
 				path = file
 				callerP = nil
@@ -133,7 +133,7 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 		cfgs := list.New()
 		readMap["@cfg"] = func(str string) {
 			str, err := filepath.EvalSymlinks(filepath.Join(Path(), str))
-			Kt.Err(err)
+			Kt.Err(err, true)
 			if str != "" {
 				if !loads[str] {
 					loads[str] = true
@@ -155,7 +155,7 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 			}
 
 			f, err := os.Open(cfgs.Remove(el).(string))
-			Kt.Err(err)
+			Kt.Err(err, true)
 			if f != nil {
 				_cfg = KtCfg.ReadIn(bufio.NewReader(f), _cfg, &readMap)
 

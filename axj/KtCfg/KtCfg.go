@@ -419,7 +419,7 @@ func ReadIn(in *bufio.Reader, cfg *Cfg, readMap *map[string]Read) *Cfg {
 
 		if err != nil {
 			if err != io.EOF {
-				Kt.Err(err)
+				Kt.Err(err, true)
 			}
 
 			break
