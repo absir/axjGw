@@ -491,7 +491,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 	length := len(str)
 	var chr rune
 	si := start
-	ei := -1
+	ei := -2
 	for ; start < length; start++ {
 		chr = str[start]
 		if br {
@@ -511,8 +511,6 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 					if strict {
 						strs.PushBack("")
 					}
-
-					ei = -2
 				}
 
 				return start
@@ -536,15 +534,12 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 			strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
 			ei = -1
 
-		} else if ei >= -1 {
+		} else {
 			if strict {
 				strs.PushBack("")
 			}
 
 			ei = -1
-
-		} else {
-			ei = start
 		}
 
 		si = start + 1
@@ -552,6 +547,11 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 
 	if si < ei {
 		strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
+
+	} else if ei == -1 {
+		if strict {
+			strs.PushBack("")
+		}
 	}
 
 	return start
