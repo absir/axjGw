@@ -3,7 +3,9 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"github.com/apache/thrift/lib/go/thrift"
 	"gw"
+	"reflect"
 )
 
 type Remote struct {
@@ -12,6 +14,9 @@ type Remote struct {
 func (r Remote) Req(ctx context.Context, uid int64, sid string, uri string, bytes []byte) (_r []byte, _err error) {
 	//helper, _ := thrift.GetResponseHelper(ctx)
 	//helper.THeaderResponseHelper
+	helper, _ := thrift.GetResponseHelper(ctx)
+	proto := reflect.ValueOf(*helper.THeaderResponseHelper).FieldByName("proto").Interface().(*thrift.THeaderProtocol)
+	fmt.Println(proto)
 	fmt.Println(sid)
 	fmt.Println(uri)
 	return nil, nil

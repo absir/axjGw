@@ -23,6 +23,7 @@ var Float32 = reflect.TypeOf(*new(float32))
 var Float64 = reflect.TypeOf(*new(float64))
 var Complex64 = reflect.TypeOf(*new(complex64))
 var Complex128 = reflect.TypeOf(*new(complex128))
+var Interface = reflect.TypeOf(*new(interface{}))
 var Array = reflect.TypeOf(*new([]interface{}))
 
 func Safe(obj interface{}) interface{} {

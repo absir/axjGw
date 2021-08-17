@@ -437,18 +437,22 @@ func SplitByteType(str string, chr byte, trim bool, start int, max int, typ refl
 
 // 字符串分隔
 func SplitStr(str string, sps string, trim bool, start int) []interface{} {
-	return Kt.ToArray(SplitStrBr(str, sps, trim, start, false, 0).(*list.List))
+	return Kt.ToArray(SplitStrBr(str, sps, trim, start, false, 0, false).(*list.List))
 }
 
-func SplitStrBr(str string, sps string, trim bool, start int, br bool, typ int) interface{} {
+func SplitStrS(str string, sps string, trim bool, start int, strict bool) []interface{} {
+	return Kt.ToArray(SplitStrBr(str, sps, trim, start, false, 0, strict).(*list.List))
+}
+
+func SplitStrBr(str string, sps string, trim bool, start int, br bool, typ int, strict bool) interface{} {
 	strs := list.New()
 	if br {
 		brc := Kt.If(typ == 1, '}', ']').(rune)
-		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, brc, strs)
+		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, brc, strs, strict)
 		return splitStrM(strs, brc)
 
 	} else {
-		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, '{', strs)
+		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, '{', strs, strict)
 	}
 
 	return strs
@@ -479,7 +483,7 @@ func splitStrM(strs *list.List, brc rune) interface{} {
 	return strs
 }
 
-func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune, strs *list.List) int {
+func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune, strs *list.List, strict bool) int {
 	if str == nil || sps == nil || strs == nil {
 		return start
 	}
@@ -494,7 +498,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 			if chr == '{' || chr == '[' {
 				sts := list.New()
 				chr = Kt.If(chr == '{', '}', ']').(rune)
-				start = splitStrBrC(str, sps, trim, start+1, br, chr, sts)
+				start = splitStrBrC(str, sps, trim, start+1, br, chr, sts, strict)
 				strs.PushBack(splitStrM(sts, chr))
 				ei = -2
 				continue
@@ -504,7 +508,10 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 					strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
 
 				} else if ei == -1 {
-					strs.PushBack("")
+					if strict {
+						strs.PushBack("")
+					}
+
 					ei = -2
 				}
 
@@ -530,7 +537,10 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 			ei = -1
 
 		} else if ei >= -1 {
-			strs.PushBack("")
+			if strict {
+				strs.PushBack("")
+			}
+
 			ei = -1
 
 		} else {
