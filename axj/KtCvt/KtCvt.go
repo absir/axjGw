@@ -25,6 +25,8 @@ var Complex64 = reflect.TypeOf(*new(complex64))
 var Complex128 = reflect.TypeOf(*new(complex128))
 var Interface = reflect.TypeOf(*new(interface{}))
 var Array = reflect.TypeOf(*new([]interface{}))
+var List = reflect.TypeOf(*new(list.List))
+var Map = reflect.TypeOf(*new(map[interface{}]interface{}))
 
 func Safe(obj interface{}) interface{} {
 	if mp, is := obj.(map[interface{}]interface{}); is {
@@ -51,10 +53,10 @@ func Safe(obj interface{}) interface{} {
 }
 
 func ToType(obj interface{}, typ reflect.Type) interface{} {
-	return ToUnsafe(obj, typ, false)
+	return ToSafe(obj, typ, true)
 }
 
-func ToUnsafe(obj interface{}, typ reflect.Type, unsafe bool) interface{} {
+func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 	if typ == nil {
 		return obj
 	}
@@ -127,6 +129,11 @@ func ToUnsafe(obj interface{}, typ reflect.Type, unsafe bool) interface{} {
 		break
 	case reflect.Interface:
 		return obj
+	case reflect.Ptr:
+		val := reflect.New(typ.Elem())
+		ptr := ToSafe(obj, typ.Elem(), safe)
+		val.Elem().Set(reflect.ValueOf(ptr))
+		return val.Interface()
 	default:
 		break
 	}
@@ -150,21 +157,47 @@ func ToUnsafe(obj interface{}, typ reflect.Type, unsafe bool) interface{} {
 				is := ForArrayIs(typ.Elem())
 				if oIs != nil && is != nil {
 					size := oIs.Size(obj)
-					array := is.New(size)
+					val := is.New(size)
 					for i := 0; i < size; i++ {
-						is.Set(array, i, ToType(oIs.Get(obj, i), typ.Elem()))
+						is.Set(val, i, ToType(oIs.Get(obj, i), typ.Elem()))
 					}
 
-					return array
+					return val
+
+				} else {
+					array := reflect.ValueOf(obj)
+					size := array.Len()
+					val := reflect.New(reflect.ArrayOf(size, oTyp.Elem()))
+					for i := 0; i < size; i++ {
+						val.Elem().Index(i).Set(reflect.ValueOf(ToSafe(array.Index(i).Interface(), typ.Elem(), false)))
+					}
+
+					return val.Elem().Interface()
 				}
 			}
 
 		} else if lst, is := obj.(*list.List); is {
 			return ToArray(lst, typ.Elem())
 		}
+
+	} else if oTyp.Kind() == reflect.Map {
+		if typ.Kind() == reflect.Map {
+			val := reflect.New(typ)
+			it := reflect.ValueOf(obj).MapRange()
+			for it.Next() {
+				val.Elem().SetMapIndex(reflect.ValueOf(ToSafe(it.Key(), typ.Key(), false)), reflect.ValueOf(ToSafe(it.Value(), typ.Elem(), false)))
+			}
+
+			return val.Elem().Interface()
+
+		} else if typ.Kind() == reflect.Struct {
+			val := reflect.New(typ)
+			BindMapVal(val, reflect.ValueOf(obj))
+			return val.Elem().Interface()
+		}
 	}
 
-	if unsafe {
+	if !safe {
 		return obj
 	}
 
@@ -890,7 +923,15 @@ func ToArray(lst *list.List, typ reflect.Type) interface{} {
 
 	is := ForArrayIs(typ)
 	if is == nil {
-		return nil
+		// reflect转化
+		array := reflect.New(reflect.ArrayOf(lst.Len(), typ))
+		i := 0
+		for el := lst.Front(); el != nil; el = el.Next() {
+			array.Elem().Index(i).Set(reflect.ValueOf(ToSafe(el.Value, typ, false)))
+			i++
+		}
+
+		return array.Elem().Interface()
 	}
 
 	array := is.New(lst.Len())
@@ -923,7 +964,38 @@ func BindMap(target reflect.Value, mp map[interface{}]interface{}) {
 			continue
 		}
 
-		val = ToUnsafe(val, field.Type(), true)
+		val = ToSafe(val, field.Type(), false)
+		// Convert 类型转化
+		field.Set(reflect.ValueOf(val).Convert(field.Type()))
+	}
+}
+
+func BindMapVal(target reflect.Value, mp reflect.Value) {
+	if mp.Kind() != reflect.Map {
+		return
+	}
+
+	if target.Kind() == reflect.Ptr {
+		target = target.Elem()
+	}
+
+	if target.Kind() != reflect.Struct {
+		return
+	}
+
+	it := mp.MapRange()
+	for it.Next() {
+		name := ToString(it.Key())
+		if name == "" {
+			continue
+		}
+
+		field := target.FieldByName(name)
+		if !field.CanSet() {
+			continue
+		}
+
+		val := ToSafe(it.Value(), field.Type(), false)
 		// Convert 类型转化
 		field.Set(reflect.ValueOf(val).Convert(field.Type()))
 	}

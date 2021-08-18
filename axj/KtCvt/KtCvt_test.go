@@ -1,11 +1,16 @@
 package KtCvt
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
 
 func TestCvt(t *testing.T) {
+
+	ptr := ToType(1, reflect.TypeOf(new(int))).(*int)
+	fmt.Println(*ptr)
+
 	type args struct {
 		from interface{}
 		to   reflect.Type
