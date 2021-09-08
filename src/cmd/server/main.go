@@ -27,7 +27,7 @@ func main() {
 		return runtime.Caller(0)
 	}, "../public")
 	fmt.Println(APro.Path())
-	cfg := APro.Cfg(nil, "config.properties")
+	cfg := APro.Load(nil, "config.properties")
 	fmt.Println(KtJson.ToJsonStr(KtCvt.Safe(cfg.Map())))
 	test := Test{}
 	test.Name = "2"

@@ -109,11 +109,11 @@ func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}, tName 
 	return KtCvt.ToType(Kt.If(val == nil, dVal, val), typ)
 }
 
-func GetExp(cfg Cfg, exp string, strict bool) string {
+func GetExp(cfg Kt.Map, exp string, strict bool) string {
 	return GetExpRemain(cfg, exp, strict, false)
 }
 
-func GetExpRemain(cfg Cfg, exp string, strict bool, remain bool) string {
+func GetExpRemain(cfg Kt.Map, exp string, strict bool, remain bool) string {
 	index := strings.Index(exp, "${")
 	length := len(exp)
 	if index >= 0 && index < length-2 {
@@ -196,7 +196,7 @@ type Read func(str string)
 
 var splits = []byte("=:")
 
-func ReadFunc(cfg Cfg, readMap *map[string]Read) Read {
+func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 	var bBuilder *strings.Builder
 	var bAppend int
 	var yB int
@@ -278,7 +278,7 @@ func ReadFunc(cfg Cfg, readMap *map[string]Read) Read {
 
 					lmap := new(Kt.LinkedMap).Init()
 					if yMap == nil {
-						cfg[name] = lmap
+						cfg.Put(name, lmap)
 
 					} else {
 						yMap.Put(name, lmap)
@@ -294,7 +294,7 @@ func ReadFunc(cfg Cfg, readMap *map[string]Read) Read {
 						}
 
 						yMap = new(Kt.LinkedMap).Init()
-						cfg[name] = yMap
+						cfg.Put(name, yMap)
 
 					} else {
 						if yMaps == nil || yMaps.IsEmpty() {
@@ -371,7 +371,7 @@ func ReadFunc(cfg Cfg, readMap *map[string]Read) Read {
 				mp.Put(name, Kt.If(o == nil, str, KtCvt.ToString(o)+"\r\n"+str))
 				break
 			case ',':
-				strs := KtStr.SplitStrBr(str, ",;", true, 0, false, 0).(*list.List)
+				strs := KtStr.SplitStrBr(str, ",;", true, 0, false, 0, true).(*list.List)
 				o := GetType(mp, name, nil, nil, "").(*list.List)
 				if o == nil {
 					o = strs
@@ -401,16 +401,16 @@ func ReadFunc(cfg Cfg, readMap *map[string]Read) Read {
 	}
 }
 
-func ReadIn(in *bufio.Reader, cfg *Cfg, readMap *map[string]Read) *Cfg {
+func ReadIn(in *bufio.Reader, cfg Kt.Map, readMap *map[string]Read) Kt.Map {
 	if in == nil {
 		return cfg
 	}
 
 	if cfg == nil {
-		cfg = &Cfg{}
+		cfg = Cfg{}
 	}
 
-	fun := ReadFunc(*cfg, readMap)
+	fun := ReadFunc(cfg, readMap)
 	for {
 		line, err := in.ReadString('\n')
 		if line != "" {

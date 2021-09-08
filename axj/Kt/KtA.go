@@ -15,6 +15,10 @@ const (
 	Product int8 = 3
 )
 
+type IVal interface {
+	Get() interface{}
+}
+
 var Env = Develop
 
 var Active = true
@@ -45,6 +49,14 @@ func Err(err error, stack bool) {
 			log.Println("get call stack err ...")
 		}
 	}
+}
+
+func Panic(err error) {
+	if err == nil {
+		return
+	}
+
+	panic(err)
 }
 
 // 三元表达式

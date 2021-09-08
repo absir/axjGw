@@ -100,10 +100,10 @@ func Path() string {
 	return path
 }
 
-var cfg *KtCfg.Cfg = nil
+var Cfg KtCfg.Cfg = nil
 
-func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
-	if cfg == nil {
+func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
+	if Cfg == nil {
 		readMap := map[string]KtCfg.Read{}
 		readMap["@env"] = func(str string) {
 			str = strings.ToLower(str)
@@ -132,6 +132,10 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 		loads := map[string]bool{}
 		cfgs := list.New()
 		readMap["@cfg"] = func(str string) {
+			if str == "" {
+				return
+			}
+
 			str, err := filepath.EvalSymlinks(filepath.Join(Path(), str))
 			Kt.Err(err, true)
 			if str != "" {
@@ -142,9 +146,9 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 			}
 		}
 
-		_cfg := &KtCfg.Cfg{}
+		_cfg := KtCfg.Cfg{}
 		if reader != nil {
-			_cfg = KtCfg.ReadIn(reader, _cfg, &readMap)
+			_cfg = KtCfg.ReadIn(reader, _cfg, &readMap).(KtCfg.Cfg)
 		}
 
 		readMap["@cfg"](entry)
@@ -157,7 +161,7 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 			f, err := os.Open(cfgs.Remove(el).(string))
 			Kt.Err(err, true)
 			if f != nil {
-				_cfg = KtCfg.ReadIn(bufio.NewReader(f), _cfg, &readMap)
+				_cfg = KtCfg.ReadIn(bufio.NewReader(f), _cfg, &readMap).(KtCfg.Cfg)
 
 			} else {
 				break
@@ -174,7 +178,7 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 			if arg[0] == '-' {
 				if strings.IndexByte(arg, '=') > 0 {
 					if fun == nil {
-						f := KtCfg.ReadFunc(*_cfg, &readMap)
+						f := KtCfg.ReadFunc(_cfg, &readMap)
 						fun = &f
 					}
 
@@ -196,7 +200,7 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 				} else {
 					// 分离参数
 					if fun == nil {
-						f := KtCfg.ReadFunc(*_cfg, &readMap)
+						f := KtCfg.ReadFunc(_cfg, &readMap)
 						fun = &f
 					}
 
@@ -207,13 +211,38 @@ func Cfg(reader *bufio.Reader, entry string) KtCfg.Cfg {
 		}
 
 		if lst != nil {
-			(*_cfg)[":args"] = lst
+			_cfg[":args"] = lst
 		}
 
-		cfg = _cfg
+		Cfg = _cfg
 	}
 
-	return *cfg
+	return Cfg
+}
+
+// 子配置
+func SubCfg(sub string) Kt.Map {
+	var cfg Kt.Map = nil
+	m := Kt.If(Cfg == nil, nil, KtCfg.Get(cfg, sub))
+	if m != nil {
+		mp, ok := m.(*Kt.Map)
+		if ok && mp != nil {
+			cfg = *mp
+		}
+	}
+
+	env := os.Getenv(sub + "_CFG")
+	if env != "" {
+		cfg = KtCfg.ReadIn(bufio.NewReader(strings.NewReader(env)), cfg, nil)
+	}
+
+	return cfg
+}
+
+func SubCfgBind(sub string, bind interface{}) interface{} {
+	mp := SubCfg(sub)
+	KtCvt.BindInterface(bind, mp)
+	return bind
 }
 
 // 关闭信号

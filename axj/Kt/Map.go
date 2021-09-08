@@ -10,15 +10,28 @@ type Map interface {
 	Remove(key interface{}) interface{}
 }
 
+type LinkedEl struct {
+	val interface{}
+	el  *list.Element
+}
+
+func (l LinkedEl) Get() interface{} {
+	return l.val
+}
+
 type LinkedMap struct {
 	lst *list.List
-	mp  map[interface{}]*list.Element
+	mp  map[interface{}]*LinkedEl
 }
 
 func (l *LinkedMap) Init() *LinkedMap {
 	l.lst = list.New()
-	l.mp = map[interface{}]*list.Element{}
+	l.mp = map[interface{}]*LinkedEl{}
 	return l
+}
+
+func (l *LinkedMap) Val() interface{} {
+	return l.mp
 }
 
 func (l *LinkedMap) Front() *list.Element {
@@ -41,12 +54,12 @@ func (l *LinkedMap) GetC(key interface{}) (interface{}, bool) {
 		return nil, false
 	}
 
-	return el.Value, true
+	return el.val, true
 }
 
 func (l *LinkedMap) GetVal(val interface{}, equals Equals) (interface{}, bool) {
 	for k, v := range l.mp {
-		if IsEquals(val, v.Value, equals) {
+		if IsEquals(val, v.val, equals) {
 			return k, true
 		}
 	}
@@ -57,13 +70,16 @@ func (l *LinkedMap) GetVal(val interface{}, equals Equals) (interface{}, bool) {
 func (l *LinkedMap) Put(key interface{}, val interface{}) interface{} {
 	el := l.mp[key]
 	if el == nil {
-		l.mp[key] = l.lst.PushBack(key)
+		el = new(LinkedEl)
+		el.val = val
+		el.el = l.lst.PushBack(key)
+		l.mp[key] = el
 		return nil
 	}
 
-	_val := el.Value
-	el.Value = val
-	l.lst.MoveToBack(el)
+	_val := el.val
+	el.val = val
+	l.lst.MoveToBack(el.el)
 	return _val
 }
 
@@ -74,13 +90,13 @@ func (l *LinkedMap) Remove(key interface{}) interface{} {
 	}
 
 	delete(l.mp, key)
-	l.lst.Remove(el)
-	return el.Value
+	l.lst.Remove(el.el)
+	return el.val
 }
 
 func (l *LinkedMap) Clear() {
 	l.lst.Init()
-	l.mp = map[interface{}]*list.Element{}
+	l.mp = map[interface{}]*LinkedEl{}
 }
 
 func (l *LinkedMap) IsEmpty() bool {

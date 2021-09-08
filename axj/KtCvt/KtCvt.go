@@ -1,6 +1,7 @@
 package KtCvt
 
 import (
+	"axj/Kt"
 	"container/list"
 	"fmt"
 	"reflect"
@@ -62,6 +63,21 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 	}
 
 	var oTyp reflect.Type = nil
+	if obj != nil {
+		oTyp = reflect.TypeOf(obj)
+		if oTyp == typ {
+			return obj
+		}
+
+		if val, ok := obj.(Kt.IVal); ok {
+			obj = val.Get()
+			oTyp = reflect.TypeOf(obj)
+			if oTyp == typ {
+				return obj
+			}
+		}
+	}
+
 	switch typ.Kind() {
 	case reflect.Bool:
 		obj = ToBool(obj)
@@ -130,20 +146,24 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 	case reflect.Interface:
 		return obj
 	case reflect.Ptr:
+		// 转换指针
 		val := reflect.New(typ.Elem())
 		ptr := ToSafe(obj, typ.Elem(), safe)
 		val.Elem().Set(reflect.ValueOf(ptr))
 		return val.Interface()
+	case reflect.Struct:
+		// struct转化
+		if oTyp != nil && oTyp.Kind() == reflect.Map {
+			val := reflect.New(typ)
+			BindMapVal(val, reflect.ValueOf(obj))
+			return val.Interface()
+		}
 	default:
 		break
 	}
 
 	if obj == nil {
 		return nil
-	}
-
-	if oTyp == nil {
-		oTyp = reflect.TypeOf(obj)
 	}
 
 	if oTyp == typ {
@@ -153,6 +173,7 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 	if typ.Kind() == reflect.Array {
 		if oTyp.Kind() == reflect.Array {
 			if oTyp.Elem() != typ.Elem() {
+				// 转换数组
 				oIs := ForArrayIs(oTyp.Elem())
 				is := ForArrayIs(typ.Elem())
 				if oIs != nil && is != nil {
@@ -177,11 +198,13 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 			}
 
 		} else if lst, is := obj.(*list.List); is {
+			// 转换列表
 			return ToArray(lst, typ.Elem())
 		}
 
 	} else if oTyp.Kind() == reflect.Map {
 		if typ.Kind() == reflect.Map {
+			// 转换字典
 			val := reflect.New(typ)
 			it := reflect.ValueOf(obj).MapRange()
 			for it.Next() {
@@ -191,6 +214,7 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 			return val.Elem().Interface()
 
 		} else if typ.Kind() == reflect.Struct {
+			// 转换对象
 			val := reflect.New(typ)
 			BindMapVal(val, reflect.ValueOf(obj))
 			return val.Elem().Interface()
@@ -944,7 +968,7 @@ func ToArray(lst *list.List, typ reflect.Type) interface{} {
 	return array
 }
 
-func BindMap(target reflect.Value, mp map[interface{}]interface{}) {
+func BindMap(target reflect.Value, from map[interface{}]interface{}) {
 	if target.Kind() == reflect.Ptr {
 		target = target.Elem()
 	}
@@ -953,7 +977,7 @@ func BindMap(target reflect.Value, mp map[interface{}]interface{}) {
 		return
 	}
 
-	for key, val := range mp {
+	for key, val := range from {
 		name := ToString(key)
 		if name == "" {
 			continue
@@ -970,8 +994,8 @@ func BindMap(target reflect.Value, mp map[interface{}]interface{}) {
 	}
 }
 
-func BindMapVal(target reflect.Value, mp reflect.Value) {
-	if mp.Kind() != reflect.Map {
+func BindMapVal(target reflect.Value, from reflect.Value) {
+	if from.Kind() != reflect.Map {
 		return
 	}
 
@@ -983,7 +1007,7 @@ func BindMapVal(target reflect.Value, mp reflect.Value) {
 		return
 	}
 
-	it := mp.MapRange()
+	it := from.MapRange()
 	for it.Next() {
 		name := ToString(it.Key())
 		if name == "" {
@@ -999,4 +1023,19 @@ func BindMapVal(target reflect.Value, mp reflect.Value) {
 		// Convert 类型转化
 		field.Set(reflect.ValueOf(val).Convert(field.Type()))
 	}
+}
+
+func BindInterface(target interface{}, from interface{}) {
+	if target == nil || from == nil {
+		return
+	}
+
+	if val, ok := from.(Kt.IVal); ok {
+		from = val.Get()
+		if from == nil {
+			return
+		}
+	}
+
+	BindMapVal(reflect.ValueOf(target), reflect.ValueOf(from))
 }
