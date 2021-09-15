@@ -3,8 +3,22 @@ package KtBytes
 import (
 	"axj/KtUnsafe"
 	"fmt"
-	"io"
 )
+
+func Copy(bs []byte) []byte {
+	if bs == nil {
+		return nil
+	}
+
+	bLen := len(bs)
+	if bLen <= 0 {
+		return bs
+	}
+
+	src := make([]byte, bLen)
+	copy(bs, src)
+	return src
+}
 
 func GetIntBytes(val int32) []byte {
 	bytes := make([]byte, 4)
@@ -33,7 +47,6 @@ func GetInt(bs []byte, off int, offP *int) int32 {
 	val += int32(bs[off]&0xFF) << 8
 	off++
 	val += int32(bs[off] & 0xFF)
-
 	if offP != nil {
 		offP = &off
 	}
@@ -67,7 +80,7 @@ func GetVIntLen(vInt int32) int32 {
 	return 4
 }
 
-func getVIntBytes(val int32) []byte {
+func GetVIntBytes(val int32) []byte {
 	bytes := make([]byte, GetVIntLen(val))
 	SetVInt(bytes, 0, val, nil)
 	return bytes
@@ -135,42 +148,6 @@ func GetVInt(bs []byte, off int32, offP *int32) int32 {
 	return val
 }
 
-func GetVIntReader(reader io.ByteReader) int32 {
-	var val int32 = 0
-	b, err := reader.ReadByte()
-	if err != nil {
-		return val
-	}
-
-	val = int32(b) & VINT
-	if (b & VINT_NB) != 0 {
-		b, err = reader.ReadByte()
-		if err != nil {
-			return val
-		}
-
-		val += int32(b&VINT_B) << 7
-		if (b & VINT_NB) != 0 {
-			b, err = reader.ReadByte()
-			if err != nil {
-				return val
-			}
-
-			val += int32(b&VINT_B) << 14
-			if (b & VINT_NB) != 0 {
-				b, err = reader.ReadByte()
-				if err != nil {
-					return val
-				}
-
-				val += int32(b) << 21
-			}
-		}
-	}
-
-	return val
-}
-
 func IndexByte(bs []byte, b byte, start int, end int) int {
 	if start < 0 {
 		start = 0
@@ -182,23 +159,4 @@ func IndexByte(bs []byte, b byte, start int, end int) int {
 	}
 
 	return KtUnsafe.IndexByte(bs, b, start, end)
-}
-
-func ReadBytesReader(reader io.Reader, bLen int) ([]byte, error) {
-	bs := make([]byte, bLen)
-	var off int
-	var err error
-	for {
-		off, err = reader.Read(bs)
-		if err != nil {
-			return nil, err
-		}
-
-		bLen -= off
-		if bLen <= 0 {
-			return bs, nil
-		}
-
-		bs = bs[off:]
-	}
 }
