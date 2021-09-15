@@ -16,6 +16,7 @@ import (
 type Config struct {
 	addr    string
 	addrPub string
+	name string
 	etcd    string
 }
 
@@ -40,7 +41,7 @@ func main() {
 				Endpoints: KtCvt.ToArray(KtStr.SplitStrBr(cfg.etcd, ",;", true, 0, false, 0, false).(*list.List), KtCvt.String).([]string),
 			}).(clientv3.Config))
 	Kt.Panic(err)
-	client.ser
+	clientv3
 
 	KtCvt.BindInterface(cfg, APro.Cfg["server"])
 	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:9999")

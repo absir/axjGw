@@ -19,3 +19,13 @@ func StringToRunes(s string) []rune {
 func RunesToString(b []rune) string {
 	return string(b)
 }
+
+func IndexByte(bs []byte, b byte, start int, end int) int {
+	for ; start < end; start++ {
+		if bs[start] == b {
+			return start
+		}
+	}
+
+	return -1
+}

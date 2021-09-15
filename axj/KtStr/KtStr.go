@@ -931,3 +931,64 @@ func Match(exp string, reg bool, str string) bool {
 func ForMatcher(exp string, reg bool) *Matcher {
 	return matcherMs(exp, reg, false, "")
 }
+
+func AddMatchers(matchers *list.List, matcher *Matcher, optimize bool) {
+	if matcher == nil {
+		return
+	}
+
+	if optimize {
+		for el := matchers.Front(); el != nil; el = el.Next() {
+			val := el.Value.(*Matcher)
+			if val.cover(matcher) {
+				return
+
+			} else if matcher.cover(val) {
+				el.Value = matcher
+				return
+			}
+		}
+	}
+
+	matchers.PushBack(matcher)
+}
+
+func ForMatchers(exps []string, reg bool, optimize bool) []Matcher {
+	if exps == nil {
+		return nil
+	}
+
+	len := len(exps)
+	if len <= 0 {
+		return nil
+	}
+
+	matchers := &list.List{}
+	for i := 0; i < len; i++ {
+		AddMatchers(matchers, ForMatcher(exps[i], reg), optimize)
+	}
+
+	ary := make([]Matcher, matchers.Len())
+	i := 0
+	for el := matchers.Front(); el != nil; el = el.Next() {
+		ary[i] = *el.Value.(*Matcher)
+		i++
+	}
+
+	return ary
+}
+
+func Matchers(matchers []Matcher, str string, def bool) bool {
+	if matchers != nil {
+		len := len(matchers)
+		if len > 0 {
+			for i := 0; i < len; i++ {
+				if matchers[i].match(str) {
+					return true
+				}
+			}
+		}
+	}
+
+	return def
+}

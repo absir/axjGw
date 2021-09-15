@@ -7,10 +7,7 @@ import (
 
 type TServerSocketIps struct {
 	thrift.TServerSocket
-}
-
-func (p *TServerSocketIps) Allow(ip string) bool {
-	return true
+	Ips func(ip string) bool
 }
 
 func (p *TServerSocketIps) Accept() (thrift.TTransport, error) {
@@ -23,7 +20,7 @@ func (p *TServerSocketIps) Accept() (thrift.TTransport, error) {
 			ip = ip[0:i]
 		}
 
-		if !p.Allow(ip) {
+		if p.Ips == nil || !p.Ips(ip) {
 			socket.Close()
 			return nil, thrift.NewTTransportException(thrift.NOT_OPEN, "No Allow ip "+ip)
 		}
