@@ -12,12 +12,12 @@ import (
 
 const (
 	// 头状态
-	HEAD_REQ       byte = 0x01 << 7          //请求
-	HEAD_URI       byte = 0x01 << 6          //请求路由字符
-	HEAD_URI_I     byte = 0x01 << 5          //请求路由压缩
-	HEAD_DATA      byte = 0x01 << 4          //请求数据
-	HEAD_COMPRESS  byte = 0x01 << 3          //数据压缩
-	HEAD_ENCRY     byte = 0x01 << 2          //数据加密
+	HEAD_COMPRESS  byte = 0x01 << 7          //数据压缩
+	HEAD_ENCRY     byte = 0x01 << 6          //数据加密
+	HEAD_REQ       byte = 0x01 << 5          //请求
+	HEAD_URI       byte = 0x01 << 4          //请求路由字符
+	HEAD_URI_I     byte = 0x01 << 3          //请求路由压缩
+	HEAD_DATA      byte = 0x01 << 2          //请求数据
 	HEAD_CRC_MSK_M byte = 0x01 << 2          //头数据校验MOD
 	HEAD_CRC_MSK   byte = HEAD_CRC_MSK_M - 1 //头数据校验
 	HEAD_CRC_MSK_N byte = ^HEAD_CRC_MSK      //头数据校验取反
@@ -26,7 +26,7 @@ const (
 	REQ_BEAT  int32 = 1 // 心跳
 	REQ_PUSH  int32 = 2 // 推送
 	REQ_URI   int32 = 3 // 路由查询
-	REQ_ROUTE int32 = 4 // 路由表HASH
+	REQ_DICT  int32 = 4 // 路由字典
 	REQ_ENCRY int32 = 5 // 加密keys
 )
 
@@ -42,7 +42,11 @@ type Protocol interface {
 	// 返回数据
 	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte
 	// 返回流写入
-	RepClient(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error)
+	RepOut(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error)
+	// 批量返回数据头
+	RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte
+	RepBS(bh []byte, data []byte, sticky bool, head byte) []byte
+	RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh []byte, data []byte, sticky bool, head byte) (err error)
 }
 
 type ProtocolV struct {
@@ -223,7 +227,7 @@ func (p ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bo
 	return bs
 }
 
-func (p ProtocolV) RepClient(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error) {
+func (p ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error) {
 	err = nil
 	// 头状态准备
 	if req > 0 {
@@ -313,6 +317,121 @@ func (p ProtocolV) RepClient(locker sync.Locker, client Client, buff *[]byte, re
 			}
 		}
 
+		err = client.Write(data, true)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (p ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte {
+	if data {
+		head |= HEAD_DATA
+	}
+
+	return p.Rep(req, uri, uriI, nil, false, head)
+}
+
+func (p ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte {
+	// 数据长度
+	var dLen int32 = 0
+	if data != nil {
+		dLen = int32(len(data))
+	}
+
+	if dLen > 0 {
+		// 数据粘包
+		bLen := int32(len(bh)) + dLen
+		if sticky {
+			bLen += KtBytes.GetVIntLen(dLen)
+		}
+
+		// 新数据包
+		bs := make([]byte, bLen)
+		// 头数据
+		copy(bh, bs)
+
+		// 粘包
+		if sticky {
+			KtBytes.SetVInt(bs, dLen, dLen, &dLen)
+		}
+
+		// 数据
+		copy(data, bs[dLen:])
+
+		// 头处理
+		head |= bs[0]
+		head |= HEAD_DATA
+		if head != bs[0] {
+			head &= HEAD_CRC_MSK_N
+			head |= p.crc(head)
+			bs[0] = head
+		}
+
+		return bs
+	}
+
+	return bh
+}
+
+func (p ProtocolV) RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh []byte, data []byte, sticky bool, head byte) (err error) {
+	err = nil
+	var dLen int32 = 0
+	if data != nil {
+		dLen = int32(len(data))
+	}
+
+	// 头处理
+	head |= bh[0]
+	if dLen > 0 {
+		head |= HEAD_DATA
+	}
+
+	if head != bh[0] {
+		head &= HEAD_CRC_MSK_N
+		head |= p.crc(head)
+	}
+
+	// 写入锁
+	if locker != nil {
+		defer locker.Unlock()
+		locker.Lock()
+	}
+
+	// buff准备
+	_buff := *buff
+	if _buff == nil {
+		_buff = make([]byte, 4)
+		buff = &_buff
+	}
+
+	// 写入批量头状态
+	_buff[0] = head
+	err = client.Write(_buff[0:1], true)
+	if err != nil {
+		return
+	}
+
+	// 写入批量头
+	err = client.Write(bh[1:], true)
+	if err != nil {
+		return
+	}
+
+	if dLen > 0 {
+		// 写入粘包
+		if sticky {
+			var off int32
+			KtBytes.SetVInt(_buff, 0, dLen, &off)
+			err = client.Write(_buff[0:off], true)
+			if err != nil {
+				return
+			}
+		}
+
+		// 写入数据
 		err = client.Write(data, true)
 		if err != nil {
 			return
