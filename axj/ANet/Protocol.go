@@ -31,7 +31,7 @@ const (
 )
 
 // CRC错误
-var CRC_ERR = errors.New("CRC")
+var ERR_CRC = errors.New("CRC")
 
 // 数据协议
 type Protocol interface {
@@ -60,7 +60,7 @@ func (p ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, 
 	head = bs[0]
 	// 头部校验
 	if p.crc(head) != (head & HEAD_CRC_MSK) {
-		err = CRC_ERR
+		err = ERR_CRC
 		return
 	}
 
@@ -105,7 +105,7 @@ func (p ProtocolV) ReqReader(reader *bufio.Reader, sticky bool) (err error, head
 
 	// 头部校验
 	if p.crc(head) != (head & HEAD_CRC_MSK) {
-		err = CRC_ERR
+		err = ERR_CRC
 		return
 	}
 

@@ -4,7 +4,7 @@ import (
 	"io"
 )
 
-func Req() (client Client, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, err error, req int32, uri string, uriI int32, data []byte) {
+func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte) (err error, req int32, uri string, uriI int32, data []byte) {
 	err, bs, read := client.Read()
 	if err != nil {
 		return
@@ -46,7 +46,7 @@ func Req() (client Client, protocol Protocol, compress Compress, decrypt Encrypt
 	return
 }
 
-func Rep(client Client, buff *[]byte, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, err error, req int32, uri string, uriI int32, data []byte, isolate bool) error {
+func Rep(client Client, buff *[]byte, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) (err error) {
 	err, out, locker := client.Output()
 	if err != nil {
 		return err
@@ -100,12 +100,7 @@ type RepBatch struct {
 	bhs      []byte
 }
 
-func NewRepBatch() *RepBatch {
-	r := new(RepBatch)
-	return r
-}
-
-func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, err error, req int32, uri string, uriI int32, data []byte) error {
+func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
 	var head byte = 0
 	dLen := 0
 	if data != nil {
@@ -115,8 +110,7 @@ func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, e
 	if dLen > 0 {
 		head |= HEAD_DATA
 		if dLen > compressMin && compress != nil {
-			var bs []byte
-			bs, err = compress.Compress(data)
+			bs, err := compress.Compress(data)
 			if err != nil {
 				return err
 			}
@@ -226,7 +220,8 @@ func (r *RepBatch) Rep(client Client, buff *[]byte, encrypt Encrypt, encryKey []
 }
 
 type Processor struct {
-	Protocol Protocol
-	Compress Compress
-	Encrypt  Encrypt
+	Protocol    Protocol
+	Compress    Compress
+	CompressMin int
+	Encrypt     Encrypt
 }

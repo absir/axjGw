@@ -16,20 +16,20 @@ type Encrypt interface {
 	Encrypt(data []byte, key []byte, isolate bool) ([]byte, error)
 }
 
-type EncrySr struct {
+type EncryptSr struct {
 }
 
-func (e EncrySr) NewKeys() ([]byte, []byte) {
+func (e EncryptSr) NewKeys() ([]byte, []byte) {
 	bs := KtRand.RandBytes(8)
 	return bs, bs
 }
 
-func (e EncrySr) Decrypt(data []byte, key []byte) ([]byte, error) {
+func (e EncryptSr) Decrypt(data []byte, key []byte) ([]byte, error) {
 	KtEncry.SrDecry(data, key)
 	return data, nil
 }
 
-func (e EncrySr) Encrypt(data []byte, key []byte, isolate bool) ([]byte, error) {
+func (e EncryptSr) Encrypt(data []byte, key []byte, isolate bool) ([]byte, error) {
 	if isolate {
 		data = KtBytes.Copy(data)
 	}
