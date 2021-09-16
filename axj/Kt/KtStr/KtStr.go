@@ -1,9 +1,9 @@
 package KtStr
 
 import (
-	"axj/Kt"
-	"axj/KtCvt"
-	"axj/KtUnsafe"
+	Kt2 "axj/Kt/Kt"
+	KtCvt2 "axj/Kt/KtCvt"
+	KtUnsafe2 "axj/Kt/KtUnsafe"
 	"container/list"
 	"io"
 	"reflect"
@@ -168,7 +168,7 @@ func Cap(str string) string {
 	if chr >= 'a' && chr <= 'z' {
 		b := []byte(str)
 		b[0] -= 32
-		str = KtUnsafe.BytesToString(b)
+		str = KtUnsafe2.BytesToString(b)
 	}
 
 	return str
@@ -186,7 +186,7 @@ func UnCap(str string, strict bool) string {
 
 		b := []byte(str)
 		b[0] += 32
-		str = KtUnsafe.BytesToString(b)
+		str = KtUnsafe2.BytesToString(b)
 	}
 
 	return str
@@ -218,8 +218,8 @@ func Cmp(str string, to string, m int, n int) int {
 	for i := 0; i < m; i++ {
 		chr := str[i]
 		for j := 0; j < n; j++ {
-			mtx[i+1][j+1] = Kt.Min(mtx[i][j+1]+1, mtx[i+1][j]+1,
-				mtx[i][j]+Kt.If(chr == to[j], 0, 1).(int))
+			mtx[i+1][j+1] = Kt2.Min(mtx[i][j+1]+1, mtx[i+1][j]+1,
+				mtx[i][j]+Kt2.If(chr == to[j], 0, 1).(int))
 		}
 	}
 
@@ -241,7 +241,7 @@ func Sim(str, to string) float32 {
 		return 1
 	}
 
-	return 1.0 - float32(Cmp(str, to, m, n))/float32(Kt.If(m > n, m, n).(int))
+	return 1.0 - float32(Cmp(str, to, m, n))/float32(Kt2.If(m > n, m, n).(int))
 }
 
 // 查找从位置
@@ -403,11 +403,11 @@ func CountByte(str string, chr byte, start int, max int) int {
 }
 
 func SplitByte(str string, chr byte, trim bool, start int, max int) []string {
-	return SplitByteType(str, chr, trim, start, max, KtCvt.String).([]string)
+	return SplitByteType(str, chr, trim, start, max, KtCvt2.String).([]string)
 }
 
 func SplitByteType(str string, chr byte, trim bool, start int, max int, typ reflect.Type) interface{} {
-	is := KtCvt.ForArrayIs(typ)
+	is := KtCvt2.ForArrayIs(typ)
 	if is == nil {
 		return nil
 	}
@@ -422,7 +422,7 @@ func SplitByteType(str string, chr byte, trim bool, start int, max int, typ refl
 			s = strings.TrimSpace(s)
 		}
 
-		is.Set(strs, i, KtCvt.ToType(s, typ))
+		is.Set(strs, i, KtCvt2.ToType(s, typ))
 		start = end + 1
 	}
 
@@ -431,28 +431,28 @@ func SplitByteType(str string, chr byte, trim bool, start int, max int, typ refl
 		s = strings.TrimSpace(s)
 	}
 
-	is.Set(strs, last, KtCvt.ToType(s, typ))
+	is.Set(strs, last, KtCvt2.ToType(s, typ))
 	return strs
 }
 
 // 字符串分隔
 func SplitStr(str string, sps string, trim bool, start int) []interface{} {
-	return Kt.ToArray(SplitStrBr(str, sps, trim, start, false, 0, false).(*list.List))
+	return Kt2.ToArray(SplitStrBr(str, sps, trim, start, false, 0, false).(*list.List))
 }
 
 func SplitStrS(str string, sps string, trim bool, start int, strict bool) []interface{} {
-	return Kt.ToArray(SplitStrBr(str, sps, trim, start, false, 0, strict).(*list.List))
+	return Kt2.ToArray(SplitStrBr(str, sps, trim, start, false, 0, strict).(*list.List))
 }
 
 func SplitStrBr(str string, sps string, trim bool, start int, br bool, typ int, strict bool) interface{} {
 	strs := list.New()
 	if br {
-		brc := Kt.If(typ == 1, '}', ']').(rune)
-		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, brc, strs, strict)
+		brc := Kt2.If(typ == 1, '}', ']').(rune)
+		splitStrBrC(KtUnsafe2.StringToRunes(str), KtUnsafe2.StringToRunes(sps), trim, start, br, brc, strs, strict)
 		return splitStrM(strs, brc)
 
 	} else {
-		splitStrBrC(KtUnsafe.StringToRunes(str), KtUnsafe.StringToRunes(sps), trim, start, br, '{', strs, strict)
+		splitStrBrC(KtUnsafe2.StringToRunes(str), KtUnsafe2.StringToRunes(sps), trim, start, br, '{', strs, strict)
 	}
 
 	return strs
@@ -497,7 +497,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 		if br {
 			if chr == '{' || chr == '[' {
 				sts := list.New()
-				chr = Kt.If(chr == '{', '}', ']').(rune)
+				chr = Kt2.If(chr == '{', '}', ']').(rune)
 				start = splitStrBrC(str, sps, trim, start+1, br, chr, sts, strict)
 				strs.PushBack(splitStrM(sts, chr))
 				ei = -2
@@ -505,7 +505,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 
 			} else if chr == brc {
 				if si < ei {
-					strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
+					strs.PushBack(KtUnsafe2.RunesToString(str[si:ei]))
 
 				} else if ei == -1 {
 					if strict {
@@ -531,7 +531,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 		}
 
 		if si < ei {
-			strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
+			strs.PushBack(KtUnsafe2.RunesToString(str[si:ei]))
 			ei = -1
 
 		} else {
@@ -546,7 +546,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 	}
 
 	if si < ei {
-		strs.PushBack(KtUnsafe.RunesToString(str[si:ei]))
+		strs.PushBack(KtUnsafe2.RunesToString(str[si:ei]))
 
 	} else if ei == -1 {
 		if strict {
@@ -766,7 +766,7 @@ func mathO(typ int8, match string, matchO interface{}) interface{} {
 			var err error
 			matchO, _ = regexp.Compile(match[1:])
 			if err != nil {
-				Kt.Err(err, true)
+				Kt2.Err(err, true)
 			}
 			break
 		case 5:

@@ -2,8 +2,8 @@ package main
 
 import (
 	"axj/APro"
-	"axj/Kt"
-	"axj/KtCvt"
+	Kt2 "axj/Kt/Kt"
+	"axj/Kt/KtCvt"
 	"context"
 	"github.com/apache/thrift/lib/go/thrift"
 	"net"
@@ -29,13 +29,13 @@ func main() {
 	APro.Load(nil, "config.yaml")
 	KtCvt.BindInterface(cfg, APro.Cfg["server"])
 	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:9999")
-	Kt.Panic(err)
+	Kt2.Panic(err)
 	configure := &thrift.TConfiguration{}
 	KtCvt.BindInterface(configure, APro.Cfg["thrift"])
 	factory = thrift.NewTCompactProtocolFactoryConf(configure)
 	for true {
 		conn, err := net.DialTCP("tcp", nil, addr)
-		Kt.Err(err, false)
+		Kt2.Err(err, false)
 		if conn != nil {
 			handle(conn)
 		}

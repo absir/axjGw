@@ -1,8 +1,8 @@
-package anet
+package ANet
 
 import (
-	"axj/KtEncry"
-	"axj/KtRand"
+	"axj/Kt/KtEncry"
+	"axj/Kt/KtRand"
 	"bytes"
 	"compress/gzip"
 	"io"

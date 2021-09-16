@@ -2,9 +2,9 @@ package main
 
 import (
 	"axj/APro"
-	"axj/Kt"
-	"axj/KtCvt"
-	"axj/KtJson"
+	Kt2 "axj/Kt/Kt"
+	"axj/Kt/KtCvt"
+	"axj/Kt/KtJson"
 	"axjGW/pkg/gateway"
 	"context"
 	"fmt"
@@ -38,25 +38,25 @@ func main() {
 
 	processor := gw.NewGatewayProcessor(gateway.Remote{})
 	transport, err := thrift.NewTServerSocket("0.0.0.0:8181")
-	Kt.Err(err, true)
+	Kt2.Err(err, true)
 	server := thrift.NewTSimpleServer4(processor, transport, thrift.NewTTransportFactory(), thrift.NewTCompactProtocolFactoryConf(nil))
 	go func() {
 		err := server.Serve()
-		Kt.Err(err, true)
+		Kt2.Err(err, true)
 	}()
 
 	go func() {
 		time.Sleep(1 * time.Second)
 		transport, err := thrift.NewTSocketConf("127.0.0.1:8181", nil)
-		Kt.Err(err, true)
+		Kt2.Err(err, true)
 		err = transport.Open()
-		Kt.Err(err, true)
+		Kt2.Err(err, true)
 		proto := thrift.NewTCompactProtocolConf(transport, nil)
 		client := thrift.NewTStandardClient(proto, proto)
 		pass := gw.NewGatewayClient(client)
 		r, err := pass.Req(context.Background(), 0, "123", "abc", nil)
-		Kt.Err(err, true)
-		Kt.Log(r)
+		Kt2.Err(err, true)
+		Kt2.Log(r)
 	}()
 
 	APro.Signal()

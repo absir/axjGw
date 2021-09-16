@@ -2,9 +2,9 @@ package gateway
 
 import (
 	"axj/APro"
-	"axj/Kt"
-	"axj/KtCvt"
-	"axj/KtStr"
+	Kt2 "axj/Kt/Kt"
+	"axj/Kt/KtCvt"
+	"axj/Kt/KtStr"
 	"container/list"
 	"github.com/apache/thrift/lib/go/thrift"
 	"go.etcd.io/etcd/client/v3"
@@ -40,18 +40,18 @@ func main() {
 			clientv3.Config{
 				Endpoints: KtCvt.ToArray(KtStr.SplitStrBr(cfg.etcd, ",;", true, 0, false, 0, false).(*list.List), KtCvt.String).([]string),
 			}).(clientv3.Config))
-	Kt.Panic(err)
+	Kt2.Panic(err)
 	clientv3
 
 	KtCvt.BindInterface(cfg, APro.Cfg["server"])
 	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:9999")
-	Kt.Panic(err)
+	Kt2.Panic(err)
 	configure := &thrift.TConfiguration{}
 	KtCvt.BindInterface(configure, APro.Cfg["thrift"])
 	factory = thrift.NewTCompactProtocolFactoryConf(configure)
 	for true {
 		conn, err := net.DialTCP("tcp", nil, addr)
-		Kt.Err(err, false)
+		Kt2.Err(err, false)
 		if conn != nil {
 			handle(conn)
 		}

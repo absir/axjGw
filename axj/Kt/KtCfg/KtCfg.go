@@ -1,9 +1,9 @@
 package KtCfg
 
 import (
-	"axj/Kt"
-	"axj/KtCvt"
-	"axj/KtStr"
+	Kt2 "axj/Kt/Kt"
+	KtCvt2 "axj/Kt/KtCvt"
+	KtStr2 "axj/Kt/KtStr"
 	"bufio"
 	"container/list"
 	"io"
@@ -36,8 +36,8 @@ func (c Cfg) Remove(key interface{}) interface{} {
 }
 
 // 配置获取
-func Get(cfg Kt.Map, name string) interface{} {
-	val := Kt.If(cfg == nil, nil, cfg.Get(name))
+func Get(cfg Kt2.Map, name string) interface{} {
+	val := Kt2.If(cfg == nil, nil, cfg.Get(name))
 	if val == nil {
 		if len(name) > 1 {
 			chr := name[0]
@@ -47,7 +47,7 @@ func Get(cfg Kt.Map, name string) interface{} {
 				break
 			case '@':
 			case '$':
-				return Kt.If(cfg == nil, nil, cfg.Get(name[1:]))
+				return Kt2.If(cfg == nil, nil, cfg.Get(name[1:]))
 				break
 			}
 		}
@@ -55,14 +55,14 @@ func Get(cfg Kt.Map, name string) interface{} {
 		if cfg != nil {
 			i := -1
 			for {
-				i = KtStr.LastIndex(name, ".", i)
+				i = KtStr2.LastIndex(name, ".", i)
 				if i < 0 {
 					break
 				}
 
 				c := cfg.Get(name[0:i])
 				if c != nil {
-					if mp, is := c.(Kt.Map); is {
+					if mp, is := c.(Kt2.Map); is {
 						return Get(mp, name[i+1:])
 					}
 				}
@@ -73,7 +73,7 @@ func Get(cfg Kt.Map, name string) interface{} {
 	return val
 }
 
-func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}, tName string) interface{} {
+func GetType(cfg Kt2.Map, name string, typ reflect.Type, dVal interface{}, tName string) interface{} {
 	val := Get(cfg, name)
 	if val != nil {
 		if typ == nil {
@@ -84,8 +84,8 @@ func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}, tName 
 					}
 				}
 
-				ary := KtCvt.ToType(Kt.If(val == nil, dVal, val), typ).([]interface{})
-				val = Kt.ToList(ary)
+				ary := KtCvt2.ToType(Kt2.If(val == nil, dVal, val), typ).([]interface{})
+				val = Kt2.ToList(ary)
 				cfg.Put(name, ary)
 			}
 
@@ -106,14 +106,14 @@ func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}, tName 
 		}
 	}
 
-	return KtCvt.ToType(Kt.If(val == nil, dVal, val), typ)
+	return KtCvt2.ToType(Kt2.If(val == nil, dVal, val), typ)
 }
 
-func GetExp(cfg Kt.Map, exp string, strict bool) string {
+func GetExp(cfg Kt2.Map, exp string, strict bool) string {
 	return GetExpRemain(cfg, exp, strict, false)
 }
 
-func GetExpRemain(cfg Kt.Map, exp string, strict bool, remain bool) string {
+func GetExpRemain(cfg Kt2.Map, exp string, strict bool, remain bool) string {
 	index := strings.Index(exp, "${")
 	length := len(exp)
 	if index >= 0 && index < length-2 {
@@ -133,7 +133,7 @@ func GetExpRemain(cfg Kt.Map, exp string, strict bool, remain bool) string {
 				break
 			}
 
-			sIndex = KtStr.Index(exp, "${", index)
+			sIndex = KtStr2.Index(exp, "${", index)
 			if sIndex < 0 {
 				sb.WriteString(exp[index:length])
 				break
@@ -146,11 +146,11 @@ func GetExpRemain(cfg Kt.Map, exp string, strict bool, remain bool) string {
 				var value interface{} = nil
 				if strings.IndexByte(val, '?') > 0 {
 					// 支持二运运算|三元运算
-					vals := KtStr.SplitStr(val, "?:", true, 0)
+					vals := KtStr2.SplitStr(val, "?:", true, 0)
 					val := vals[0]
 					if len(vals) == 3 {
 						strict = false
-						valD = Kt.If(GetType(cfg, val.(string), KtCvt.Bool, false, "").(bool), vals[1], vals[2])
+						valD = Kt2.If(GetType(cfg, val.(string), KtCvt2.Bool, false, "").(bool), vals[1], vals[2])
 
 					} else {
 						value = Get(cfg, val.(string))
@@ -170,17 +170,17 @@ func GetExpRemain(cfg Kt.Map, exp string, strict bool, remain bool) string {
 
 					} else if remain {
 						sb.WriteString("${")
-						sb.WriteString(KtCvt.ToString(val))
+						sb.WriteString(KtCvt2.ToString(val))
 						sb.WriteString("}")
 					}
 
 				} else {
-					sb.WriteString(KtCvt.ToString(value))
+					sb.WriteString(KtCvt2.ToString(value))
 				}
 			}
 
 			sIndex++
-			index = KtStr.Index(exp, "${", sIndex)
+			index = KtStr2.Index(exp, "${", sIndex)
 		}
 
 		exp = sb.String()
@@ -196,12 +196,12 @@ type Read func(str string)
 
 var splits = []byte("=:")
 
-func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
+func ReadFunc(cfg Kt2.Map, readMap *map[string]Read) Read {
 	var bBuilder *strings.Builder
 	var bAppend int
 	var yB int
-	var yMap *Kt.LinkedMap
-	var yMaps *Kt.Stack
+	var yMap *Kt2.LinkedMap
+	var yMaps *Kt2.Stack
 	return func(str string) {
 		str = strings.TrimSpace(str)
 		length := len(str)
@@ -242,7 +242,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			return
 		}
 
-		index := KtStr.IndexBytes(str, splits, 0)
+		index := KtStr2.IndexBytes(str, splits, 0)
 		if index > 0 && index < length {
 			var name string
 			chr = str[index-1]
@@ -270,13 +270,13 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				if yB < b {
 					if yMap != nil {
 						if yMaps == nil {
-							yMaps = new(Kt.Stack).Init()
+							yMaps = new(Kt2.Stack).Init()
 						}
 
 						yMaps.Push(yMap)
 					}
 
-					lmap := new(Kt.LinkedMap).Init()
+					lmap := new(Kt2.LinkedMap).Init()
 					if yMap == nil {
 						cfg.Put(name, lmap)
 
@@ -293,7 +293,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 							yMaps.Clear()
 						}
 
-						yMap = new(Kt.LinkedMap).Init()
+						yMap = new(Kt2.LinkedMap).Init()
 						cfg.Put(name, yMap)
 
 					} else {
@@ -301,7 +301,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 							yMap = nil
 
 						} else {
-							yMap = yMaps.Pop().(*Kt.LinkedMap)
+							yMap = yMaps.Pop().(*Kt2.LinkedMap)
 						}
 					}
 				}
@@ -317,18 +317,18 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 					return
 				}
 
-				conds := KtStr.SplitByte(name, '|', true, index+1, 0)
+				conds := KtStr2.SplitByte(name, '|', true, index+1, 0)
 				name = strings.TrimSpace(name[0:index])
 				for _, cond := range conds {
 					index = strings.IndexByte(cond, '&')
 					if index > 0 {
-						val := KtCvt.ToString(Get(cfg, cond[0:index]))
-						if len(val) > 0 && KtStr.Match(cond[index+1:], false, val) {
+						val := KtCvt2.ToString(Get(cfg, cond[0:index]))
+						if len(val) > 0 && KtStr2.Match(cond[index+1:], false, val) {
 							conds = nil
 							break
 						}
 
-					} else if GetType(cfg, cond, KtCvt.Bool, false, "").(bool) {
+					} else if GetType(cfg, cond, KtCvt2.Bool, false, "").(bool) {
 						conds = nil
 						break
 					}
@@ -340,7 +340,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			}
 
 			str = str[eIndex+1:]
-			str = GetExp(cfg, KtStr.ToArg(str), false)
+			str = GetExp(cfg, KtStr2.ToArg(str), false)
 			if bBuilder != nil {
 				if len(str) > 0 {
 					bBuilder.WriteString("\r\n")
@@ -360,18 +360,18 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				}
 			}
 
-			mp := Kt.If(yMap == nil, cfg, yMap).(Kt.Map)
+			mp := Kt2.If(yMap == nil, cfg, yMap).(Kt2.Map)
 			switch chr {
 			case '.':
 				o := mp.Get(name)
-				mp.Put(name, Kt.If(o == nil, str, KtCvt.ToString(o)+str))
+				mp.Put(name, Kt2.If(o == nil, str, KtCvt2.ToString(o)+str))
 				break
 			case '#':
 				o := mp.Get(name)
-				mp.Put(name, Kt.If(o == nil, str, KtCvt.ToString(o)+"\r\n"+str))
+				mp.Put(name, Kt2.If(o == nil, str, KtCvt2.ToString(o)+"\r\n"+str))
 				break
 			case ',':
-				strs := KtStr.SplitStrBr(str, ",;", true, 0, false, 0, true).(*list.List)
+				strs := KtStr2.SplitStrBr(str, ",;", true, 0, false, 0, true).(*list.List)
 				o := GetType(mp, name, nil, nil, "").(*list.List)
 				if o == nil {
 					o = strs
@@ -401,7 +401,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 	}
 }
 
-func ReadIn(in *bufio.Reader, cfg Kt.Map, readMap *map[string]Read) Kt.Map {
+func ReadIn(in *bufio.Reader, cfg Kt2.Map, readMap *map[string]Read) Kt2.Map {
 	if in == nil {
 		return cfg
 	}
@@ -419,7 +419,7 @@ func ReadIn(in *bufio.Reader, cfg Kt.Map, readMap *map[string]Read) Kt.Map {
 
 		if err != nil {
 			if err != io.EOF {
-				Kt.Err(err, true)
+				Kt2.Err(err, true)
 			}
 
 			break

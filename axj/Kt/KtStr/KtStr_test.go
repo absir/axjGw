@@ -1,8 +1,8 @@
 package KtStr
 
 import (
-	"axj/KtCvt"
-	"axj/KtJson"
+	KtCvt2 "axj/Kt/KtCvt"
+	KtJson2 "axj/Kt/KtJson"
 	"testing"
 )
 
@@ -175,8 +175,8 @@ func TestSplit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ret := SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ)
-			json, err := KtJson.ToJsonStr(KtCvt.Safe(ret))
+			ret := SplitStrBr(tt.args.s, tt.args.sps, tt.args.trim, tt.args.start, tt.args.br, tt.args.typ, false)
+			json, err := KtJson2.ToJsonStr(KtCvt2.Safe(ret))
 			if err != nil {
 				t.Error(err)
 			}

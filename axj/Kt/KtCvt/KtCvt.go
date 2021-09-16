@@ -1,7 +1,7 @@
 package KtCvt
 
 import (
-	"axj/Kt"
+	Kt2 "axj/Kt/Kt"
 	"container/list"
 	"fmt"
 	"reflect"
@@ -69,7 +69,7 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 			return obj
 		}
 
-		if val, ok := obj.(Kt.IVal); ok {
+		if val, ok := obj.(Kt2.IVal); ok {
 			obj = val.Get()
 			oTyp = reflect.TypeOf(obj)
 			if oTyp == typ {
@@ -1030,7 +1030,7 @@ func BindInterface(target interface{}, from interface{}) {
 		return
 	}
 
-	if val, ok := from.(Kt.IVal); ok {
+	if val, ok := from.(Kt2.IVal); ok {
 		from = val.Get()
 		if from == nil {
 			return

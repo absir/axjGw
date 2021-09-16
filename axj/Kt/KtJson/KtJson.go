@@ -1,7 +1,7 @@
 package KtJson
 
 import (
-	"axj/KtUnsafe"
+	KtUnsafe2 "axj/Kt/KtUnsafe"
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -15,5 +15,5 @@ func ToJsonStr(obj interface{}) (string, error) {
 		return "", err
 	}
 
-	return KtUnsafe.BytesToString(b), err
+	return KtUnsafe2.BytesToString(b), err
 }

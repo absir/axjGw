@@ -1,4 +1,4 @@
-package anet
+package ANet
 
 type Session struct {
 	client    Client

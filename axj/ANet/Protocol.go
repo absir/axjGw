@@ -1,9 +1,9 @@
-package anet
+package ANet
 
 import (
-	"axj/KtBytes"
-	"axj/KtIo"
-	"axj/KtUnsafe"
+	"axj/Kt/KtBytes"
+	"axj/Kt/KtIo"
+	"axj/Kt/KtUnsafe"
 	"bufio"
 	"errors"
 	"io"
