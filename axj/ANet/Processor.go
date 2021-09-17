@@ -47,6 +47,11 @@ func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, d
 }
 
 func Rep(client Client, buff *[]byte, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) (err error) {
+	if req < 0 {
+		// 纯写入data
+		return client.Write(data, false)
+	}
+
 	err, out, locker := client.Output()
 	if err != nil {
 		return err

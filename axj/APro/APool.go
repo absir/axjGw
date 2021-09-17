@@ -56,3 +56,5 @@ func NewPoolLimit(limit int) *PoolLimit {
 	pl.cond = sync.NewCond(pl.locker)
 	return pl
 }
+
+var PoolOne = NewPoolLimit(1)
