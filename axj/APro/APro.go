@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"container/list"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -249,5 +250,7 @@ func SubCfgBind(sub string, bind interface{}) interface{} {
 func Signal() os.Signal {
 	c := make(chan os.Signal, 0)
 	signal.Notify(c, syscall.SIGTERM)
-	return <-c
+	s := <-c
+	fmt.Printf("exit pro ------- signal:[%v]", s)
+	return s
 }

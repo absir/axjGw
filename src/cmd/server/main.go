@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"gw"
-	"reflect"
 	"runtime"
 	"time"
+	"unsafe"
 )
 
 type Test struct {
@@ -22,19 +22,26 @@ type Test struct {
 	Timeout time.Duration
 }
 
+type Test2 struct {
+	Test
+	Name2 string
+}
+
 func main() {
+
+	test2 := Test2{}
+	test2.Name2 = "abc"
+	test := test2.Test
+	test2 = *(*Test2)(unsafe.Pointer(&test))
+	println(test2.Name2)
+
 	APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 		return runtime.Caller(0)
 	}, "../public")
 	fmt.Println(APro.Path())
 	cfg := APro.Load(nil, "config.properties")
 	fmt.Println(KtJson.ToJsonStr(KtCvt.Safe(cfg.Map())))
-	test := Test{}
-	test.Name = "2"
-	field := reflect.ValueOf(&test).Elem().FieldByName("Name")
-	fmt.Println(field.CanSet())
-	KtCvt.BindMap(reflect.ValueOf(&test), cfg.Map())
-	fmt.Println(KtJson.ToJsonStr(test))
+
 
 	processor := gw.NewGatewayProcessor(gateway.Remote{})
 	transport, err := thrift.NewTServerSocket("0.0.0.0:8181")

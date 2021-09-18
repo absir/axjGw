@@ -103,7 +103,7 @@ func (c ClientWebsocket) Close() {
 	c.conn.Close()
 }
 
-func NewClientWebsocket(conn *websocket.Conn, size int) *ClientWebsocket {
+func NewClientWebsocket(conn *websocket.Conn) *ClientWebsocket {
 	client := new(ClientWebsocket)
 	client.conn = conn
 	return client

@@ -43,10 +43,10 @@ func Err(err error, stack bool) {
 		pc, file, line, ok := runtime.Caller(1)
 		if ok {
 			fun := runtime.FuncForPC(pc)
-			log.Println("\tat %s:%d (Method %s)\nCause by: %s\n", file, line, fun.Name(), err.Error())
+			log.Printf("\tat %s:%d (Method %s)\nCause by: %s\n", file, line, fun.Name(), err.Error())
 
 		} else {
-			log.Println("get call stack err ...")
+			log.Print("get call stack err ...\n")
 		}
 	}
 }

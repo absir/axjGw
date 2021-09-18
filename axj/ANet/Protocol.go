@@ -21,13 +21,6 @@ const (
 	HEAD_CRC_MSK_M byte = 0x01 << 2          //头数据校验MOD
 	HEAD_CRC_MSK   byte = HEAD_CRC_MSK_M - 1 //头数据校验
 	HEAD_CRC_MSK_N byte = ^HEAD_CRC_MSK      //头数据校验取反
-
-	// 特殊请求
-	REQ_BEAT  int32 = 1 // 心跳
-	REQ_PUSH  int32 = 2 // 推送
-	REQ_URI   int32 = 3 // 路由查询
-	REQ_DICT  int32 = 4 // 路由字典
-	REQ_ENCRY int32 = 5 // 加密keys
 )
 
 // CRC错误
