@@ -11,9 +11,10 @@ import (
 const (
 	// 特殊请求
 	REQ_PUSH  int32 = 0 // 推送
-	REQ_BEAT  int32 = 1 // 心跳
-	REQ_ROUTE int32 = 2 // 路由字典
-	REQ_URI   int32 = 3 // 路由交换
+	REQ_ENTRY int32 = 1 // 秘钥
+	REQ_BEAT  int32 = 2 // 心跳
+	REQ_ROUTE int32 = 3 // 路由字典
+	REQ_URI   int32 = 4 // 路由交换
 )
 
 type Mng struct {
@@ -46,11 +47,11 @@ func (c *ConnMng) Data(conn *Conn) interface{} {
 
 func (c *ConnMng) Last(conn *Conn, req bool) {
 	// 心跳延长
-	conn.handlerData.(*Mng).idleTime = time.Now().UnixNano() + c.idleTime
+	conn.managerData.(*Mng).idleTime = time.Now().UnixNano() + c.idleTime
 }
 
 func (c *ConnMng) OnClose(conn *Conn, err error, reason interface{}) {
-	mng := conn.handlerData.(*Mng)
+	mng := conn.managerData.(*Mng)
 	c.ConnMap.Delete(mng.id)
 	c.handler.OnClose(conn, err, reason)
 }
@@ -64,7 +65,7 @@ func NewConnMng(handler Handler, workerId int32, idleTime time.Duration, checkTi
 	c.idleTime = int64(idleTime)
 	c.checkTime = checkTime
 	c.ConnMap = sync.Map{}
-	c.beatBs = handler.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0)
+	c.beatBs = c.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0)
 	return c
 }
 
@@ -84,7 +85,7 @@ func (c *ConnMng) IdleCheck() {
 			return true
 		}
 
-		if conn.handlerData.(*Mng).idleTime <= time {
+		if conn.managerData.(*Mng).idleTime <= time {
 			// 直接心跳
 			c.Last(conn, false)
 			go conn.Rep(-1, "", c.beatBs, false, false, nil)
@@ -96,14 +97,14 @@ func (c *ConnMng) IdleCheck() {
 
 func (c *ConnMng) RegConn(conn *Conn, poolG int) {
 	c.Last(conn, true)
-	c.ConnMap.Store(conn.handlerData.(*Mng).id, conn)
+	c.ConnMap.Store(conn.managerData.(*Mng).id, conn)
 	if poolG > 1 {
 		conn.poolG = APro.NewPoolLimit(poolG)
 	}
 }
 
 func (c *ConnMng) UnRegConn(conn *Conn, close bool) {
-	c.ConnMap.Delete(conn.handlerData.(*Mng).id)
+	c.ConnMap.Delete(conn.managerData.(*Mng).id)
 	if close {
 		conn.Close(ERR_CLOSED, nil)
 	}
