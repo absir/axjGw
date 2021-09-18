@@ -1,9 +1,9 @@
 package APro
 
 import (
-	Kt2 "axj/Kt/Kt"
-	KtCfg2 "axj/Kt/KtCfg"
-	KtCvt2 "axj/Kt/KtCvt"
+	"axj/Kt/Kt"
+	"axj/Kt/KtCfg"
+	"axj/Kt/KtCvt"
 	"bufio"
 	"container/list"
 	"errors"
@@ -33,7 +33,7 @@ APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 */
 func Caller(fun func(skip int) (pc uintptr, file string, line int, ok bool), dir string) {
 	if path != "" {
-		Kt2.Err(errors.New("path has got"), false)
+		Kt.Err(errors.New("path has got"), false)
 		return
 	}
 
@@ -49,7 +49,7 @@ func Tmp() string {
 		}
 
 		dir, err := filepath.EvalSymlinks(dir)
-		Kt2.Err(err, true)
+		Kt.Err(err, true)
 		tmp = dir
 	}
 
@@ -59,11 +59,11 @@ func Tmp() string {
 func Path() string {
 	if path == "" {
 		file, err := os.Executable()
-		Kt2.Err(err, true)
+		Kt.Err(err, true)
 		if file == "" || (strings.HasPrefix(file, Tmp()) && callerP != nil) {
 			if file != "" {
-				Kt2.Log("exe : " + file)
-				Kt2.Log("tmp : " + Tmp())
+				Kt.Log("exe : " + file)
+				Kt.Log("tmp : " + Tmp())
 			}
 
 			file = ""
@@ -90,7 +90,7 @@ func Path() string {
 
 		if file != "" {
 			file, err = filepath.EvalSymlinks(file)
-			Kt2.Err(err, true)
+			Kt.Err(err, true)
 			if file != "" {
 				path = file
 				callerP = nil
@@ -101,31 +101,31 @@ func Path() string {
 	return path
 }
 
-var Cfg KtCfg2.Cfg = nil
+var Cfg KtCfg.Cfg = nil
 
-func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
+func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 	if Cfg == nil {
-		readMap := map[string]KtCfg2.Read{}
+		readMap := map[string]KtCfg.Read{}
 		readMap["@env"] = func(str string) {
 			str = strings.ToLower(str)
 			switch str {
 			case "dev":
 			case "develop":
-				Kt2.Env = Kt2.Develop
+				Kt.Env = Kt.Develop
 				break
 			case "test":
-				Kt2.Env = Kt2.Test
+				Kt.Env = Kt.Test
 				break
 			case "debug":
-				Kt2.Env = Kt2.Debug
+				Kt.Env = Kt.Debug
 				break
 			case "pro":
 			case "prod":
 			case "product":
-				Kt2.Env = Kt2.Product
+				Kt.Env = Kt.Product
 				break
 			default:
-				Kt2.Env = KtCvt2.ToType(str, KtCvt2.Int8).(int8)
+				Kt.Env = KtCvt.ToType(str, KtCvt.Int8).(int8)
 				break
 			}
 		}
@@ -138,7 +138,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
 			}
 
 			str, err := filepath.EvalSymlinks(filepath.Join(Path(), str))
-			Kt2.Err(err, true)
+			Kt.Err(err, true)
 			if str != "" {
 				if !loads[str] {
 					loads[str] = true
@@ -147,9 +147,9 @@ func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
 			}
 		}
 
-		_cfg := KtCfg2.Cfg{}
+		_cfg := KtCfg.Cfg{}
 		if reader != nil {
-			_cfg = KtCfg2.ReadIn(reader, _cfg, &readMap).(KtCfg2.Cfg)
+			_cfg = KtCfg.ReadIn(reader, _cfg, &readMap).(KtCfg.Cfg)
 		}
 
 		readMap["@cfg"](entry)
@@ -160,16 +160,16 @@ func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
 			}
 
 			f, err := os.Open(cfgs.Remove(el).(string))
-			Kt2.Err(err, true)
+			Kt.Err(err, true)
 			if f != nil {
-				_cfg = KtCfg2.ReadIn(bufio.NewReader(f), _cfg, &readMap).(KtCfg2.Cfg)
+				_cfg = KtCfg.ReadIn(bufio.NewReader(f), _cfg, &readMap).(KtCfg.Cfg)
 
 			} else {
 				break
 			}
 		}
 
-		var fun *KtCfg2.Read = nil
+		var fun *KtCfg.Read = nil
 		name := ""
 		var lst *list.List = nil
 		args := os.Args
@@ -179,7 +179,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
 			if arg[0] == '-' {
 				if strings.IndexByte(arg, '=') > 0 {
 					if fun == nil {
-						f := KtCfg2.ReadFunc(_cfg, &readMap)
+						f := KtCfg.ReadFunc(_cfg, &readMap)
 						fun = &f
 					}
 
@@ -201,7 +201,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
 				} else {
 					// 分离参数
 					if fun == nil {
-						f := KtCfg2.ReadFunc(_cfg, &readMap)
+						f := KtCfg.ReadFunc(_cfg, &readMap)
 						fun = &f
 					}
 
@@ -222,11 +222,11 @@ func Load(reader *bufio.Reader, entry string) KtCfg2.Cfg {
 }
 
 // 子配置
-func SubCfg(sub string) Kt2.Map {
-	var cfg Kt2.Map = nil
-	m := Kt2.If(Cfg == nil, nil, KtCfg2.Get(cfg, sub))
+func SubCfg(sub string) Kt.Map {
+	var cfg Kt.Map = nil
+	m := Kt.If(Cfg == nil, nil, KtCfg.Get(cfg, sub))
 	if m != nil {
-		mp, ok := m.(*Kt2.Map)
+		mp, ok := m.(*Kt.Map)
 		if ok && mp != nil {
 			cfg = *mp
 		}
@@ -234,7 +234,7 @@ func SubCfg(sub string) Kt2.Map {
 
 	env := os.Getenv(sub + "_CFG")
 	if env != "" {
-		cfg = KtCfg2.ReadIn(bufio.NewReader(strings.NewReader(env)), cfg, nil)
+		cfg = KtCfg.ReadIn(bufio.NewReader(strings.NewReader(env)), cfg, nil)
 	}
 
 	return cfg
@@ -242,7 +242,7 @@ func SubCfg(sub string) Kt2.Map {
 
 func SubCfgBind(sub string, bind interface{}) interface{} {
 	mp := SubCfg(sub)
-	KtCvt2.BindInterface(bind, mp)
+	KtCvt.BindInterface(bind, mp)
 	return bind
 }
 
