@@ -4,7 +4,7 @@ import (
 	"io"
 )
 
-func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte) (err error, req int32, uri string, uriI int32, data []byte) {
+func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
 	err, bs, read := client.Read()
 	if err != nil {
 		return
@@ -15,7 +15,7 @@ func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, d
 		err, head, req, uri, uriI, data = protocol.Req(bs)
 
 	} else if read != nil {
-		err, head, req, uri, uriI, data = protocol.ReqReader(read, client.Sticky())
+		err, head, req, uri, uriI, data = protocol.ReqReader(read, client.Sticky(), dataMax)
 
 	} else {
 		err = io.EOF
@@ -62,7 +62,7 @@ func Rep(client Client, buff *[]byte, protocol Protocol, compress Compress, comp
 		// 数据处理
 		if compress != nil {
 			bLen := len(data)
-			if bLen > compressMin {
+			if compressMin > 0 && bLen > compressMin {
 				var bs []byte
 				bs, err = compress.Compress(data)
 				if err != nil {
@@ -114,7 +114,7 @@ func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, r
 
 	if dLen > 0 {
 		head |= HEAD_DATA
-		if dLen > compressMin && compress != nil {
+		if compressMin > 0 && dLen > compressMin && compress != nil {
 			bs, err := compress.Compress(data)
 			if err != nil {
 				return err
@@ -229,4 +229,5 @@ type Processor struct {
 	Compress    Compress
 	CompressMin int
 	Encrypt     Encrypt
+	DataMax     int32
 }

@@ -22,12 +22,9 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  string req(i64 uid, string sid, string uri, string bytes)")
-  fmt.Fprintln(os.Stderr, "  void send(i64 uid, string sid, string uri, string bytes)")
-  fmt.Fprintln(os.Stderr, "  void reg(Serv serv)")
-  fmt.Fprintln(os.Stderr, "  void beat()")
-  fmt.Fprintln(os.Stderr, "  void push(i64 uid, string sid, Msg msg)")
-  fmt.Fprintln(os.Stderr, "  void group(string sid, Group group, bool deleted)")
+  fmt.Fprintln(os.Stderr, "  void aid(i64 cid, string name, i32 aid)")
+  fmt.Fprintln(os.Stderr, "  void dirty(string sid)")
+  fmt.Fprintln(os.Stderr, "  bool push(i64 cid, i64 uid, string sid, Msg msg)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -149,9 +146,42 @@ func main() {
   }
   
   switch cmd {
-  case "req":
+  case "aid":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "Aid requires 3 args")
+      flag.Usage()
+    }
+    argvalue0, err40 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err40 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1 := flag.Arg(2)
+    value1 := argvalue1
+    tmp2, err42 := (strconv.Atoi(flag.Arg(3)))
+    if err42 != nil {
+      Usage()
+      return
+    }
+    argvalue2 := int32(tmp2)
+    value2 := argvalue2
+    fmt.Print(client.Aid(context.Background(), value0, value1, value2))
+    fmt.Print("\n")
+    break
+  case "dirty":
+    if flag.NArg() - 1 != 1 {
+      fmt.Fprintln(os.Stderr, "Dirty requires 1 args")
+      flag.Usage()
+    }
+    argvalue0 := flag.Arg(1)
+    value0 := argvalue0
+    fmt.Print(client.Dirty(context.Background(), value0))
+    fmt.Print("\n")
+    break
+  case "push":
     if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "Req requires 4 args")
+      fmt.Fprintln(os.Stderr, "Push requires 4 args")
       flag.Usage()
     }
     argvalue0, err44 := (strconv.ParseInt(flag.Arg(1), 10, 64))
@@ -160,128 +190,32 @@ func main() {
       return
     }
     value0 := argvalue0
-    argvalue1 := flag.Arg(2)
+    argvalue1, err45 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err45 != nil {
+      Usage()
+      return
+    }
     value1 := argvalue1
     argvalue2 := flag.Arg(3)
     value2 := argvalue2
-    argvalue3 := []byte(flag.Arg(4))
+    arg47 := flag.Arg(4)
+    mbTrans48 := thrift.NewTMemoryBufferLen(len(arg47))
+    defer mbTrans48.Close()
+    _, err49 := mbTrans48.WriteString(arg47)
+    if err49 != nil {
+      Usage()
+      return
+    }
+    factory50 := thrift.NewTJSONProtocolFactory()
+    jsProt51 := factory50.GetProtocol(mbTrans48)
+    argvalue3 := gw.NewMsg()
+    err52 := argvalue3.Read(context.Background(), jsProt51)
+    if err52 != nil {
+      Usage()
+      return
+    }
     value3 := argvalue3
-    fmt.Print(client.Req(context.Background(), value0, value1, value2, value3))
-    fmt.Print("\n")
-    break
-  case "send":
-    if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "Send requires 4 args")
-      flag.Usage()
-    }
-    argvalue0, err48 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err48 != nil {
-      Usage()
-      return
-    }
-    value0 := argvalue0
-    argvalue1 := flag.Arg(2)
-    value1 := argvalue1
-    argvalue2 := flag.Arg(3)
-    value2 := argvalue2
-    argvalue3 := []byte(flag.Arg(4))
-    value3 := argvalue3
-    fmt.Print(client.Send(context.Background(), value0, value1, value2, value3))
-    fmt.Print("\n")
-    break
-  case "reg":
-    if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Reg requires 1 args")
-      flag.Usage()
-    }
-    arg52 := flag.Arg(1)
-    mbTrans53 := thrift.NewTMemoryBufferLen(len(arg52))
-    defer mbTrans53.Close()
-    _, err54 := mbTrans53.WriteString(arg52)
-    if err54 != nil {
-      Usage()
-      return
-    }
-    factory55 := thrift.NewTJSONProtocolFactory()
-    jsProt56 := factory55.GetProtocol(mbTrans53)
-    argvalue0 := gw.NewServ()
-    err57 := argvalue0.Read(context.Background(), jsProt56)
-    if err57 != nil {
-      Usage()
-      return
-    }
-    value0 := argvalue0
-    fmt.Print(client.Reg(context.Background(), value0))
-    fmt.Print("\n")
-    break
-  case "beat":
-    if flag.NArg() - 1 != 0 {
-      fmt.Fprintln(os.Stderr, "Beat requires 0 args")
-      flag.Usage()
-    }
-    fmt.Print(client.Beat(context.Background()))
-    fmt.Print("\n")
-    break
-  case "push":
-    if flag.NArg() - 1 != 3 {
-      fmt.Fprintln(os.Stderr, "Push requires 3 args")
-      flag.Usage()
-    }
-    argvalue0, err58 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err58 != nil {
-      Usage()
-      return
-    }
-    value0 := argvalue0
-    argvalue1 := flag.Arg(2)
-    value1 := argvalue1
-    arg60 := flag.Arg(3)
-    mbTrans61 := thrift.NewTMemoryBufferLen(len(arg60))
-    defer mbTrans61.Close()
-    _, err62 := mbTrans61.WriteString(arg60)
-    if err62 != nil {
-      Usage()
-      return
-    }
-    factory63 := thrift.NewTJSONProtocolFactory()
-    jsProt64 := factory63.GetProtocol(mbTrans61)
-    argvalue2 := gw.NewMsg()
-    err65 := argvalue2.Read(context.Background(), jsProt64)
-    if err65 != nil {
-      Usage()
-      return
-    }
-    value2 := argvalue2
-    fmt.Print(client.Push(context.Background(), value0, value1, value2))
-    fmt.Print("\n")
-    break
-  case "group":
-    if flag.NArg() - 1 != 3 {
-      fmt.Fprintln(os.Stderr, "Group requires 3 args")
-      flag.Usage()
-    }
-    argvalue0 := flag.Arg(1)
-    value0 := argvalue0
-    arg67 := flag.Arg(2)
-    mbTrans68 := thrift.NewTMemoryBufferLen(len(arg67))
-    defer mbTrans68.Close()
-    _, err69 := mbTrans68.WriteString(arg67)
-    if err69 != nil {
-      Usage()
-      return
-    }
-    factory70 := thrift.NewTJSONProtocolFactory()
-    jsProt71 := factory70.GetProtocol(mbTrans68)
-    argvalue1 := gw.NewGroup()
-    err72 := argvalue1.Read(context.Background(), jsProt71)
-    if err72 != nil {
-      Usage()
-      return
-    }
-    value1 := argvalue1
-    argvalue2 := flag.Arg(3) == "true"
-    value2 := argvalue2
-    fmt.Print(client.Group(context.Background(), value0, value1, value2))
+    fmt.Print(client.Push(context.Background(), value0, value1, value2, value3))
     fmt.Print("\n")
     break
   case "":

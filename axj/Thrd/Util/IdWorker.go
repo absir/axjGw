@@ -1,4 +1,4 @@
-package SnowFlake
+package Util
 
 import (
 	"errors"
@@ -22,13 +22,14 @@ import (
 * 3. 12位序列，毫秒内的计数，同一机器，同一时间截并发4096个序号
  */
 const (
-	twepoch        = int64(1483228800000)             //开始时间截 (2017-01-01)
-	workerIdBits   = uint(10)                         //机器id所占的位数
-	sequenceBits   = uint(12)                         //序列所占的位数
-	workerIdMax    = int32(-1 ^ (-1 << workerIdBits)) //支持的最大机器id数量
-	sequenceMask   = int64(-1 ^ (-1 << sequenceBits)) //
-	workerIdShift  = sequenceBits                     //机器id左移位数
-	timestampShift = sequenceBits + workerIdBits      //时间戳左移位数
+	twepoch        = int64(1483228800000)        //开始时间截 (2017-01-01)
+	workerIdBits   = uint(10)                    //机器id所占的位数
+	workerIdMax    = 1<<workerIdBits - 1         //支持的最大机器id数量
+	worderIdMask   = workerIdMax                 //机器id掩码
+	sequenceBits   = uint(12)                    //序列所占的位数
+	sequenceMask   = int64(1)<<sequenceBits - 1  //序号掩码
+	workerIdShift  = sequenceBits                //机器id左移位数
+	timestampShift = sequenceBits + workerIdBits //时间戳左移位数
 )
 
 // A IdWorker struct holds the basic information needed for a snowflake generator worker
@@ -75,5 +76,5 @@ func (s *IdWorker) Generate() int64 {
 }
 
 func GetWorkerId(id int64) int32 {
-	return (int32)(id >> workerIdShift)
+	return (int32)(id>>workerIdShift) & worderIdMask
 }

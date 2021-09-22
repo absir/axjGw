@@ -13,21 +13,41 @@ var ERR_CLOSED = errors.New("CLOSED")
 var ERR_CRASH = errors.New("CRASH")
 
 type Conn struct {
-	client      Client
-	locker      sync.Locker
-	closed      bool
-	encryKey    []byte
-	repBuffer   *[]byte
-	poolG       APro.PoolG
-	manager     Manager
-	managerData interface{}
+	client    Client
+	locker    sync.Locker
+	closed    bool
+	encryKey  []byte
+	repBuffer *[]byte
+	poolG     APro.PoolG
+	manager   Manager
+	mData     interface{}
+}
+
+func (c *Conn) Client() Client {
+	return c.client
+}
+
+func (c *Conn) Locker() sync.Locker {
+	return c.locker
+}
+
+func (c *Conn) Closed() bool {
+	return c.closed
+}
+
+func (c *Conn) Manager() Manager {
+	return c.manager
+}
+
+func (c *Conn) MData() interface{} {
+	return c.mData
 }
 
 type Handler interface {
 	Data(conn *Conn) interface{}
 	Last(conn *Conn, req bool)
-	OnReq(conn *Conn, req int32, uri string, data []byte) bool
-	OnReqIO(conn *Conn, req int32, uri string, data []byte)
+	OnReq(conn *Conn, req int32, uri string, uriI int32, data []byte) bool
+	OnReqIO(conn *Conn, req int32, uri string, uriI int32, data []byte)
 	OnClose(conn *Conn, err error, reason interface{})
 	Processor() Processor
 	UriDict() UriDict
@@ -49,7 +69,7 @@ func InitConn(conn *Conn, client Client, manager Manager) *Conn {
 	conn.repBuffer = nil
 	conn.poolG = nil
 	conn.manager = manager
-	conn.managerData = manager.Data(conn)
+	conn.mData = manager.Data(conn)
 	return conn
 }
 
@@ -69,7 +89,7 @@ func (c *Conn) Close(err error, reason interface{}) {
 	defer c.client.Close()
 	c.closed = true
 	// 关闭日志
-	AZap.Logger.Info("Recover crash", zap.Error(err), zap.Reflect("reason", reason))
+	AZap.Logger.Info("Conn close", zap.Error(err), zap.Reflect("reason", reason))
 	if c.manager != nil {
 		c.manager.OnClose(c, err, reason)
 	}
@@ -88,10 +108,10 @@ func (c *Conn) Recover() error {
 		}
 
 		if reason == nil {
-			AZap.Logger.Warn("Recover crash", zap.Error(err))
+			AZap.Logger.Warn("Conn crash", zap.Error(err))
 
 		} else {
-			AZap.Logger.Warn("Recover crash", zap.Error(err), zap.Reflect("reason", reason))
+			AZap.Logger.Warn("Conn crash", zap.Error(err), zap.Reflect("reason", reason))
 		}
 
 		return err
@@ -100,15 +120,14 @@ func (c *Conn) Recover() error {
 	return nil
 }
 
-func (c *Conn) Req() (err error, req int32, uri string, data []byte) {
+func (c *Conn) Req() (err error, req int32, uri string, uriI int32, data []byte) {
 	if c.closed {
-		return ERR_CLOSED, 0, "", nil
+		return ERR_CLOSED, 0, "", 0, nil
 	}
 
 	c.manager.Last(c, true)
 	processor := c.manager.Processor()
-	var uriI int32 = 0
-	err, req, uri, uriI, data = Req(c.client, processor.Protocol, processor.Compress, processor.Encrypt, c.encryKey)
+	err, req, uri, uriI, data = Req(c.client, processor.Protocol, processor.Compress, processor.Encrypt, c.encryKey, processor.DataMax)
 	if uri == "" && uriI > 0 {
 		uriDict := c.manager.UriDict()
 		if uriDict != nil {
@@ -116,24 +135,24 @@ func (c *Conn) Req() (err error, req int32, uri string, data []byte) {
 		}
 	}
 
-	return nil, req, uri, data
+	return
 }
 
 func (c *Conn) ReqLoop() {
 	for {
-		err, req, uri, data := c.Req()
+		err, req, uri, uriI, data := c.Req()
 		if err != nil {
 			c.Close(err, nil)
 			break
 		}
 
-		if !c.manager.OnReq(c, req, uri, data) {
+		if !c.manager.OnReq(c, req, uri, uriI, data) {
 			poolG := c.poolG
 			if poolG == APro.PoolOne {
-				c.handlerReqIo(nil, req, uri, data)
+				c.handlerReqIo(nil, req, uri, uriI, data)
 
 			} else {
-				go c.handlerReqIo(poolG, req, uri, data)
+				go c.handlerReqIo(poolG, req, uri, uriI, data)
 				if poolG != nil {
 					poolG.Add()
 				}
@@ -142,27 +161,28 @@ func (c *Conn) ReqLoop() {
 	}
 }
 
-func (c *Conn) handlerReqIo(poolG APro.PoolG, req int32, uri string, data []byte) {
+func (c *Conn) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32, data []byte) {
 	if poolG == nil {
 		defer poolG.Done()
 	}
 
-	c.manager.OnReqIO(c, req, uri, data)
+	c.manager.OnReqIO(c, req, uri, uriI, data)
 }
 
 // 单进程阻塞 req < 0 直接 WriteData
-func (c *Conn) Rep(req int32, uri string, data []byte, isolate bool, encry bool, batch *RepBatch) error {
+func (c *Conn) Rep(req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, batch *RepBatch) error {
 	if c.closed {
 		return ERR_CLOSED
 	}
 
 	c.manager.Last(c, false)
 	uriDict := c.manager.UriDict()
-	var uriI int32 = 0
-	if uri != "" && uriDict != nil {
-		uriI = uriDict.UriMapUriI()[uri]
-		if uriI > 0 {
-			uri = ""
+	if uriI <= 0 {
+		if uri != "" && uriDict != nil {
+			uriI = uriDict.UriMapUriI()[uri]
+			if uriI > 0 {
+				uri = ""
+			}
 		}
 	}
 
@@ -215,12 +235,12 @@ func (h HandlerW) Last(conn *Conn, req bool) {
 	h.handler.Last(conn, req)
 }
 
-func (h HandlerW) OnReq(conn *Conn, req int32, uri string, data []byte) bool {
-	return h.handler.OnReq(conn, req, uri, data)
+func (h HandlerW) OnReq(conn *Conn, req int32, uri string, uriI int32, data []byte) bool {
+	return h.handler.OnReq(conn, req, uri, uriI, data)
 }
 
-func (h HandlerW) OnReqIO(conn *Conn, req int32, uri string, data []byte) {
-	h.handler.OnReqIO(conn, req, uri, data)
+func (h HandlerW) OnReqIO(conn *Conn, req int32, uri string, uriI int32, data []byte) {
+	h.handler.OnReqIO(conn, req, uri, uriI, data)
 }
 
 func (h HandlerW) OnClose(conn *Conn, err error, reason interface{}) {

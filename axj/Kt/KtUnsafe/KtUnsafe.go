@@ -29,3 +29,7 @@ func IndexByte(bs []byte, b byte, start int, end int) int {
 
 	return -1
 }
+
+func PointerHash(b interface{}) int {
+	return *(*int)(unsafe.Pointer(&b))
+}

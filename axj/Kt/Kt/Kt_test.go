@@ -1,6 +1,7 @@
 package Kt
 
 import (
+	"axj/Kt/KtUnsafe"
 	"testing"
 )
 
@@ -31,4 +32,13 @@ func TestUnsafe(t *testing.T) {
 	b.say1()
 	b.say2()
 	b.A.say1()
+
+	b.b = "ggg"
+
+	println(KtUnsafe.PointerHash(b))
+	println(KtUnsafe.PointerHash(&b))
+	println(KtUnsafe.PointerHash(new(B)))
+	println(KtUnsafe.PointerHash(new(B)))
+	println(KtUnsafe.PointerHash(b))
+	println(KtUnsafe.PointerHash(&b))
 }

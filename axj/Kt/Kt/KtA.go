@@ -3,6 +3,7 @@ package Kt
 import (
 	"container/list"
 	"fmt"
+	"hash/crc32"
 	"log"
 	"os"
 	"runtime"
@@ -132,4 +133,17 @@ func ToList(array []interface{}) *list.List {
 	}
 
 	return lst
+}
+
+func HashCode(bs []byte) int {
+	v := int(crc32.ChecksumIEEE(bs))
+	if v >= 0 {
+		return v
+	}
+
+	if -v >= 0 {
+		return -v
+	}
+	
+	return 0
 }

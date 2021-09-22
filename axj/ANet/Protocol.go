@@ -25,13 +25,14 @@ const (
 
 // CRC错误
 var ERR_CRC = errors.New("CRC")
+var ERR_MAX = errors.New("MAX")
 
 // 数据协议
 type Protocol interface {
 	// 请求读取
 	Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 流请求读取
-	ReqReader(reader *bufio.Reader, sticky bool) (err error, head byte, req int32, uri string, uriI int32, data []byte)
+	ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 返回数据
 	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte
 	// 返回流写入
@@ -90,7 +91,7 @@ func (p ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, 
 	return
 }
 
-func (p ProtocolV) ReqReader(reader *bufio.Reader, sticky bool) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (p ProtocolV) ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head, err = reader.ReadByte()
 	if err != nil {
 		return
@@ -135,6 +136,11 @@ func (p ProtocolV) ReqReader(reader *bufio.Reader, sticky bool) (err error, head
 		if sticky {
 			// 粘包
 			bLen := KtIo.GetVIntReader(reader)
+			if bLen > dataMax {
+				err = ERR_MAX
+				return
+			}
+
 			data, err = KtIo.ReadBytesReader(reader, int(bLen))
 
 		} else {

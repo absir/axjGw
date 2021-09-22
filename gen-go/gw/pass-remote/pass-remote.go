@@ -22,8 +22,8 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  string req(i64 uid, string sid, string uri, string bytes)")
-  fmt.Fprintln(os.Stderr, "  void send(i64 uid, string sid, string uri, string bytes)")
+  fmt.Fprintln(os.Stderr, "  string req(i64 cid, i64 uid, string sid, string uri, string bytes)")
+  fmt.Fprintln(os.Stderr, "  void send(i64 cid, i64 uid, string sid, string uri, string bytes)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -146,43 +146,55 @@ func main() {
   
   switch cmd {
   case "req":
-    if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "Req requires 4 args")
+    if flag.NArg() - 1 != 5 {
+      fmt.Fprintln(os.Stderr, "Req requires 5 args")
       flag.Usage()
     }
-    argvalue0, err18 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err18 != nil {
+    argvalue0, err19 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err19 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1 := flag.Arg(2)
+    argvalue1, err20 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err20 != nil {
+      Usage()
+      return
+    }
     value1 := argvalue1
     argvalue2 := flag.Arg(3)
     value2 := argvalue2
-    argvalue3 := []byte(flag.Arg(4))
+    argvalue3 := flag.Arg(4)
     value3 := argvalue3
-    fmt.Print(client.Req(context.Background(), value0, value1, value2, value3))
+    argvalue4 := []byte(flag.Arg(5))
+    value4 := argvalue4
+    fmt.Print(client.Req(context.Background(), value0, value1, value2, value3, value4))
     fmt.Print("\n")
     break
   case "send":
-    if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "Send requires 4 args")
+    if flag.NArg() - 1 != 5 {
+      fmt.Fprintln(os.Stderr, "Send requires 5 args")
       flag.Usage()
     }
-    argvalue0, err22 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err22 != nil {
+    argvalue0, err24 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err24 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1 := flag.Arg(2)
+    argvalue1, err25 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err25 != nil {
+      Usage()
+      return
+    }
     value1 := argvalue1
     argvalue2 := flag.Arg(3)
     value2 := argvalue2
-    argvalue3 := []byte(flag.Arg(4))
+    argvalue3 := flag.Arg(4)
     value3 := argvalue3
-    fmt.Print(client.Send(context.Background(), value0, value1, value2, value3))
+    argvalue4 := []byte(flag.Arg(5))
+    value4 := argvalue4
+    fmt.Print(client.Send(context.Background(), value0, value1, value2, value3, value4))
     fmt.Print("\n")
     break
   case "":

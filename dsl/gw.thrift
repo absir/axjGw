@@ -9,6 +9,8 @@ struct Login {
     3: string unique;
     // 最大连接数
     4: i16 max;
+    // 服务编号
+    5: i32 aid;
 }
 
 struct Conn {
@@ -19,16 +21,18 @@ struct Conn {
 }
 
 struct Group {
+    // 版本
+    1: i64 version
     // 组连接
-    1: list<Conn> conns;
+    2: list<Conn> conns;
     // 读扩散、写扩散
-    2: bool readFeed;
+    3: bool readFeed;
 }
 
 // 访问控制
 service Acl {
     // 登录
-    Login login(1: string cid, 2: binary bytes);
+    Login login(1: i64 cid, 2: binary bytes);
     // 组查询
     Group group(1: string sid);
 }
@@ -36,18 +40,18 @@ service Acl {
 // 转发
 service Pass {
     // 请求
-    binary req(1: i64 uid, 2: string sid, 3: string uri, 4: binary bytes);
+    binary req(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes);
     // 发送
-    oneway void send(1: i64 uid, 2: string sid, 3: string uri, 4: binary bytes);
+    oneway void send(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes);
 }
 
 struct Serv {
-    // 服务名
-    1: string name;
+    // 服务编号
+    1: i32 sid;
     // 服务地址(空,为反向调用服务)
     2: string addr;
-    // 持久域(有值，注册后一直生效)
-    3: string scope;
+    // 服务名
+    3: string name;
 }
 
 struct Msg {
@@ -63,16 +67,10 @@ struct Msg {
 
 // 网关
 service Gateway {
-    // 转发请求
-    binary req(1: string cid, 2: string uri, 3: binary bytes);
-    // 转发发送
-    oneway void send(1: string cid, 2: string uri, 3: binary bytes);
-    // 注册服务
-    void reg(1: Serv serv);
-    // 心跳包
-    void beat();
-    // 推送
-    void push(1: string id, 2: Msg msg);
+    // 服务编号
+    void aid(1: i64 cid, 2: string name, 3: i32 aid)
     // 组更新、删除
-    void group(1: string sid, 2: Group group, 3: bool deleted);
+    void dirty(1: string sid);
+    // 推送
+    bool push(1: i64 cid, 2: i64 uid, 3: string sid, 4: Msg msg);
 }

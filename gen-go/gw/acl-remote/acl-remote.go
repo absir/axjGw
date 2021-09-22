@@ -22,7 +22,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  Login login(string bytes)")
+  fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
   fmt.Fprintln(os.Stderr, "  Group group(string sid)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
@@ -146,13 +146,19 @@ func main() {
   
   switch cmd {
   case "login":
-    if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Login requires 1 args")
+    if flag.NArg() - 1 != 2 {
+      fmt.Fprintln(os.Stderr, "Login requires 2 args")
       flag.Usage()
     }
-    argvalue0 := []byte(flag.Arg(1))
+    argvalue0, err10 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err10 != nil {
+      Usage()
+      return
+    }
     value0 := argvalue0
-    fmt.Print(client.Login(context.Background(), value0))
+    argvalue1 := []byte(flag.Arg(2))
+    value1 := argvalue1
+    fmt.Print(client.Login(context.Background(), value0, value1))
     fmt.Print("\n")
     break
   case "group":
