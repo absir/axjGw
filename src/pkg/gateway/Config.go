@@ -6,9 +6,8 @@ import (
 )
 
 type config struct {
-	id          int32 // 服务编号
-	gwProd      string
-	accProd     string
+	GwProd      string
+	AclProd     string
 	TConfig     *thrift.TConfiguration
 	CompressMin int
 	DataMax     int32
@@ -17,8 +16,8 @@ type config struct {
 var Config = config{}
 
 func init() {
-	Config.gwProd = "gw"
-	Config.accProd = "acc"
+	Config.GwProd = "gw"
+	Config.AclProd = "acl"
 	Config.TConfig = nil
 	Config.CompressMin = 1024
 	Config.DataMax = 1024 << 10

@@ -12,7 +12,11 @@ import (
 var ERR_CLOSED = errors.New("CLOSED")
 var ERR_CRASH = errors.New("CRASH")
 
-type Conn struct {
+type Conn interface {
+	Get() *ConnC
+}
+
+type ConnC struct {
 	client    Client
 	locker    sync.Locker
 	closed    bool
@@ -20,35 +24,34 @@ type Conn struct {
 	repBuffer *[]byte
 	poolG     APro.PoolG
 	manager   Manager
-	mData     interface{}
 }
 
-func (c *Conn) Client() Client {
+func (c *ConnC) Get() *ConnC {
+	return c
+}
+
+func (c *ConnC) Client() Client {
 	return c.client
 }
 
-func (c *Conn) Locker() sync.Locker {
+func (c *ConnC) Locker() sync.Locker {
 	return c.locker
 }
 
-func (c *Conn) Closed() bool {
+func (c *ConnC) Closed() bool {
 	return c.closed
 }
 
-func (c *Conn) Manager() Manager {
+func (c *ConnC) Manager() Manager {
 	return c.manager
 }
 
-func (c *Conn) MData() interface{} {
-	return c.mData
-}
-
 type Handler interface {
-	Data(conn *Conn) interface{}
-	Last(conn *Conn, req bool)
-	OnReq(conn *Conn, req int32, uri string, uriI int32, data []byte) bool
-	OnReqIO(conn *Conn, req int32, uri string, uriI int32, data []byte)
-	OnClose(conn *Conn, err error, reason interface{})
+	Open(client Client) Conn
+	OnClose(conn Conn, err error, reason interface{})
+	Last(conn Conn, req bool)
+	OnReq(conn Conn, req int32, uri string, uriI int32, data []byte) bool
+	OnReqIO(conn Conn, req int32, uri string, uriI int32, data []byte)
 	Processor() Processor
 	UriDict() UriDict
 }
@@ -57,23 +60,20 @@ type Manager interface {
 	Handler
 }
 
-func InitConn(conn *Conn, client Client, manager Manager) *Conn {
-	if conn == nil {
-		conn = new(Conn)
-	}
-
-	conn.client = client
-	conn.locker = new(sync.Mutex)
-	conn.closed = false
-	conn.encryKey = nil
-	conn.repBuffer = nil
-	conn.poolG = nil
-	conn.manager = manager
-	conn.mData = manager.Data(conn)
+func OpenConn(client Client, manager Manager) Conn {
+	conn := manager.Open(client)
+	connC := conn.Get()
+	connC.client = client
+	connC.locker = new(sync.Mutex)
+	connC.closed = false
+	connC.encryKey = nil
+	connC.repBuffer = nil
+	connC.poolG = nil
+	connC.manager = manager
 	return conn
 }
 
-func (c *Conn) Close(err error, reason interface{}) {
+func (c *ConnC) Close(err error, reason interface{}) {
 	if c.closed {
 		return
 	}
@@ -95,7 +95,7 @@ func (c *Conn) Close(err error, reason interface{}) {
 	}
 }
 
-func (c *Conn) Recover() error {
+func (c *ConnC) Recover() error {
 	if reason := recover(); reason != nil {
 		err, ok := reason.(error)
 		if ok {
@@ -120,7 +120,7 @@ func (c *Conn) Recover() error {
 	return nil
 }
 
-func (c *Conn) Req() (err error, req int32, uri string, uriI int32, data []byte) {
+func (c *ConnC) Req() (err error, req int32, uri string, uriI int32, data []byte) {
 	if c.closed {
 		return ERR_CLOSED, 0, "", 0, nil
 	}
@@ -138,7 +138,7 @@ func (c *Conn) Req() (err error, req int32, uri string, uriI int32, data []byte)
 	return
 }
 
-func (c *Conn) ReqLoop() {
+func (c *ConnC) ReqLoop() {
 	for {
 		err, req, uri, uriI, data := c.Req()
 		if err != nil {
@@ -161,7 +161,7 @@ func (c *Conn) ReqLoop() {
 	}
 }
 
-func (c *Conn) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32, data []byte) {
+func (c *ConnC) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32, data []byte) {
 	if poolG == nil {
 		defer poolG.Done()
 	}
@@ -170,7 +170,7 @@ func (c *Conn) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32,
 }
 
 // 单进程阻塞 req < 0 直接 WriteData
-func (c *Conn) Rep(req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, batch *RepBatch) error {
+func (c *ConnC) Rep(req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, batch *RepBatch) error {
 	if c.closed {
 		return ERR_CLOSED
 	}
@@ -227,23 +227,23 @@ type HandlerW struct {
 	handler Handler
 }
 
-func (h HandlerW) Data(conn *Conn) interface{} {
-	return h.handler.Data(conn)
+func (h HandlerW) Open(client Client) interface{} {
+	return h.handler.Open(client)
 }
 
-func (h HandlerW) Last(conn *Conn, req bool) {
+func (h HandlerW) Last(conn Conn, req bool) {
 	h.handler.Last(conn, req)
 }
 
-func (h HandlerW) OnReq(conn *Conn, req int32, uri string, uriI int32, data []byte) bool {
+func (h HandlerW) OnReq(conn Conn, req int32, uri string, uriI int32, data []byte) bool {
 	return h.handler.OnReq(conn, req, uri, uriI, data)
 }
 
-func (h HandlerW) OnReqIO(conn *Conn, req int32, uri string, uriI int32, data []byte) {
+func (h HandlerW) OnReqIO(conn Conn, req int32, uri string, uriI int32, data []byte) {
 	h.handler.OnReqIO(conn, req, uri, uriI, data)
 }
 
-func (h HandlerW) OnClose(conn *Conn, err error, reason interface{}) {
+func (h HandlerW) OnClose(conn Conn, err error, reason interface{}) {
 	h.handler.OnClose(conn, err, reason)
 }
 

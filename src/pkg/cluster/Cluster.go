@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	Kt2 "axj/Kt/Kt"
+	"axj/Kt/Kt"
 	"axj/Kt/KtStr"
 	"github.com/apache/thrift/lib/go/thrift"
 	"sync"
@@ -29,7 +29,7 @@ func (p *Peer) Client(pubs []KtStr.Matcher, conf *thrift.TConfiguration) *thrift
 			p.socket, err = thrift.NewTSocketConf(p.addr, conf)
 		}
 
-		Kt2.Panic(err)
+		Kt.Panic(err)
 	}
 
 	return p.socket

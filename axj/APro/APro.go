@@ -4,6 +4,7 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
+	"axj/Kt/KtStr"
 	"bufio"
 	"container/list"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 )
 
@@ -25,6 +27,7 @@ var callerP *CallerP
 
 var tmp = ""
 var path = ""
+var Locker = new(sync.Mutex)
 
 /*
 APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
@@ -244,6 +247,54 @@ func SubCfgBind(sub string, bind interface{}) interface{} {
 	mp := SubCfg(sub)
 	KtCvt.BindInterface(bind, mp)
 	return bind
+}
+
+func FileCfg(file string) KtCfg.Cfg {
+	file, err := filepath.EvalSymlinks(filepath.Join(Path(), file))
+	Kt.Err(err, true)
+	f, err := os.Open(file)
+	Kt.Err(err, true)
+	if f != nil {
+		return KtCfg.ReadIn(bufio.NewReader(f), nil, nil).(KtCfg.Cfg)
+
+	} else {
+		return nil
+	}
+}
+
+var workId int32 = -1
+
+func WorkId() int32 {
+	if workId < 0 {
+		Locker.Lock()
+		defer Locker.Unlock()
+		if workId < 0 {
+			var id int32 = 0
+			if Cfg != nil {
+				id = KtCfg.GetType(Cfg, "workId", KtCvt.Int32, 0, "").(int32)
+			}
+
+			if id <= 0 {
+				str := os.Getenv("HOSTNAME")
+				i := strings.LastIndexByte(str, '-')
+				if i > 0 {
+					str = str[i+1:]
+				}
+
+				if KtStr.DigitStr(str) {
+					id = KtCvt.ToType(str, KtCvt.Int32).(int32)
+				}
+
+				if id < 0 {
+					id = 0
+				}
+			}
+
+			workId = id
+		}
+	}
+
+	return workId
 }
 
 // 关闭信号

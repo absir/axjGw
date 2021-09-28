@@ -24,7 +24,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "\nFunctions:")
   fmt.Fprintln(os.Stderr, "  void aid(i64 cid, string name, i32 aid)")
   fmt.Fprintln(os.Stderr, "  void dirty(string sid)")
-  fmt.Fprintln(os.Stderr, "  bool push(i64 cid, i64 uid, string sid, Msg msg)")
+  fmt.Fprintln(os.Stderr, "  bool push(i64 cid, i64 uid, string sid, string uri, string bytes, i32 qs, string unique)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -180,8 +180,8 @@ func main() {
     fmt.Print("\n")
     break
   case "push":
-    if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "Push requires 4 args")
+    if flag.NArg() - 1 != 7 {
+      fmt.Fprintln(os.Stderr, "Push requires 7 args")
       flag.Usage()
     }
     argvalue0, err44 := (strconv.ParseInt(flag.Arg(1), 10, 64))
@@ -198,24 +198,20 @@ func main() {
     value1 := argvalue1
     argvalue2 := flag.Arg(3)
     value2 := argvalue2
-    arg47 := flag.Arg(4)
-    mbTrans48 := thrift.NewTMemoryBufferLen(len(arg47))
-    defer mbTrans48.Close()
-    _, err49 := mbTrans48.WriteString(arg47)
+    argvalue3 := flag.Arg(4)
+    value3 := argvalue3
+    argvalue4 := []byte(flag.Arg(5))
+    value4 := argvalue4
+    tmp5, err49 := (strconv.Atoi(flag.Arg(6)))
     if err49 != nil {
       Usage()
       return
     }
-    factory50 := thrift.NewTJSONProtocolFactory()
-    jsProt51 := factory50.GetProtocol(mbTrans48)
-    argvalue3 := gw.NewMsg()
-    err52 := argvalue3.Read(context.Background(), jsProt51)
-    if err52 != nil {
-      Usage()
-      return
-    }
-    value3 := argvalue3
-    fmt.Print(client.Push(context.Background(), value0, value1, value2, value3))
+    argvalue5 := int32(tmp5)
+    value5 := argvalue5
+    argvalue6 := flag.Arg(7)
+    value6 := argvalue6
+    fmt.Print(client.Push(context.Background(), value0, value1, value2, value3, value4, value5, value6))
     fmt.Print("\n")
     break
   case "":

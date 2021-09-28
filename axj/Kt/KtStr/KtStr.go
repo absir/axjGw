@@ -244,6 +244,29 @@ func Sim(str, to string) float32 {
 	return 1.0 - float32(Cmp(str, to, m, n))/float32(Kt.If(m > n, m, n).(int))
 }
 
+func DigitStr(str string) bool {
+	return DigitRunes(KtUnsafe.StringToRunes(str))
+}
+
+func DigitRunes(runes []rune) bool {
+	if runes == nil {
+		return false
+	}
+
+	len := len(runes)
+	for i := 0; i < len; i++ {
+		if !DigitRune(runes[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func DigitRune(chr rune) bool {
+	return chr >= '0' && chr <= '9'
+}
+
 // 查找从位置
 func Index(s, substr string, from int) int {
 	i := from

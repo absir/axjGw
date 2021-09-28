@@ -1,5 +1,10 @@
 package KtEncry
 
+import (
+	"crypto/md5"
+	"fmt"
+)
+
 // 加密
 func SrEncry(bs []byte, keys []byte) {
 	if bs == nil || keys == nil {
@@ -74,4 +79,9 @@ func SrDecry(bs []byte, keys []byte) {
 			k = 0
 		}
 	}
+}
+
+func EnMd5(bs []byte) string {
+	mbs := md5.Sum(bs)
+	return fmt.Sprintf("%x", mbs) //将[]byte转成16进制
 }
