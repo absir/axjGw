@@ -26,23 +26,56 @@ type ClientSocket struct {
 	locker sync.Locker
 }
 
-func NewClientSocket(conn *net.TCPConn, size int, out bool) *ClientSocket {
-	client := new(ClientSocket)
-	client.conn = conn
+func (c ClientSocket) init() {
+	c.locker = nil
+}
+
+func (c ClientSocket) open(conn *net.TCPConn, size int, out bool) {
+	c.conn = conn
 	if size <= 0 {
-		client.reader = bufio.NewReader(conn)
+		c.reader = bufio.NewReader(conn)
 
 	} else {
-		client.reader = bufio.NewReaderSize(conn, size)
+		c.reader = bufio.NewReaderSize(conn, size)
 	}
 
 	if out {
-		client.locker = new(sync.Mutex)
+		if c.locker == nil {
+			c.locker = new(sync.Mutex)
+		}
 
 	} else {
-		client.locker = nil
+		c.locker = nil
+	}
+}
+
+func (c ClientSocket) close() {
+	c.conn = nil
+	c.reader = nil
+}
+
+var clientSocketPool *sync.Pool = nil
+
+func SetClientSocketPool() {
+	pool := new(sync.Pool)
+	pool.New = func() interface{} {
+		client := new(ClientSocket)
+		client.init()
+		return client
+	}
+}
+
+func NewClientSocket(conn *net.TCPConn, size int, out bool) *ClientSocket {
+	var client *ClientSocket
+	if clientSocketPool == nil {
+		client = new(ClientSocket)
+		client.init()
+
+	} else {
+		client = clientSocketPool.Get().(*ClientSocket)
 	}
 
+	client.open(conn, size, out)
 	return client
 }
 
@@ -69,16 +102,24 @@ func (c ClientSocket) Write(bs []byte, out bool) (err error) {
 }
 
 func (c ClientSocket) Close() {
+	if clientSocketPool != nil {
+		c.close()
+		clientSocketPool.Put(c)
+	}
+
 	c.conn.Close()
 }
 
-type ClientWebsocket struct {
-	conn *websocket.Conn
+type ClientWebsocket websocket.Conn
+
+func (c ClientWebsocket) Conn() *websocket.Conn {
+	conn := websocket.Conn(c)
+	return &conn
 }
 
-func (c ClientWebsocket) Read() (error, []byte, *bufio.Reader) {
+func (c *ClientWebsocket) Read() (error, []byte, *bufio.Reader) {
 	var bs []byte
-	err := websocket.Message.Receive(c.conn, &bs)
+	err := websocket.Message.Receive(c.Conn(), &bs)
 	if err != nil {
 		return err, nil, nil
 	}
@@ -95,16 +136,19 @@ func (c ClientWebsocket) Output() (error, bool, sync.Locker) {
 }
 
 func (c ClientWebsocket) Write(bs []byte, out bool) (err error) {
-	err = websocket.Message.Send(c.conn, bs)
+	err = websocket.Message.Send(c.Conn(), bs)
 	return
 }
 
 func (c ClientWebsocket) Close() {
-	c.conn.Close()
+	c.Conn().Close()
 }
 
 func NewClientWebsocket(conn *websocket.Conn) *ClientWebsocket {
-	client := new(ClientWebsocket)
-	client.conn = conn
-	return client
+	if conn == nil {
+		return nil
+	}
+
+	client := ClientWebsocket(*conn)
+	return &client
 }
