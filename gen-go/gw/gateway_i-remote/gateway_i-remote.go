@@ -22,8 +22,11 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
-  fmt.Fprintln(os.Stderr, "  Group group(string sid)")
+  fmt.Fprintln(os.Stderr, "  void rid(i64 cid, string name, i32 rid)")
+  fmt.Fprintln(os.Stderr, "  void rids(i64 cid,  rids)")
+  fmt.Fprintln(os.Stderr, "  void dirty(string sid)")
+  fmt.Fprintln(os.Stderr, "  bool push(i64 cid, string uri, string bytes)")
+  fmt.Fprintln(os.Stderr, "  void pushO(i64 cid, string uri, string bytes)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -138,37 +141,112 @@ func main() {
   }
   iprot := protocolFactory.GetProtocol(trans)
   oprot := protocolFactory.GetProtocol(trans)
-  client := gw.NewAclClient(thrift.NewTStandardClient(iprot, oprot))
+  client := gw.NewGatewayIClient(thrift.NewTStandardClient(iprot, oprot))
   if err := trans.Open(); err != nil {
     fmt.Fprintln(os.Stderr, "Error opening socket to ", host, ":", port, " ", err)
     os.Exit(1)
   }
   
   switch cmd {
-  case "login":
-    if flag.NArg() - 1 != 2 {
-      fmt.Fprintln(os.Stderr, "Login requires 2 args")
+  case "rid":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "Rid requires 3 args")
       flag.Usage()
     }
-    argvalue0, err13 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err13 != nil {
+    argvalue0, err17 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err17 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1 := []byte(flag.Arg(2))
+    argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    fmt.Print(client.Login(context.Background(), value0, value1))
+    tmp2, err19 := (strconv.Atoi(flag.Arg(3)))
+    if err19 != nil {
+      Usage()
+      return
+    }
+    argvalue2 := int32(tmp2)
+    value2 := argvalue2
+    fmt.Print(client.Rid(context.Background(), value0, value1, value2))
     fmt.Print("\n")
     break
-  case "group":
+  case "rids":
+    if flag.NArg() - 1 != 2 {
+      fmt.Fprintln(os.Stderr, "Rids requires 2 args")
+      flag.Usage()
+    }
+    argvalue0, err20 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err20 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    arg21 := flag.Arg(2)
+    mbTrans22 := thrift.NewTMemoryBufferLen(len(arg21))
+    defer mbTrans22.Close()
+    _, err23 := mbTrans22.WriteString(arg21)
+    if err23 != nil { 
+      Usage()
+      return
+    }
+    factory24 := thrift.NewTJSONProtocolFactory()
+    jsProt25 := factory24.GetProtocol(mbTrans22)
+    containerStruct1 := gw.NewGatewayIRidsArgs()
+    err26 := containerStruct1.ReadField2(context.Background(), jsProt25)
+    if err26 != nil {
+      Usage()
+      return
+    }
+    argvalue1 := containerStruct1.Rids
+    value1 := argvalue1
+    fmt.Print(client.Rids(context.Background(), value0, value1))
+    fmt.Print("\n")
+    break
+  case "dirty":
     if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Group requires 1 args")
+      fmt.Fprintln(os.Stderr, "Dirty requires 1 args")
       flag.Usage()
     }
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
-    fmt.Print(client.Group(context.Background(), value0))
+    fmt.Print(client.Dirty(context.Background(), value0))
+    fmt.Print("\n")
+    break
+  case "push":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "Push requires 3 args")
+      flag.Usage()
+    }
+    argvalue0, err28 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err28 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1 := flag.Arg(2)
+    value1 := argvalue1
+    argvalue2 := []byte(flag.Arg(3))
+    value2 := argvalue2
+    fmt.Print(client.Push(context.Background(), value0, value1, value2))
+    fmt.Print("\n")
+    break
+  case "pushO":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "PushO requires 3 args")
+      flag.Usage()
+    }
+    argvalue0, err31 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err31 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1 := flag.Arg(2)
+    value1 := argvalue1
+    argvalue2 := []byte(flag.Arg(3))
+    value2 := argvalue2
+    fmt.Print(client.PushO(context.Background(), value0, value1, value2))
     fmt.Print("\n")
     break
   case "":

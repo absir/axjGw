@@ -1,4 +1,4 @@
-package gateway
+package main
 
 import (
 	"axj/ANet"
@@ -7,7 +7,6 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axjGW/pkg/gateway"
-	"context"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 	"net"
@@ -18,7 +17,7 @@ import (
 )
 
 type Config struct {
-	cacheHttp  string
+	pool       bool
 	idleTime   int64
 	checkTime  int64
 	httpAddr   string
@@ -29,11 +28,18 @@ type Config struct {
 	addrPub    string
 }
 
-var GCfg = Config{}
+var GCfg = Config{
+	pool:       true,
+	idleTime:   30000,
+	checkTime:  3000,
+	httpAddr:   ":8082",
+	httpWs:     true,
+	socketAddr: ":8083",
+	addrPub:    "127.0.0.1:8082",
+}
 var GWorkHash int
-var GContext context.Context
 
-var GHandler *gateway.Handler
+var GHandler *gateway.HandlerG
 var GConnMng *ANet.ConnMng
 
 func main() {
@@ -45,20 +51,13 @@ func main() {
 
 	// 默认配置
 	{
-		GCfg.idleTime = 30000
-		GCfg.checkTime = 3000
-		GCfg.httpAddr = ":8082"
-		GCfg.httpWs = true
-		GCfg.socketAddr = ":8083"
-		GCfg.addrPub = "127.0.0.1:8082"
 		KtCvt.BindInterface(GCfg, APro.Cfg)
 		GWorkHash = int(APro.WorkId())
-		GContext = context.Background()
 	}
 
 	// ANet服务
-	GHandler = new(gateway.Handler)
-	GConnMng = ANet.NewConnMng(GHandler, APro.WorkId(), time.Duration(GCfg.idleTime)*time.Millisecond, time.Duration(GCfg.checkTime)*time.Millisecond)
+	GHandler = new(gateway.HandlerG)
+	GConnMng = ANet.NewConnMng(GHandler, APro.WorkId(), time.Duration(GCfg.idleTime)*time.Millisecond, time.Duration(GCfg.checkTime)*time.Millisecond, GCfg.pool)
 	// 空闲检测
 	go GConnMng.IdleLoop()
 
@@ -95,22 +94,37 @@ func main() {
 }
 
 func connect(client ANet.Client) {
-	connM := GConnMng.OpenConnM(client)
-	if !connectDo(connM) {
+	conn := GConnMng.OpenConn(client)
+	if !connectDo(conn) {
 		return
 	}
 
-	go connM.ReqLoop()
+	go conn.Get().ReqLoop()
 }
 
-func connectDo(connM *ANet.ConnM) bool {
+func connectDo(conn ANet.Conn) bool {
+	connM := GConnMng.ConnM(conn)
+	// 交换密钥
+	encrypt := GConnMng.Processor().Encrypt
+	if encrypt != nil {
+		sKey, cKey := encrypt.NewKeys()
+		if sKey != nil && cKey != nil {
+			connM.SetEncryKey(sKey)
+			// 路由缓存
+			connM.Get().Rep(ANet.REQ_KEY, "", 0, cKey, false, false, nil)
+		}
+	}
+
+	// 服务准备
+	connM.Get().Rep(ANet.REQ_ACL, "", 0, nil, false, false, nil)
+	// Arl请求
 	err, _, uri, uriI, data := connM.Req()
 	if err != nil || data == nil {
 		AZap.Logger.Warn("serv acl Req err", zap.Error(err))
 		return false
 	}
 
-	login, err := gateway.GetProds(gateway.Config.AclProd).GetProdHash(GWorkHash).GetAclClient().Login(GContext, connM.Id(), data)
+	login, err := gateway.GetProds(gateway.Config.AclProd).GetProdHash(GWorkHash).GetAclClient().Login(gateway.MsgMng.Context, connM.Id(), data)
 	if err != nil || login == nil {
 		AZap.Logger.Warn("serv acl Login err", zap.Error(err))
 		return false
@@ -127,13 +141,14 @@ func connectDo(connM *ANet.ConnM) bool {
 	// 用户注册
 
 	// 用户状态设置
-	connH := GHandler.ConnH(connM)
-	connH.SetId(login.UID, login.Sid)
-	// 路由规则
-	connH.PutId("", login.Aid)
+	connG := GHandler.ConnG(conn)
+	connG.SetId(login.UID, login.Sid)
+	// 路由服务规则
+	connG.PutRId("", login.Rid)
+	connG.PutRIds(login.Rids)
 	// 连接注册
-	GConnMng.RegConn(connH, int(login.PoolG))
+	GConnMng.RegConn(connG, int(login.PoolG))
 	// 开启服务
-	connM.Get().Rep(ANet.REQ_READY, "", 0, nil, false, false, nil)
+	connM.Get().Rep(ANet.REQ_LOOP, "", 0, nil, false, false, nil)
 	return true
 }

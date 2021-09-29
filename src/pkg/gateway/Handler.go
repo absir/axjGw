@@ -24,7 +24,7 @@ var Processor = ANet.Processor{
 	DataMax:     Config.DataMax,
 }
 
-type ConnH struct {
+type ConnG struct {
 	ANet.ConnM
 	uid    int64     // 用户编号int64
 	sid    string    // 用户编号string
@@ -33,13 +33,13 @@ type ConnH struct {
 	ridMap *sync.Map // 请求字典
 }
 
-func (c *ConnH) SetId(uid int64, sid string) {
+func (c *ConnG) SetId(uid int64, sid string) {
 	c.uid = uid
 	c.sid = sid
 	c.hash = -1
 }
 
-func (c *ConnH) Hash() int {
+func (c *ConnG) Hash() int {
 	if c.hash < 0 {
 		conn := c.ConnC
 		conn.Locker().Lock()
@@ -68,7 +68,7 @@ func (c *ConnH) Hash() int {
 	return c.hash
 }
 
-func (c *ConnH) GetId(name string) int32 {
+func (c *ConnG) GetId(name string) int32 {
 	if name == "" || name == Config.AclProd {
 		return c.rid
 	}
@@ -85,7 +85,7 @@ func (c *ConnH) GetId(name string) int32 {
 	return id.(int32)
 }
 
-func (c *ConnH) initRidMap() {
+func (c *ConnG) initRidMap() {
 	if c.ridMap == nil {
 		conn := c.ConnC
 		conn.Locker().Lock()
@@ -96,7 +96,7 @@ func (c *ConnH) initRidMap() {
 	}
 }
 
-func (c *ConnH) PutId(name string, id int32) {
+func (c *ConnG) PutRId(name string, id int32) {
 	if name == "" || name == Config.AclProd {
 		c.rid = id
 		return
@@ -117,7 +117,17 @@ func (c *ConnH) PutId(name string, id int32) {
 	}
 }
 
-func (c *ConnH) GetProd(name string, rand bool) *Prod {
+func (c *ConnG) PutRIds(ids map[string]int32) {
+	if ids == nil {
+		return
+	}
+
+	for name, id := range ids {
+		c.PutRId(name, id)
+	}
+}
+
+func (c *ConnG) GetProd(name string, rand bool) *Prod {
 	prods := GetProds(name)
 	if prods == nil {
 		return nil
@@ -135,31 +145,44 @@ func (c *ConnH) GetProd(name string, rand bool) *Prod {
 	return prods.GetProdHash(c.Hash())
 }
 
-type Handler struct {
+type HandlerG struct {
 }
 
-func (h *Handler) ConnH(conn ANet.Conn) *ConnH {
-	return conn.(*ConnH)
+func (h *HandlerG) ConnG(conn ANet.Conn) *ConnG {
+	return conn.(*ConnG)
 }
 
-func (h *Handler) ConnM(conn ANet.Conn) ANet.ConnM {
-	return conn.(*ConnH).ConnM
+func (h *HandlerG) ConnM(conn ANet.Conn) ANet.ConnM {
+	return conn.(*ConnG).ConnM
 }
 
-func (h *Handler) Open(client ANet.Client) ANet.Conn {
-	conn := new(ConnH)
-	conn.uid = 0
-	conn.sid = ""
-	conn.hash = -1
-	conn.rid = 0
-	conn.ridMap = nil
-	return conn
+func (h *HandlerG) New() ANet.Conn {
+	return new(ConnG)
 }
 
-func (h *Handler) Last(conn ANet.Conn, req bool) {
+func (h *HandlerG) Init(conn ANet.Conn) {
+	connG := h.ConnG(conn)
+	connG.ridMap = nil
 }
 
-func (h *Handler) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) bool {
+func (h *HandlerG) Open(conn ANet.Conn, client ANet.Client) {
+	connG := h.ConnG(conn)
+	connG.uid = 0
+	connG.sid = ""
+	connG.hash = -1
+	connG.rid = 0
+	connG.ridMap = nil
+}
+
+func (h *HandlerG) OnClose(conn ANet.Conn, err error, reason interface{}) {
+	connG := h.ConnG(conn)
+	connG.ridMap = nil
+}
+
+func (h *HandlerG) Last(conn ANet.Conn, req bool) {
+}
+
+func (h *HandlerG) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) bool {
 	if req >= ANet.REQ_ONEWAY {
 		return false
 	}
@@ -167,7 +190,7 @@ func (h *Handler) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data 
 	return true
 }
 
-func (h *Handler) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) {
+func (h *HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) {
 	reped := false
 	defer h.OnReqErr(conn, req, reped)
 	name := Config.AclProd
@@ -179,8 +202,8 @@ func (h *Handler) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, dat
 		}
 	}
 
-	connH := h.ConnH(conn)
-	prod := connH.GetProd(name, false)
+	connG := h.ConnG(conn)
+	prod := connG.GetProd(name, false)
 	if prod == nil {
 		if req > ANet.REQ_ONEWAY {
 			// 服务不存在
@@ -193,7 +216,7 @@ func (h *Handler) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, dat
 
 	if req > ANet.REQ_ONEWAY {
 		// 请求返回
-		bs, err := prod.GetPassClient().Req(context.Background(), connH.Id(), connH.uid, connH.sid, uri, data)
+		bs, err := prod.GetPassClient().Req(context.Background(), connG.Id(), connG.uid, connG.sid, uri, data)
 		if err != nil {
 			panic(err)
 
@@ -204,11 +227,11 @@ func (h *Handler) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, dat
 
 	} else {
 		// 单向发送
-		prod.GetPassClient().Send(context.Background(), connH.Id(), connH.uid, connH.sid, uri, data)
+		prod.GetPassClient().Send(context.Background(), connG.Id(), connG.uid, connG.sid, uri, data)
 	}
 }
 
-func (h *Handler) OnReqErr(conn ANet.Conn, req int32, reped bool) {
+func (h *HandlerG) OnReqErr(conn ANet.Conn, req int32, reped bool) {
 	if err := recover(); err != nil {
 		AZap.Logger.Warn("rep err", zap.Reflect("err", err))
 	}
@@ -218,13 +241,10 @@ func (h *Handler) OnReqErr(conn ANet.Conn, req int32, reped bool) {
 	}
 }
 
-func (h *Handler) OnClose(conn ANet.Conn, err error, reason interface{}) {
-}
-
-func (h *Handler) Processor() ANet.Processor {
+func (h *HandlerG) Processor() ANet.Processor {
 	return Processor
 }
 
-func (h Handler) UriDict() ANet.UriDict {
+func (h HandlerG) UriDict() ANet.UriDict {
 	return UriDict
 }

@@ -25,7 +25,8 @@ type Prod struct {
 	// 转发客户端
 	passClient *gw.PassClient
 	// 网关客户端
-	gwClient *gw.GatewayClient
+	gwClient  *gw.GatewayClient
+	gwIClient *gw.GatewayIClient
 }
 
 func NewProd(id int32, url string) (*Prod, error) {
@@ -78,7 +79,7 @@ func (m *Prod) GetPassClient() *gw.PassClient {
 	return m.passClient
 }
 
-func (m *Prod) getGWClient() *gw.GatewayClient {
+func (m *Prod) GetGWClient() *gw.GatewayClient {
 	if m.gwClient == nil {
 		locker.Lock()
 		defer locker.Unlock()
@@ -88,6 +89,18 @@ func (m *Prod) getGWClient() *gw.GatewayClient {
 	}
 
 	return m.gwClient
+}
+
+func (m *Prod) GetGWIClient() *gw.GatewayIClient {
+	if m.gwIClient == nil {
+		locker.Lock()
+		defer locker.Unlock()
+		if m.gwIClient == nil {
+			m.gwIClient = gw.NewGatewayIClient(m.client)
+		}
+	}
+
+	return m.gwIClient
 }
 
 type Prods struct {

@@ -13,7 +13,7 @@ type Client interface {
 	// 粘包
 	Sticky() bool
 	// 流写入
-	Output() (err error, out bool, locker sync.Locker)
+	Output() (error, bool, sync.Locker)
 	// 写入
 	Write(bs []byte, out bool) (err error)
 	// 关闭
@@ -40,7 +40,7 @@ func NewClientSocket(conn *net.TCPConn, size int, out bool) *ClientSocket {
 		client.locker = new(sync.Mutex)
 
 	} else {
-		client = nil
+		client.locker = nil
 	}
 
 	return client
@@ -54,8 +54,8 @@ func (c ClientSocket) Sticky() bool {
 	return true
 }
 
-func (c ClientSocket) Output() (err error, out bool, locker sync.Locker) {
-	return nil, locker != nil, locker
+func (c ClientSocket) Output() (error, bool, sync.Locker) {
+	return nil, c.locker != nil, c.locker
 }
 
 func (c ClientSocket) Write(bs []byte, out bool) (err error) {
@@ -90,7 +90,7 @@ func (c ClientWebsocket) Sticky() bool {
 	return false
 }
 
-func (c ClientWebsocket) Output() (err error, out bool, locker sync.Locker) {
+func (c ClientWebsocket) Output() (error, bool, sync.Locker) {
 	return nil, false, nil
 }
 

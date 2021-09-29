@@ -253,6 +253,10 @@ func FileCfg(file string) KtCfg.Cfg {
 	file, err := filepath.EvalSymlinks(filepath.Join(Path(), file))
 	Kt.Err(err, true)
 	f, err := os.Open(file)
+	if err == os.ErrNotExist {
+		return nil
+	}
+
 	Kt.Err(err, true)
 	if f != nil {
 		return KtCfg.ReadIn(bufio.NewReader(f), nil, nil).(KtCfg.Cfg)

@@ -4,6 +4,12 @@ import (
 	"gorm.io/gorm"
 )
 
+type MsgG interface {
+	Get() *Msg
+	Unique() string
+	Isolate() bool
+}
+
 type Msg struct {
 	Id   int64  `gorm:"primary_key"`
 	Sid  string `gorm:"type:varchar(255);not null;index:Sid"`
@@ -11,9 +17,21 @@ type Msg struct {
 	Data []byte `gorm:""`
 }
 
+func (m *Msg) Get() *Msg {
+	return m
+}
+
+func (m Msg) Unique() string {
+	return ""
+}
+
+func (m Msg) Isolate() bool {
+	return false
+}
+
 type MsgQueue interface {
-	Insert(sid string, uri string, data []byte) int64
-	Next(sid string, lastId int64, limit int) []Msg
+	Insert(msg Msg) int64
+	Next(sid string, id int64, limit int) []Msg
 	Last(sid string, limit int) []Msg
 }
 
@@ -21,13 +39,7 @@ type MsgQueueDb struct {
 	db *gorm.DB
 }
 
-func (m MsgQueueDb) Insert(sid string, uri string, data []byte) int64 {
-	msg := Msg{
-		Sid:  sid,
-		Uri:  uri,
-		Data: data,
-	}
-
+func (m MsgQueueDb) Insert(msg Msg) int64 {
 	m.db.Create(msg)
 	return msg.Id
 }

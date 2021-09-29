@@ -150,14 +150,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "Req requires 5 args")
       flag.Usage()
     }
-    argvalue0, err19 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err19 != nil {
+    argvalue0, err22 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err22 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err20 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err20 != nil {
+    argvalue1, err23 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err23 != nil {
       Usage()
       return
     }
@@ -176,14 +176,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "Send requires 5 args")
       flag.Usage()
     }
-    argvalue0, err24 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err24 != nil {
+    argvalue0, err27 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err27 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err25 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err25 != nil {
+    argvalue1, err28 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err28 != nil {
       Usage()
       return
     }

@@ -13,13 +13,15 @@ type config struct {
 	DataMax     int32
 }
 
-var Config = config{}
+var Config *config
 
 func init() {
-	Config.GwProd = "gw"
-	Config.AclProd = "acl"
-	Config.TConfig = nil
-	Config.CompressMin = 1024
-	Config.DataMax = 1024 << 10
+	Config = &config{
+		GwProd:      "gw",
+		AclProd:     "acl",
+		TConfig:     nil,
+		CompressMin: 1024,
+		DataMax:     1024 << 10,
+	}
 	APro.SubCfgBind("gateway", Config)
 }

@@ -11,12 +11,13 @@ import (
 const (
 	// 特殊请求
 	REQ_PUSH   int32 = 0  // 推送
-	REQ_ENTRY  int32 = 1  // 秘钥
-	REQ_BEAT   int32 = 2  // 心跳
-	REQ_ROUTE  int32 = 3  // 路由字典
-	REQ_URI    int32 = 4  // 路由交换
-	REQ_READY  int32 = 31 // 准备完毕
-	REQ_ONEWAY int32 = 32 // 路由处理
+	REQ_LAST   int32 = 1  // 消息推送检查+
+	REQ_KEY    int32 = 2  // 秘钥
+	REQ_ACL    int32 = 3  // 请求开启
+	REQ_BEAT   int32 = 4  // 心跳
+	REQ_ROUTE  int32 = 5  // 路由字典
+	REQ_LOOP   int32 = 15 // 连接接受
+	REQ_ONEWAY int32 = 16 // 路由处理
 )
 
 type ConnM struct {
@@ -24,7 +25,6 @@ type ConnM struct {
 	id       int64
 	initTime int64
 	idleTime int64
-	poolG    APro.PoolG
 }
 
 func (c *ConnM) Id() int64 {
@@ -39,31 +39,44 @@ func (c *ConnM) IdleTime() int64 {
 	return c.idleTime
 }
 
-type HandlerH interface {
+type HandlerM interface {
 	Handler
 	ConnM(conn Conn) ConnM
 }
 
 type ConnMng struct {
 	HandlerW
-	HandlerH  HandlerH
+	hanlderM  HandlerM
 	idWorker  *Util.IdWorker
 	idleTime  int64
 	checkTime time.Duration
+	connPool  *sync.Pool
 	loopTime  int64
 	ConnMap   sync.Map
 	beatBs    []byte
 }
 
-func NewConnMng(handler HandlerH, workerId int32, idleTime time.Duration, checkTime time.Duration) *ConnMng {
+func NewConnMng(handler HandlerM, workerId int32, idleTime time.Duration, checkTime time.Duration, connPool bool) *ConnMng {
 	c := new(ConnMng)
 	c.handler = handler
-	c.HandlerH = handler
+	c.hanlderM = handler
 	var err error
 	c.idWorker, err = Util.NewIdWorker(workerId)
 	Kt.Panic(err)
 	c.idleTime = int64(idleTime)
 	c.checkTime = checkTime
+	if connPool {
+		c.connPool = new(sync.Pool)
+		c.connPool.New = func() interface{} {
+			conn := c.New()
+			c.Init(conn)
+			return conn
+		}
+
+	} else {
+		c.connPool = nil
+	}
+
 	c.loopTime = 0
 	c.ConnMap = sync.Map{}
 	c.beatBs = c.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0)
@@ -71,17 +84,46 @@ func NewConnMng(handler HandlerH, workerId int32, idleTime time.Duration, checkT
 }
 
 func (c *ConnMng) ConnM(conn Conn) ConnM {
-	return c.HandlerH.ConnM(conn)
+	return c.hanlderM.ConnM(conn)
 }
 
-func (c *ConnMng) Open(client Client) Conn {
-	connM := c.handler.Open(client).(*ConnM)
+func (c *ConnMng) OpenConn(client Client) Conn {
+	var conn Conn
+	if c.connPool == nil {
+		conn := c.New()
+		c.Init(conn)
+
+	} else {
+		conn = c.connPool.Get().(Conn)
+	}
+
+	c.Open(conn, client)
+	return conn
+}
+
+func (c *ConnMng) Init(conn Conn) {
+	conn.Get().Init()
+	c.handler.Init(conn)
+}
+
+func (c *ConnMng) Open(conn Conn, client Client) {
+	conn.Get().Open(client, c)
+	connM := c.ConnM(conn)
 	connM.id = c.idWorker.Generate()
 	connM.initTime = time.Now().UnixNano()
 	connM.idleTime = connM.initTime
-	connM.poolG = nil
 	connM.Get().poolG = APro.PoolOne
-	return connM
+	c.handler.Open(conn, client)
+}
+
+func (c *ConnMng) OnClose(conn Conn, err error, reason interface{}) {
+	if c.connPool != nil {
+		c.connPool.Put(conn)
+	}
+
+	connM := c.ConnM(conn)
+	c.ConnMap.Delete(connM.id)
+	c.handler.OnClose(conn, err, reason)
 }
 
 func (c *ConnMng) Last(conn Conn, req bool) {
@@ -89,16 +131,6 @@ func (c *ConnMng) Last(conn Conn, req bool) {
 	connM := c.ConnM(conn)
 	connM.idleTime = time.Now().UnixNano() + c.idleTime
 	c.handler.Last(conn, req)
-}
-
-func (c *ConnMng) OnClose(conn Conn, err error, reason interface{}) {
-	connM := c.ConnM(conn)
-	c.ConnMap.Delete(connM.id)
-	c.handler.OnClose(conn, err, reason)
-}
-
-func (c *ConnMng) OpenConnM(client Client) *ConnM {
-	return OpenConn(client, c).(*ConnM)
 }
 
 // 空闲检测
@@ -117,7 +149,7 @@ func (c *ConnMng) IdleLoop() {
 			connM := c.ConnM(conn)
 			connC := connM.ConnC
 			// 已关闭链接
-			if connC.closed {
+			if connC.Closed() {
 				c.ConnMap.Delete(key)
 				return true
 			}
@@ -138,7 +170,10 @@ func (c *ConnMng) RegConn(conn Conn, poolG int) {
 	connM := c.ConnM(conn)
 	c.ConnMap.Store(connM.id, conn)
 	if poolG > 1 {
-		connM.ConnC.poolG = APro.NewPoolLimit(poolG)
+		pg := connM.ConnC.poolG
+		if pg == nil || !pg.StrictAs(poolG) {
+			connM.ConnC.poolG = APro.NewPoolLimit(poolG)
+		}
 	}
 }
 

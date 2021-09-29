@@ -6,6 +6,7 @@ type PoolG interface {
 	Add()
 	Done()
 	Wait()
+	StrictAs(limit int) bool
 }
 
 type PoolLimit struct {
@@ -32,8 +33,6 @@ func (p PoolLimit) Done() {
 	if p.add <= 0 {
 		p.cond.Signal()
 	}
-
-	panic("implement me")
 }
 
 func (p PoolLimit) Wait() {
@@ -46,6 +45,10 @@ func (p PoolLimit) Wait() {
 
 		break
 	}
+}
+
+func (p PoolLimit) StrictAs(limit int) bool {
+	return p.add == 0 && p.limit == limit
 }
 
 func NewPoolLimit(limit int) *PoolLimit {

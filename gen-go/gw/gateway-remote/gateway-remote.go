@@ -22,9 +22,11 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  void aid(i64 cid, string name, i32 aid)")
+  fmt.Fprintln(os.Stderr, "  void rid(i64 cid, string name, i32 rid)")
+  fmt.Fprintln(os.Stderr, "  void rids(i64 cid,  rids)")
   fmt.Fprintln(os.Stderr, "  void dirty(string sid)")
   fmt.Fprintln(os.Stderr, "  bool push(i64 cid, i64 uid, string sid, string uri, string bytes, i32 qs, string unique)")
+  fmt.Fprintln(os.Stderr, "  void pushO(i64 cid, i64 uid, string sid, string uri, string bytes)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -146,27 +148,59 @@ func main() {
   }
   
   switch cmd {
-  case "aid":
+  case "rid":
     if flag.NArg() - 1 != 3 {
-      fmt.Fprintln(os.Stderr, "Aid requires 3 args")
+      fmt.Fprintln(os.Stderr, "Rid requires 3 args")
       flag.Usage()
     }
-    argvalue0, err40 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err40 != nil {
+    argvalue0, err49 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err49 != nil {
       Usage()
       return
     }
     value0 := argvalue0
     argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    tmp2, err42 := (strconv.Atoi(flag.Arg(3)))
-    if err42 != nil {
+    tmp2, err51 := (strconv.Atoi(flag.Arg(3)))
+    if err51 != nil {
       Usage()
       return
     }
     argvalue2 := int32(tmp2)
     value2 := argvalue2
-    fmt.Print(client.Aid(context.Background(), value0, value1, value2))
+    fmt.Print(client.Rid(context.Background(), value0, value1, value2))
+    fmt.Print("\n")
+    break
+  case "rids":
+    if flag.NArg() - 1 != 2 {
+      fmt.Fprintln(os.Stderr, "Rids requires 2 args")
+      flag.Usage()
+    }
+    argvalue0, err52 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err52 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    arg53 := flag.Arg(2)
+    mbTrans54 := thrift.NewTMemoryBufferLen(len(arg53))
+    defer mbTrans54.Close()
+    _, err55 := mbTrans54.WriteString(arg53)
+    if err55 != nil { 
+      Usage()
+      return
+    }
+    factory56 := thrift.NewTJSONProtocolFactory()
+    jsProt57 := factory56.GetProtocol(mbTrans54)
+    containerStruct1 := gw.NewGatewayRidsArgs()
+    err58 := containerStruct1.ReadField2(context.Background(), jsProt57)
+    if err58 != nil {
+      Usage()
+      return
+    }
+    argvalue1 := containerStruct1.Rids
+    value1 := argvalue1
+    fmt.Print(client.Rids(context.Background(), value0, value1))
     fmt.Print("\n")
     break
   case "dirty":
@@ -184,14 +218,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "Push requires 7 args")
       flag.Usage()
     }
-    argvalue0, err44 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err44 != nil {
+    argvalue0, err60 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err60 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err45 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err45 != nil {
+    argvalue1, err61 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err61 != nil {
       Usage()
       return
     }
@@ -202,8 +236,8 @@ func main() {
     value3 := argvalue3
     argvalue4 := []byte(flag.Arg(5))
     value4 := argvalue4
-    tmp5, err49 := (strconv.Atoi(flag.Arg(6)))
-    if err49 != nil {
+    tmp5, err65 := (strconv.Atoi(flag.Arg(6)))
+    if err65 != nil {
       Usage()
       return
     }
@@ -212,6 +246,32 @@ func main() {
     argvalue6 := flag.Arg(7)
     value6 := argvalue6
     fmt.Print(client.Push(context.Background(), value0, value1, value2, value3, value4, value5, value6))
+    fmt.Print("\n")
+    break
+  case "pushO":
+    if flag.NArg() - 1 != 5 {
+      fmt.Fprintln(os.Stderr, "PushO requires 5 args")
+      flag.Usage()
+    }
+    argvalue0, err67 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err67 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1, err68 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err68 != nil {
+      Usage()
+      return
+    }
+    value1 := argvalue1
+    argvalue2 := flag.Arg(3)
+    value2 := argvalue2
+    argvalue3 := flag.Arg(4)
+    value3 := argvalue3
+    argvalue4 := []byte(flag.Arg(5))
+    value4 := argvalue4
+    fmt.Print(client.PushO(context.Background(), value0, value1, value2, value3, value4))
     fmt.Print("\n")
     break
   case "":

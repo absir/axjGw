@@ -19,7 +19,6 @@ type Conn interface {
 type ConnC struct {
 	client    Client
 	locker    sync.Locker
-	closed    bool
 	encryKey  []byte
 	repBuffer *[]byte
 	poolG     APro.PoolG
@@ -39,15 +38,21 @@ func (c *ConnC) Locker() sync.Locker {
 }
 
 func (c *ConnC) Closed() bool {
-	return c.closed
+	return c.client == nil
 }
 
 func (c *ConnC) Manager() Manager {
 	return c.manager
 }
 
+func (c *ConnC) SetEncryKey(encryKey []byte) {
+	c.encryKey = encryKey
+}
+
 type Handler interface {
-	Open(client Client) Conn
+	New() Conn
+	Init(conn Conn)
+	Open(conn Conn, client Client)
 	OnClose(conn Conn, err error, reason interface{})
 	Last(conn Conn, req bool)
 	OnReq(conn Conn, req int32, uri string, uriI int32, data []byte) bool
@@ -60,34 +65,39 @@ type Manager interface {
 	Handler
 }
 
-func OpenConn(client Client, manager Manager) Conn {
-	conn := manager.Open(client)
-	connC := conn.Get()
-	connC.client = client
-	connC.locker = new(sync.Mutex)
-	connC.closed = false
-	connC.encryKey = nil
-	connC.repBuffer = nil
-	connC.poolG = nil
-	connC.manager = manager
-	return conn
+func (c *ConnC) Init() {
+	c.client = nil
+	c.locker = new(sync.Mutex)
+	c.encryKey = nil
+	c.repBuffer = nil
+	c.poolG = nil
+	c.manager = nil
+}
+
+func (c *ConnC) Open(client Client, manager Manager) {
+	c.client = client
+	// c.poolG = nil
+	c.manager = manager
 }
 
 func (c *ConnC) Close(err error, reason interface{}) {
-	if c.closed {
+	if c.Closed() {
 		return
 	}
 
 	c.locker.Lock()
 	defer c.locker.Unlock()
-	if c.closed {
+	if c.Closed() {
 		return
 	}
 
+	client := c.client
 	// 关闭执行
 	defer c.Recover()
-	defer c.client.Close()
-	c.closed = true
+	defer client.Close()
+	c.client = nil
+	// c.poolG = nil
+	c.manager = nil
 	// 关闭日志
 	AZap.Logger.Info("Conn close", zap.Error(err), zap.Reflect("reason", reason))
 	if c.manager != nil {
@@ -121,7 +131,7 @@ func (c *ConnC) Recover() error {
 }
 
 func (c *ConnC) Req() (err error, req int32, uri string, uriI int32, data []byte) {
-	if c.closed {
+	if c.Closed() {
 		return ERR_CLOSED, 0, "", 0, nil
 	}
 
@@ -171,7 +181,7 @@ func (c *ConnC) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32
 
 // 单进程阻塞 req < 0 直接 WriteData
 func (c *ConnC) Rep(req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, batch *RepBatch) error {
-	if c.closed {
+	if c.Closed() {
 		return ERR_CLOSED
 	}
 
@@ -227,8 +237,20 @@ type HandlerW struct {
 	handler Handler
 }
 
-func (h HandlerW) Open(client Client) interface{} {
-	return h.handler.Open(client)
+func (h HandlerW) New() Conn {
+	return h.handler.New()
+}
+
+func (h HandlerW) Init(conn Conn) {
+	h.handler.Init(conn)
+}
+
+func (h HandlerW) Open(conn Conn, client Client) {
+	h.handler.Open(conn, client)
+}
+
+func (h HandlerW) OnClose(conn Conn, err error, reason interface{}) {
+	h.handler.OnClose(conn, err, reason)
 }
 
 func (h HandlerW) Last(conn Conn, req bool) {
@@ -241,10 +263,6 @@ func (h HandlerW) OnReq(conn Conn, req int32, uri string, uriI int32, data []byt
 
 func (h HandlerW) OnReqIO(conn Conn, req int32, uri string, uriI int32, data []byte) {
 	h.handler.OnReqIO(conn, req, uri, uriI, data)
-}
-
-func (h HandlerW) OnClose(conn Conn, err error, reason interface{}) {
-	h.handler.OnClose(conn, err, reason)
 }
 
 func (h HandlerW) Processor() Processor {
