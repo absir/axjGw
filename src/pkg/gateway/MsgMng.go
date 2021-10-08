@@ -311,9 +311,17 @@ func (m *MsgUser) idleCheck() {
 }
 
 type MsgConn struct {
-	cid     int64
-	prod    *Prod
-	lasting int64
+	cid      int64
+	prod     *Prod
+	lasting  int64
+	lastTime int64
+}
+
+func (m *MsgConn) Init(cid int64) {
+	m.cid = cid
+	m.prod = nil
+	m.lasting = 0
+	m.lastTime = 0
 }
 
 func (m *MsgConn) Prop() *Prod {
@@ -381,6 +389,8 @@ func (m *MsgConn) lastDone(lasting int64, user *MsgUser, unique string) bool {
 }
 
 func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
+	lastTime := time.Now().UnixNano()
+	m.lastTime = lastTime
 	for i := 0; i < MsgMng.LastLoop; i++ {
 		msgG, lastIn := m.lastGet(lastId, user, unique)
 		if msgG == nil {
@@ -398,6 +408,10 @@ func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
 
 				for j := 0; j < mLen; j++ {
 					msg := msgs[j]
+					if lastTime != m.lastTime {
+						return
+					}
+
 					ret, err := m.Prop().GetGWIClient().Push(MsgMng.Context, m.cid, msg.Uri, msg.Data, false)
 					if !m.OnResult(ret, err, EP_DIRECT, user, unique) {
 						return
@@ -409,6 +423,10 @@ func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
 
 		} else {
 			msg := msgG.Get()
+			if lastTime != m.lastTime {
+				return
+			}
+
 			ret, err := m.Prop().GetGWIClient().Push(MsgMng.Context, m.cid, msg.Uri, msg.Data, msgG.Isolate())
 			if !m.OnResult(ret, err, EP_DIRECT, user, unique) {
 				return
