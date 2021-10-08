@@ -57,8 +57,10 @@ func (c *CircleQueue) Pop() (interface{}, bool) {
 		return nil, false
 	}
 
-	v := c.array[c.head]
-	c.head = c.mod(c.head + 1)
+	head := c.head
+	v := c.array[head]
+	c.head = c.mod(head + 1)
+	c.array[head] = nil
 	return v, true
 }
 
@@ -69,4 +71,38 @@ func (c *CircleQueue) Get(idx int) (interface{}, bool) {
 
 	idx = c.mod(c.head + idx)
 	return c.array[idx], true
+}
+
+func (c *CircleQueue) Set(idx int, val interface{}) bool {
+	if idx < 0 || idx >= c.Size() {
+		return false
+	}
+
+	idx = c.mod(c.head + idx)
+	c.array[idx] = val
+	return true
+}
+
+func (c *CircleQueue) Clear() {
+	c.head = 0
+	c.tail = 0
+	for i := c.max - 1; i >= 0; i-- {
+		c.array[i] = nil
+	}
+}
+
+func (c *CircleQueue) Remove(val interface{}) bool {
+	if c.IsEmpty() {
+		return false
+	}
+
+	head := c.head
+	v := c.array[head]
+	if v == val {
+		c.head = c.mod(head + 1)
+		c.array[head] = nil
+		return true
+	}
+
+	return false
 }

@@ -5,9 +5,12 @@ package gw
 import(
 	"bytes"
 	"context"
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"time"
 	"github.com/apache/thrift/lib/go/thrift"
+
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -17,29 +20,98 @@ var _ = context.Background
 var _ = time.Now
 var _ = bytes.Equal
 
+type Result_ int64
+const (
+  Result__Succuess Result_ = 0
+  Result__IdNone Result_ = 1
+  Result__RouteErr Result_ = 2
+)
+
+func (p Result_) String() string {
+  switch p {
+  case Result__Succuess: return "Succuess"
+  case Result__IdNone: return "IdNone"
+  case Result__RouteErr: return "RouteErr"
+  }
+  return "<UNSET>"
+}
+
+func Result_FromString(s string) (Result_, error) {
+  switch s {
+  case "Succuess": return Result__Succuess, nil 
+  case "IdNone": return Result__IdNone, nil 
+  case "RouteErr": return Result__RouteErr, nil 
+  }
+  return Result_(0), fmt.Errorf("not a valid Result_ string")
+}
+
+
+func Result_Ptr(v Result_) *Result_ { return &v }
+
+func (p Result_) MarshalText() ([]byte, error) {
+return []byte(p.String()), nil
+}
+
+func (p *Result_) UnmarshalText(text []byte) error {
+q, err := Result_FromString(string(text))
+if (err != nil) {
+return err
+}
+*p = q
+return nil
+}
+
+func (p *Result_) Scan(value interface{}) error {
+v, ok := value.(int64)
+if !ok {
+return errors.New("Scan value is not int64")
+}
+*p = Result_(v)
+return nil
+}
+
+func (p * Result_) Value() (driver.Value, error) {
+  if p == nil {
+    return nil, nil
+  }
+return int64(*p), nil
+}
 type GatewayI interface {
+  // Parameters:
+  //  - Cid
+  //  - Reason
+  Close(ctx context.Context, cid int64, reason string) (_r Result_, _err error)
+  // Parameters:
+  //  - Cid
+  //  - UID
+  //  - Sid
+  Reg(ctx context.Context, cid int64, uid int64, sid string) (_r Result_, _err error)
   // Parameters:
   //  - Cid
   //  - Name
   //  - Rid
-  Rid(ctx context.Context, cid int64, name string, rid int32) (_err error)
+  Rid(ctx context.Context, cid int64, name string, rid int32) (_r Result_, _err error)
   // Parameters:
   //  - Cid
   //  - Rids
-  Rids(ctx context.Context, cid int64, rids map[string]int32) (_err error)
+  Rids(ctx context.Context, cid int64, rids map[string]int32) (_r Result_, _err error)
   // Parameters:
-  //  - Sid
-  Dirty(ctx context.Context, sid string) (_err error)
+  //  - Cid
+  Last(ctx context.Context, cid int64) (_r Result_, _err error)
   // Parameters:
   //  - Cid
   //  - URI
   //  - Bytes
-  Push(ctx context.Context, cid int64, uri string, bytes []byte) (_r bool, _err error)
+  //  - Isolate
+  Push(ctx context.Context, cid int64, uri string, bytes []byte, isolate bool) (_r Result_, _err error)
   // Parameters:
   //  - Cid
   //  - URI
   //  - Bytes
   PushO(ctx context.Context, cid int64, uri string, bytes []byte) (_err error)
+  // Parameters:
+  //  - Sid
+  Dirty(ctx context.Context, sid string) (_r Result_, _err error)
 }
 
 type GatewayIClient struct {
@@ -79,67 +151,69 @@ func (p *GatewayIClient) SetLastResponseMeta_(meta thrift.ResponseMeta) {
 
 // Parameters:
 //  - Cid
-//  - Name
-//  - Rid
-func (p *GatewayIClient) Rid(ctx context.Context, cid int64, name string, rid int32) (_err error) {
-  var _args0 GatewayIRidArgs
+//  - Reason
+func (p *GatewayIClient) Close(ctx context.Context, cid int64, reason string) (_r Result_, _err error) {
+  var _args0 GatewayICloseArgs
   _args0.Cid = cid
-  _args0.Name = name
-  _args0.Rid = rid
-  var _result2 GatewayIRidResult
+  _args0.Reason = reason
+  var _result2 GatewayICloseResult
   var _meta1 thrift.ResponseMeta
-  _meta1, _err = p.Client_().Call(ctx, "rid", &_args0, &_result2)
+  _meta1, _err = p.Client_().Call(ctx, "close", &_args0, &_result2)
   p.SetLastResponseMeta_(_meta1)
   if _err != nil {
     return
   }
-  return nil
+  return _result2.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Cid
+//  - UID
+//  - Sid
+func (p *GatewayIClient) Reg(ctx context.Context, cid int64, uid int64, sid string) (_r Result_, _err error) {
+  var _args3 GatewayIRegArgs
+  _args3.Cid = cid
+  _args3.UID = uid
+  _args3.Sid = sid
+  var _result5 GatewayIRegResult
+  var _meta4 thrift.ResponseMeta
+  _meta4, _err = p.Client_().Call(ctx, "reg", &_args3, &_result5)
+  p.SetLastResponseMeta_(_meta4)
+  if _err != nil {
+    return
+  }
+  return _result5.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Cid
+//  - Name
+//  - Rid
+func (p *GatewayIClient) Rid(ctx context.Context, cid int64, name string, rid int32) (_r Result_, _err error) {
+  var _args6 GatewayIRidArgs
+  _args6.Cid = cid
+  _args6.Name = name
+  _args6.Rid = rid
+  var _result8 GatewayIRidResult
+  var _meta7 thrift.ResponseMeta
+  _meta7, _err = p.Client_().Call(ctx, "rid", &_args6, &_result8)
+  p.SetLastResponseMeta_(_meta7)
+  if _err != nil {
+    return
+  }
+  return _result8.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Cid
 //  - Rids
-func (p *GatewayIClient) Rids(ctx context.Context, cid int64, rids map[string]int32) (_err error) {
-  var _args3 GatewayIRidsArgs
-  _args3.Cid = cid
-  _args3.Rids = rids
-  var _result5 GatewayIRidsResult
-  var _meta4 thrift.ResponseMeta
-  _meta4, _err = p.Client_().Call(ctx, "rids", &_args3, &_result5)
-  p.SetLastResponseMeta_(_meta4)
-  if _err != nil {
-    return
-  }
-  return nil
-}
-
-// Parameters:
-//  - Sid
-func (p *GatewayIClient) Dirty(ctx context.Context, sid string) (_err error) {
-  var _args6 GatewayIDirtyArgs
-  _args6.Sid = sid
-  var _result8 GatewayIDirtyResult
-  var _meta7 thrift.ResponseMeta
-  _meta7, _err = p.Client_().Call(ctx, "dirty", &_args6, &_result8)
-  p.SetLastResponseMeta_(_meta7)
-  if _err != nil {
-    return
-  }
-  return nil
-}
-
-// Parameters:
-//  - Cid
-//  - URI
-//  - Bytes
-func (p *GatewayIClient) Push(ctx context.Context, cid int64, uri string, bytes []byte) (_r bool, _err error) {
-  var _args9 GatewayIPushArgs
+func (p *GatewayIClient) Rids(ctx context.Context, cid int64, rids map[string]int32) (_r Result_, _err error) {
+  var _args9 GatewayIRidsArgs
   _args9.Cid = cid
-  _args9.URI = uri
-  _args9.Bytes = bytes
-  var _result11 GatewayIPushResult
+  _args9.Rids = rids
+  var _result11 GatewayIRidsResult
   var _meta10 thrift.ResponseMeta
-  _meta10, _err = p.Client_().Call(ctx, "push", &_args9, &_result11)
+  _meta10, _err = p.Client_().Call(ctx, "rids", &_args9, &_result11)
   p.SetLastResponseMeta_(_meta10)
   if _err != nil {
     return
@@ -149,18 +223,69 @@ func (p *GatewayIClient) Push(ctx context.Context, cid int64, uri string, bytes 
 
 // Parameters:
 //  - Cid
+func (p *GatewayIClient) Last(ctx context.Context, cid int64) (_r Result_, _err error) {
+  var _args12 GatewayILastArgs
+  _args12.Cid = cid
+  var _result14 GatewayILastResult
+  var _meta13 thrift.ResponseMeta
+  _meta13, _err = p.Client_().Call(ctx, "last", &_args12, &_result14)
+  p.SetLastResponseMeta_(_meta13)
+  if _err != nil {
+    return
+  }
+  return _result14.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Cid
+//  - URI
+//  - Bytes
+//  - Isolate
+func (p *GatewayIClient) Push(ctx context.Context, cid int64, uri string, bytes []byte, isolate bool) (_r Result_, _err error) {
+  var _args15 GatewayIPushArgs
+  _args15.Cid = cid
+  _args15.URI = uri
+  _args15.Bytes = bytes
+  _args15.Isolate = isolate
+  var _result17 GatewayIPushResult
+  var _meta16 thrift.ResponseMeta
+  _meta16, _err = p.Client_().Call(ctx, "push", &_args15, &_result17)
+  p.SetLastResponseMeta_(_meta16)
+  if _err != nil {
+    return
+  }
+  return _result17.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Cid
 //  - URI
 //  - Bytes
 func (p *GatewayIClient) PushO(ctx context.Context, cid int64, uri string, bytes []byte) (_err error) {
-  var _args12 GatewayIPushOArgs
-  _args12.Cid = cid
-  _args12.URI = uri
-  _args12.Bytes = bytes
+  var _args18 GatewayIPushOArgs
+  _args18.Cid = cid
+  _args18.URI = uri
+  _args18.Bytes = bytes
   p.SetLastResponseMeta_(thrift.ResponseMeta{})
-  if _, err := p.Client_().Call(ctx, "pushO", &_args12, nil); err != nil {
+  if _, err := p.Client_().Call(ctx, "pushO", &_args18, nil); err != nil {
     return err
   }
   return nil
+}
+
+// Parameters:
+//  - Sid
+func (p *GatewayIClient) Dirty(ctx context.Context, sid string) (_r Result_, _err error) {
+  var _args19 GatewayIDirtyArgs
+  _args19.Sid = sid
+  var _result21 GatewayIDirtyResult
+  var _meta20 thrift.ResponseMeta
+  _meta20, _err = p.Client_().Call(ctx, "dirty", &_args19, &_result21)
+  p.SetLastResponseMeta_(_meta20)
+  if _err != nil {
+    return
+  }
+  return _result21.GetSuccess(), nil
 }
 
 type GatewayIProcessor struct {
@@ -183,13 +308,16 @@ func (p *GatewayIProcessor) ProcessorMap() map[string]thrift.TProcessorFunction 
 
 func NewGatewayIProcessor(handler GatewayI) *GatewayIProcessor {
 
-  self13 := &GatewayIProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
-  self13.processorMap["rid"] = &gatewayIProcessorRid{handler:handler}
-  self13.processorMap["rids"] = &gatewayIProcessorRids{handler:handler}
-  self13.processorMap["dirty"] = &gatewayIProcessorDirty{handler:handler}
-  self13.processorMap["push"] = &gatewayIProcessorPush{handler:handler}
-  self13.processorMap["pushO"] = &gatewayIProcessorPushO{handler:handler}
-return self13
+  self22 := &GatewayIProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
+  self22.processorMap["close"] = &gatewayIProcessorClose{handler:handler}
+  self22.processorMap["reg"] = &gatewayIProcessorReg{handler:handler}
+  self22.processorMap["rid"] = &gatewayIProcessorRid{handler:handler}
+  self22.processorMap["rids"] = &gatewayIProcessorRids{handler:handler}
+  self22.processorMap["last"] = &gatewayIProcessorLast{handler:handler}
+  self22.processorMap["push"] = &gatewayIProcessorPush{handler:handler}
+  self22.processorMap["pushO"] = &gatewayIProcessorPushO{handler:handler}
+  self22.processorMap["dirty"] = &gatewayIProcessorDirty{handler:handler}
+return self22
 }
 
 func (p *GatewayIProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -200,13 +328,171 @@ func (p *GatewayIProcessor) Process(ctx context.Context, iprot, oprot thrift.TPr
   }
   iprot.Skip(ctx, thrift.STRUCT)
   iprot.ReadMessageEnd(ctx)
-  x14 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
+  x23 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
   oprot.WriteMessageBegin(ctx, name, thrift.EXCEPTION, seqId)
-  x14.Write(ctx, oprot)
+  x23.Write(ctx, oprot)
   oprot.WriteMessageEnd(ctx)
   oprot.Flush(ctx)
-  return false, x14
+  return false, x23
 
+}
+
+type gatewayIProcessorClose struct {
+  handler GatewayI
+}
+
+func (p *gatewayIProcessorClose) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := GatewayICloseArgs{}
+  var err2 error
+  if err2 = args.Read(ctx, iprot); err2 != nil {
+    iprot.ReadMessageEnd(ctx)
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+    oprot.WriteMessageBegin(ctx, "close", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return false, thrift.WrapTException(err2)
+  }
+  iprot.ReadMessageEnd(ctx)
+
+  tickerCancel := func() {}
+  // Start a goroutine to do server side connectivity check.
+  if thrift.ServerConnectivityCheckInterval > 0 {
+    var cancel context.CancelFunc
+    ctx, cancel = context.WithCancel(ctx)
+    defer cancel()
+    var tickerCtx context.Context
+    tickerCtx, tickerCancel = context.WithCancel(context.Background())
+    defer tickerCancel()
+    go func(ctx context.Context, cancel context.CancelFunc) {
+      ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+      defer ticker.Stop()
+      for {
+        select {
+        case <-ctx.Done():
+          return
+        case <-ticker.C:
+          if !iprot.Transport().IsOpen() {
+            cancel()
+            return
+          }
+        }
+      }
+    }(tickerCtx, cancel)
+  }
+
+  result := GatewayICloseResult{}
+  var retval Result_
+  if retval, err2 = p.handler.Close(ctx, args.Cid, args.Reason); err2 != nil {
+    tickerCancel()
+    if err2 == thrift.ErrAbandonRequest {
+      return false, thrift.WrapTException(err2)
+    }
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing close: " + err2.Error())
+    oprot.WriteMessageBegin(ctx, "close", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
+  }
+  tickerCancel()
+  if err2 = oprot.WriteMessageBegin(ctx, "close", thrift.REPLY, seqId); err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.WriteMessageEnd(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err != nil {
+    return
+  }
+  return true, err
+}
+
+type gatewayIProcessorReg struct {
+  handler GatewayI
+}
+
+func (p *gatewayIProcessorReg) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := GatewayIRegArgs{}
+  var err2 error
+  if err2 = args.Read(ctx, iprot); err2 != nil {
+    iprot.ReadMessageEnd(ctx)
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+    oprot.WriteMessageBegin(ctx, "reg", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return false, thrift.WrapTException(err2)
+  }
+  iprot.ReadMessageEnd(ctx)
+
+  tickerCancel := func() {}
+  // Start a goroutine to do server side connectivity check.
+  if thrift.ServerConnectivityCheckInterval > 0 {
+    var cancel context.CancelFunc
+    ctx, cancel = context.WithCancel(ctx)
+    defer cancel()
+    var tickerCtx context.Context
+    tickerCtx, tickerCancel = context.WithCancel(context.Background())
+    defer tickerCancel()
+    go func(ctx context.Context, cancel context.CancelFunc) {
+      ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+      defer ticker.Stop()
+      for {
+        select {
+        case <-ctx.Done():
+          return
+        case <-ticker.C:
+          if !iprot.Transport().IsOpen() {
+            cancel()
+            return
+          }
+        }
+      }
+    }(tickerCtx, cancel)
+  }
+
+  result := GatewayIRegResult{}
+  var retval Result_
+  if retval, err2 = p.handler.Reg(ctx, args.Cid, args.UID, args.Sid); err2 != nil {
+    tickerCancel()
+    if err2 == thrift.ErrAbandonRequest {
+      return false, thrift.WrapTException(err2)
+    }
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing reg: " + err2.Error())
+    oprot.WriteMessageBegin(ctx, "reg", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
+  }
+  tickerCancel()
+  if err2 = oprot.WriteMessageBegin(ctx, "reg", thrift.REPLY, seqId); err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.WriteMessageEnd(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err != nil {
+    return
+  }
+  return true, err
 }
 
 type gatewayIProcessorRid struct {
@@ -254,7 +540,8 @@ func (p *gatewayIProcessorRid) Process(ctx context.Context, seqId int32, iprot, 
   }
 
   result := GatewayIRidResult{}
-  if err2 = p.handler.Rid(ctx, args.Cid, args.Name, args.Rid); err2 != nil {
+  var retval Result_
+  if retval, err2 = p.handler.Rid(ctx, args.Cid, args.Name, args.Rid); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
@@ -265,6 +552,8 @@ func (p *gatewayIProcessorRid) Process(ctx context.Context, seqId int32, iprot, 
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
     return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
   }
   tickerCancel()
   if err2 = oprot.WriteMessageBegin(ctx, "rid", thrift.REPLY, seqId); err2 != nil {
@@ -330,7 +619,8 @@ func (p *gatewayIProcessorRids) Process(ctx context.Context, seqId int32, iprot,
   }
 
   result := GatewayIRidsResult{}
-  if err2 = p.handler.Rids(ctx, args.Cid, args.Rids); err2 != nil {
+  var retval Result_
+  if retval, err2 = p.handler.Rids(ctx, args.Cid, args.Rids); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
@@ -341,6 +631,8 @@ func (p *gatewayIProcessorRids) Process(ctx context.Context, seqId int32, iprot,
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
     return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
   }
   tickerCancel()
   if err2 = oprot.WriteMessageBegin(ctx, "rids", thrift.REPLY, seqId); err2 != nil {
@@ -361,17 +653,17 @@ func (p *gatewayIProcessorRids) Process(ctx context.Context, seqId int32, iprot,
   return true, err
 }
 
-type gatewayIProcessorDirty struct {
+type gatewayIProcessorLast struct {
   handler GatewayI
 }
 
-func (p *gatewayIProcessorDirty) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-  args := GatewayIDirtyArgs{}
+func (p *gatewayIProcessorLast) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := GatewayILastArgs{}
   var err2 error
   if err2 = args.Read(ctx, iprot); err2 != nil {
     iprot.ReadMessageEnd(ctx)
     x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
-    oprot.WriteMessageBegin(ctx, "dirty", thrift.EXCEPTION, seqId)
+    oprot.WriteMessageBegin(ctx, "last", thrift.EXCEPTION, seqId)
     x.Write(ctx, oprot)
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
@@ -405,21 +697,24 @@ func (p *gatewayIProcessorDirty) Process(ctx context.Context, seqId int32, iprot
     }(tickerCtx, cancel)
   }
 
-  result := GatewayIDirtyResult{}
-  if err2 = p.handler.Dirty(ctx, args.Sid); err2 != nil {
+  result := GatewayILastResult{}
+  var retval Result_
+  if retval, err2 = p.handler.Last(ctx, args.Cid); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
     }
-    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing dirty: " + err2.Error())
-    oprot.WriteMessageBegin(ctx, "dirty", thrift.EXCEPTION, seqId)
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing last: " + err2.Error())
+    oprot.WriteMessageBegin(ctx, "last", thrift.EXCEPTION, seqId)
     x.Write(ctx, oprot)
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
     return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
   }
   tickerCancel()
-  if err2 = oprot.WriteMessageBegin(ctx, "dirty", thrift.REPLY, seqId); err2 != nil {
+  if err2 = oprot.WriteMessageBegin(ctx, "last", thrift.REPLY, seqId); err2 != nil {
     err = thrift.WrapTException(err2)
   }
   if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
@@ -482,8 +777,8 @@ func (p *gatewayIProcessorPush) Process(ctx context.Context, seqId int32, iprot,
   }
 
   result := GatewayIPushResult{}
-  var retval bool
-  if retval, err2 = p.handler.Push(ctx, args.Cid, args.URI, args.Bytes); err2 != nil {
+  var retval Result_
+  if retval, err2 = p.handler.Push(ctx, args.Cid, args.URI, args.Bytes, args.Isolate); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
@@ -540,8 +835,579 @@ func (p *gatewayIProcessorPushO) Process(ctx context.Context, seqId int32, iprot
   return true, nil
 }
 
+type gatewayIProcessorDirty struct {
+  handler GatewayI
+}
+
+func (p *gatewayIProcessorDirty) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := GatewayIDirtyArgs{}
+  var err2 error
+  if err2 = args.Read(ctx, iprot); err2 != nil {
+    iprot.ReadMessageEnd(ctx)
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+    oprot.WriteMessageBegin(ctx, "dirty", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return false, thrift.WrapTException(err2)
+  }
+  iprot.ReadMessageEnd(ctx)
+
+  tickerCancel := func() {}
+  // Start a goroutine to do server side connectivity check.
+  if thrift.ServerConnectivityCheckInterval > 0 {
+    var cancel context.CancelFunc
+    ctx, cancel = context.WithCancel(ctx)
+    defer cancel()
+    var tickerCtx context.Context
+    tickerCtx, tickerCancel = context.WithCancel(context.Background())
+    defer tickerCancel()
+    go func(ctx context.Context, cancel context.CancelFunc) {
+      ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+      defer ticker.Stop()
+      for {
+        select {
+        case <-ctx.Done():
+          return
+        case <-ticker.C:
+          if !iprot.Transport().IsOpen() {
+            cancel()
+            return
+          }
+        }
+      }
+    }(tickerCtx, cancel)
+  }
+
+  result := GatewayIDirtyResult{}
+  var retval Result_
+  if retval, err2 = p.handler.Dirty(ctx, args.Sid); err2 != nil {
+    tickerCancel()
+    if err2 == thrift.ErrAbandonRequest {
+      return false, thrift.WrapTException(err2)
+    }
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing dirty: " + err2.Error())
+    oprot.WriteMessageBegin(ctx, "dirty", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
+  }
+  tickerCancel()
+  if err2 = oprot.WriteMessageBegin(ctx, "dirty", thrift.REPLY, seqId); err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.WriteMessageEnd(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err != nil {
+    return
+  }
+  return true, err
+}
+
 
 // HELPER FUNCTIONS AND STRUCTURES
+
+// Attributes:
+//  - Cid
+//  - Reason
+type GatewayICloseArgs struct {
+  Cid int64 `thrift:"cid,1" db:"cid" json:"cid"`
+  Reason string `thrift:"reason,2" db:"reason" json:"reason"`
+}
+
+func NewGatewayICloseArgs() *GatewayICloseArgs {
+  return &GatewayICloseArgs{}
+}
+
+
+func (p *GatewayICloseArgs) GetCid() int64 {
+  return p.Cid
+}
+
+func (p *GatewayICloseArgs) GetReason() string {
+  return p.Reason
+}
+func (p *GatewayICloseArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if fieldTypeId == thrift.I64 {
+        if err := p.ReadField1(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 2:
+      if fieldTypeId == thrift.STRING {
+        if err := p.ReadField2(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayICloseArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(ctx); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Cid = v
+}
+  return nil
+}
+
+func (p *GatewayICloseArgs)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(ctx); err != nil {
+  return thrift.PrependError("error reading field 2: ", err)
+} else {
+  p.Reason = v
+}
+  return nil
+}
+
+func (p *GatewayICloseArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "close_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(ctx, oprot); err != nil { return err }
+    if err := p.writeField2(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayICloseArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "cid", thrift.I64, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:cid: ", p), err) }
+  if err := oprot.WriteI64(ctx, int64(p.Cid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.cid (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:cid: ", p), err) }
+  return err
+}
+
+func (p *GatewayICloseArgs) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "reason", thrift.STRING, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:reason: ", p), err) }
+  if err := oprot.WriteString(ctx, string(p.Reason)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.reason (2) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:reason: ", p), err) }
+  return err
+}
+
+func (p *GatewayICloseArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayICloseArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type GatewayICloseResult struct {
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewGatewayICloseResult() *GatewayICloseResult {
+  return &GatewayICloseResult{}
+}
+
+var GatewayICloseResult_Success_DEFAULT Result_
+func (p *GatewayICloseResult) GetSuccess() Result_ {
+  if !p.IsSetSuccess() {
+    return GatewayICloseResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayICloseResult) IsSetSuccess() bool {
+  return p.Success != nil
+}
+
+func (p *GatewayICloseResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayICloseResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  temp := Result_(v)
+  p.Success = &temp
+}
+  return nil
+}
+
+func (p *GatewayICloseResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "close_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayICloseResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *GatewayICloseResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayICloseResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Cid
+//  - UID
+//  - Sid
+type GatewayIRegArgs struct {
+  Cid int64 `thrift:"cid,1" db:"cid" json:"cid"`
+  UID int64 `thrift:"uid,2" db:"uid" json:"uid"`
+  Sid string `thrift:"sid,3" db:"sid" json:"sid"`
+}
+
+func NewGatewayIRegArgs() *GatewayIRegArgs {
+  return &GatewayIRegArgs{}
+}
+
+
+func (p *GatewayIRegArgs) GetCid() int64 {
+  return p.Cid
+}
+
+func (p *GatewayIRegArgs) GetUID() int64 {
+  return p.UID
+}
+
+func (p *GatewayIRegArgs) GetSid() string {
+  return p.Sid
+}
+func (p *GatewayIRegArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if fieldTypeId == thrift.I64 {
+        if err := p.ReadField1(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 2:
+      if fieldTypeId == thrift.I64 {
+        if err := p.ReadField2(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 3:
+      if fieldTypeId == thrift.STRING {
+        if err := p.ReadField3(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayIRegArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(ctx); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Cid = v
+}
+  return nil
+}
+
+func (p *GatewayIRegArgs)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(ctx); err != nil {
+  return thrift.PrependError("error reading field 2: ", err)
+} else {
+  p.UID = v
+}
+  return nil
+}
+
+func (p *GatewayIRegArgs)  ReadField3(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(ctx); err != nil {
+  return thrift.PrependError("error reading field 3: ", err)
+} else {
+  p.Sid = v
+}
+  return nil
+}
+
+func (p *GatewayIRegArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "reg_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(ctx, oprot); err != nil { return err }
+    if err := p.writeField2(ctx, oprot); err != nil { return err }
+    if err := p.writeField3(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayIRegArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "cid", thrift.I64, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:cid: ", p), err) }
+  if err := oprot.WriteI64(ctx, int64(p.Cid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.cid (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:cid: ", p), err) }
+  return err
+}
+
+func (p *GatewayIRegArgs) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "uid", thrift.I64, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:uid: ", p), err) }
+  if err := oprot.WriteI64(ctx, int64(p.UID)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.uid (2) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:uid: ", p), err) }
+  return err
+}
+
+func (p *GatewayIRegArgs) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "sid", thrift.STRING, 3); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:sid: ", p), err) }
+  if err := oprot.WriteString(ctx, string(p.Sid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.sid (3) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 3:sid: ", p), err) }
+  return err
+}
+
+func (p *GatewayIRegArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayIRegArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type GatewayIRegResult struct {
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewGatewayIRegResult() *GatewayIRegResult {
+  return &GatewayIRegResult{}
+}
+
+var GatewayIRegResult_Success_DEFAULT Result_
+func (p *GatewayIRegResult) GetSuccess() Result_ {
+  if !p.IsSetSuccess() {
+    return GatewayIRegResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayIRegResult) IsSetSuccess() bool {
+  return p.Success != nil
+}
+
+func (p *GatewayIRegResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayIRegResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  temp := Result_(v)
+  p.Success = &temp
+}
+  return nil
+}
+
+func (p *GatewayIRegResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "reg_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayIRegResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *GatewayIRegResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayIRegResult(%+v)", *p)
+}
 
 // Attributes:
 //  - Cid
@@ -706,11 +1572,25 @@ func (p *GatewayIRidArgs) String() string {
   return fmt.Sprintf("GatewayIRidArgs(%+v)", *p)
 }
 
+// Attributes:
+//  - Success
 type GatewayIRidResult struct {
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
 
 func NewGatewayIRidResult() *GatewayIRidResult {
   return &GatewayIRidResult{}
+}
+
+var GatewayIRidResult_Success_DEFAULT Result_
+func (p *GatewayIRidResult) GetSuccess() Result_ {
+  if !p.IsSetSuccess() {
+    return GatewayIRidResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayIRidResult) IsSetSuccess() bool {
+  return p.Success != nil
 }
 
 func (p *GatewayIRidResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
@@ -725,8 +1605,21 @@ func (p *GatewayIRidResult) Read(ctx context.Context, iprot thrift.TProtocol) er
       return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
     }
     if fieldTypeId == thrift.STOP { break; }
-    if err := iprot.Skip(ctx, fieldTypeId); err != nil {
-      return err
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
     }
     if err := iprot.ReadFieldEnd(ctx); err != nil {
       return err
@@ -738,16 +1631,39 @@ func (p *GatewayIRidResult) Read(ctx context.Context, iprot thrift.TProtocol) er
   return nil
 }
 
+func (p *GatewayIRidResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  temp := Result_(v)
+  p.Success = &temp
+}
+  return nil
+}
+
 func (p *GatewayIRidResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "rid_result"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
   if err := oprot.WriteStructEnd(ctx); err != nil {
     return thrift.PrependError("write struct stop error: ", err) }
   return nil
+}
+
+func (p *GatewayIRidResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
 }
 
 func (p *GatewayIRidResult) String() string {
@@ -842,19 +1758,19 @@ func (p *GatewayIRidsArgs)  ReadField2(ctx context.Context, iprot thrift.TProtoc
   tMap := make(map[string]int32, size)
   p.Rids =  tMap
   for i := 0; i < size; i ++ {
-var _key15 string
+var _key24 string
     if v, err := iprot.ReadString(ctx); err != nil {
     return thrift.PrependError("error reading field 0: ", err)
 } else {
-    _key15 = v
+    _key24 = v
 }
-var _val16 int32
+var _val25 int32
     if v, err := iprot.ReadI32(ctx); err != nil {
     return thrift.PrependError("error reading field 0: ", err)
 } else {
-    _val16 = v
+    _val25 = v
 }
-    p.Rids[_key15] = _val16
+    p.Rids[_key24] = _val25
   }
   if err := iprot.ReadMapEnd(ctx); err != nil {
     return thrift.PrependError("error reading map end: ", err)
@@ -913,11 +1829,25 @@ func (p *GatewayIRidsArgs) String() string {
   return fmt.Sprintf("GatewayIRidsArgs(%+v)", *p)
 }
 
+// Attributes:
+//  - Success
 type GatewayIRidsResult struct {
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
 
 func NewGatewayIRidsResult() *GatewayIRidsResult {
   return &GatewayIRidsResult{}
+}
+
+var GatewayIRidsResult_Success_DEFAULT Result_
+func (p *GatewayIRidsResult) GetSuccess() Result_ {
+  if !p.IsSetSuccess() {
+    return GatewayIRidsResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayIRidsResult) IsSetSuccess() bool {
+  return p.Success != nil
 }
 
 func (p *GatewayIRidsResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
@@ -932,8 +1862,21 @@ func (p *GatewayIRidsResult) Read(ctx context.Context, iprot thrift.TProtocol) e
       return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
     }
     if fieldTypeId == thrift.STOP { break; }
-    if err := iprot.Skip(ctx, fieldTypeId); err != nil {
-      return err
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
     }
     if err := iprot.ReadFieldEnd(ctx); err != nil {
       return err
@@ -945,16 +1888,39 @@ func (p *GatewayIRidsResult) Read(ctx context.Context, iprot thrift.TProtocol) e
   return nil
 }
 
+func (p *GatewayIRidsResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  temp := Result_(v)
+  p.Success = &temp
+}
+  return nil
+}
+
 func (p *GatewayIRidsResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "rids_result"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
   if err := oprot.WriteStructEnd(ctx); err != nil {
     return thrift.PrependError("write struct stop error: ", err) }
   return nil
+}
+
+func (p *GatewayIRidsResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
 }
 
 func (p *GatewayIRidsResult) String() string {
@@ -965,20 +1931,20 @@ func (p *GatewayIRidsResult) String() string {
 }
 
 // Attributes:
-//  - Sid
-type GatewayIDirtyArgs struct {
-  Sid string `thrift:"sid,1" db:"sid" json:"sid"`
+//  - Cid
+type GatewayILastArgs struct {
+  Cid int64 `thrift:"cid,1" db:"cid" json:"cid"`
 }
 
-func NewGatewayIDirtyArgs() *GatewayIDirtyArgs {
-  return &GatewayIDirtyArgs{}
+func NewGatewayILastArgs() *GatewayILastArgs {
+  return &GatewayILastArgs{}
 }
 
 
-func (p *GatewayIDirtyArgs) GetSid() string {
-  return p.Sid
+func (p *GatewayILastArgs) GetCid() int64 {
+  return p.Cid
 }
-func (p *GatewayIDirtyArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *GatewayILastArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -992,7 +1958,7 @@ func (p *GatewayIDirtyArgs) Read(ctx context.Context, iprot thrift.TProtocol) er
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
     case 1:
-      if fieldTypeId == thrift.STRING {
+      if fieldTypeId == thrift.I64 {
         if err := p.ReadField1(ctx, iprot); err != nil {
           return err
         }
@@ -1016,17 +1982,17 @@ func (p *GatewayIDirtyArgs) Read(ctx context.Context, iprot thrift.TProtocol) er
   return nil
 }
 
-func (p *GatewayIDirtyArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadString(ctx); err != nil {
+func (p *GatewayILastArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(ctx); err != nil {
   return thrift.PrependError("error reading field 1: ", err)
 } else {
-  p.Sid = v
+  p.Cid = v
 }
   return nil
 }
 
-func (p *GatewayIDirtyArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin(ctx, "dirty_args"); err != nil {
+func (p *GatewayILastArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "last_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(ctx, oprot); err != nil { return err }
@@ -1038,31 +2004,45 @@ func (p *GatewayIDirtyArgs) Write(ctx context.Context, oprot thrift.TProtocol) e
   return nil
 }
 
-func (p *GatewayIDirtyArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin(ctx, "sid", thrift.STRING, 1); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:sid: ", p), err) }
-  if err := oprot.WriteString(ctx, string(p.Sid)); err != nil {
-  return thrift.PrependError(fmt.Sprintf("%T.sid (1) field write error: ", p), err) }
+func (p *GatewayILastArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "cid", thrift.I64, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:cid: ", p), err) }
+  if err := oprot.WriteI64(ctx, int64(p.Cid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.cid (1) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:sid: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:cid: ", p), err) }
   return err
 }
 
-func (p *GatewayIDirtyArgs) String() string {
+func (p *GatewayILastArgs) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("GatewayIDirtyArgs(%+v)", *p)
+  return fmt.Sprintf("GatewayILastArgs(%+v)", *p)
 }
 
-type GatewayIDirtyResult struct {
+// Attributes:
+//  - Success
+type GatewayILastResult struct {
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
 
-func NewGatewayIDirtyResult() *GatewayIDirtyResult {
-  return &GatewayIDirtyResult{}
+func NewGatewayILastResult() *GatewayILastResult {
+  return &GatewayILastResult{}
 }
 
-func (p *GatewayIDirtyResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+var GatewayILastResult_Success_DEFAULT Result_
+func (p *GatewayILastResult) GetSuccess() Result_ {
+  if !p.IsSetSuccess() {
+    return GatewayILastResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayILastResult) IsSetSuccess() bool {
+  return p.Success != nil
+}
+
+func (p *GatewayILastResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -1074,8 +2054,21 @@ func (p *GatewayIDirtyResult) Read(ctx context.Context, iprot thrift.TProtocol) 
       return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
     }
     if fieldTypeId == thrift.STOP { break; }
-    if err := iprot.Skip(ctx, fieldTypeId); err != nil {
-      return err
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
     }
     if err := iprot.ReadFieldEnd(ctx); err != nil {
       return err
@@ -1087,10 +2080,21 @@ func (p *GatewayIDirtyResult) Read(ctx context.Context, iprot thrift.TProtocol) 
   return nil
 }
 
-func (p *GatewayIDirtyResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin(ctx, "dirty_result"); err != nil {
+func (p *GatewayILastResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  temp := Result_(v)
+  p.Success = &temp
+}
+  return nil
+}
+
+func (p *GatewayILastResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "last_result"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -1099,21 +2103,35 @@ func (p *GatewayIDirtyResult) Write(ctx context.Context, oprot thrift.TProtocol)
   return nil
 }
 
-func (p *GatewayIDirtyResult) String() string {
+func (p *GatewayILastResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *GatewayILastResult) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("GatewayIDirtyResult(%+v)", *p)
+  return fmt.Sprintf("GatewayILastResult(%+v)", *p)
 }
 
 // Attributes:
 //  - Cid
 //  - URI
 //  - Bytes
+//  - Isolate
 type GatewayIPushArgs struct {
   Cid int64 `thrift:"cid,1" db:"cid" json:"cid"`
   URI string `thrift:"uri,2" db:"uri" json:"uri"`
   Bytes []byte `thrift:"bytes,3" db:"bytes" json:"bytes"`
+  Isolate bool `thrift:"isolate,4" db:"isolate" json:"isolate"`
 }
 
 func NewGatewayIPushArgs() *GatewayIPushArgs {
@@ -1131,6 +2149,10 @@ func (p *GatewayIPushArgs) GetURI() string {
 
 func (p *GatewayIPushArgs) GetBytes() []byte {
   return p.Bytes
+}
+
+func (p *GatewayIPushArgs) GetIsolate() bool {
+  return p.Isolate
 }
 func (p *GatewayIPushArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
@@ -1168,6 +2190,16 @@ func (p *GatewayIPushArgs) Read(ctx context.Context, iprot thrift.TProtocol) err
     case 3:
       if fieldTypeId == thrift.STRING {
         if err := p.ReadField3(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 4:
+      if fieldTypeId == thrift.BOOL {
+        if err := p.ReadField4(ctx, iprot); err != nil {
           return err
         }
       } else {
@@ -1217,6 +2249,15 @@ func (p *GatewayIPushArgs)  ReadField3(ctx context.Context, iprot thrift.TProtoc
   return nil
 }
 
+func (p *GatewayIPushArgs)  ReadField4(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(ctx); err != nil {
+  return thrift.PrependError("error reading field 4: ", err)
+} else {
+  p.Isolate = v
+}
+  return nil
+}
+
 func (p *GatewayIPushArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "push_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -1224,6 +2265,7 @@ func (p *GatewayIPushArgs) Write(ctx context.Context, oprot thrift.TProtocol) er
     if err := p.writeField1(ctx, oprot); err != nil { return err }
     if err := p.writeField2(ctx, oprot); err != nil { return err }
     if err := p.writeField3(ctx, oprot); err != nil { return err }
+    if err := p.writeField4(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -1262,6 +2304,16 @@ func (p *GatewayIPushArgs) writeField3(ctx context.Context, oprot thrift.TProtoc
   return err
 }
 
+func (p *GatewayIPushArgs) writeField4(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "isolate", thrift.BOOL, 4); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:isolate: ", p), err) }
+  if err := oprot.WriteBool(ctx, bool(p.Isolate)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.isolate (4) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 4:isolate: ", p), err) }
+  return err
+}
+
 func (p *GatewayIPushArgs) String() string {
   if p == nil {
     return "<nil>"
@@ -1272,15 +2324,15 @@ func (p *GatewayIPushArgs) String() string {
 // Attributes:
 //  - Success
 type GatewayIPushResult struct {
-  Success *bool `thrift:"success,0" db:"success" json:"success,omitempty"`
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
 
 func NewGatewayIPushResult() *GatewayIPushResult {
   return &GatewayIPushResult{}
 }
 
-var GatewayIPushResult_Success_DEFAULT bool
-func (p *GatewayIPushResult) GetSuccess() bool {
+var GatewayIPushResult_Success_DEFAULT Result_
+func (p *GatewayIPushResult) GetSuccess() Result_ {
   if !p.IsSetSuccess() {
     return GatewayIPushResult_Success_DEFAULT
   }
@@ -1304,7 +2356,7 @@ func (p *GatewayIPushResult) Read(ctx context.Context, iprot thrift.TProtocol) e
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
     case 0:
-      if fieldTypeId == thrift.BOOL {
+      if fieldTypeId == thrift.I32 {
         if err := p.ReadField0(ctx, iprot); err != nil {
           return err
         }
@@ -1329,10 +2381,11 @@ func (p *GatewayIPushResult) Read(ctx context.Context, iprot thrift.TProtocol) e
 }
 
 func (p *GatewayIPushResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadBool(ctx); err != nil {
+  if v, err := iprot.ReadI32(ctx); err != nil {
   return thrift.PrependError("error reading field 0: ", err)
 } else {
-  p.Success = &v
+  temp := Result_(v)
+  p.Success = &temp
 }
   return nil
 }
@@ -1352,9 +2405,9 @@ func (p *GatewayIPushResult) Write(ctx context.Context, oprot thrift.TProtocol) 
 
 func (p *GatewayIPushResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if p.IsSetSuccess() {
-    if err := oprot.WriteFieldBegin(ctx, "success", thrift.BOOL, 0); err != nil {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
-    if err := oprot.WriteBool(ctx, bool(*p.Success)); err != nil {
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(ctx); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
@@ -1530,6 +2583,198 @@ func (p *GatewayIPushOArgs) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("GatewayIPushOArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Sid
+type GatewayIDirtyArgs struct {
+  Sid string `thrift:"sid,1" db:"sid" json:"sid"`
+}
+
+func NewGatewayIDirtyArgs() *GatewayIDirtyArgs {
+  return &GatewayIDirtyArgs{}
+}
+
+
+func (p *GatewayIDirtyArgs) GetSid() string {
+  return p.Sid
+}
+func (p *GatewayIDirtyArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if fieldTypeId == thrift.STRING {
+        if err := p.ReadField1(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayIDirtyArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(ctx); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Sid = v
+}
+  return nil
+}
+
+func (p *GatewayIDirtyArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "dirty_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayIDirtyArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "sid", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:sid: ", p), err) }
+  if err := oprot.WriteString(ctx, string(p.Sid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.sid (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:sid: ", p), err) }
+  return err
+}
+
+func (p *GatewayIDirtyArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayIDirtyArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type GatewayIDirtyResult struct {
+  Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewGatewayIDirtyResult() *GatewayIDirtyResult {
+  return &GatewayIDirtyResult{}
+}
+
+var GatewayIDirtyResult_Success_DEFAULT Result_
+func (p *GatewayIDirtyResult) GetSuccess() Result_ {
+  if !p.IsSetSuccess() {
+    return GatewayIDirtyResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayIDirtyResult) IsSetSuccess() bool {
+  return p.Success != nil
+}
+
+func (p *GatewayIDirtyResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayIDirtyResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  temp := Result_(v)
+  p.Success = &temp
+}
+  return nil
+}
+
+func (p *GatewayIDirtyResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "dirty_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayIDirtyResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *GatewayIDirtyResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayIDirtyResult(%+v)", *p)
 }
 
 

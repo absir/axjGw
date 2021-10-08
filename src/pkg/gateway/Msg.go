@@ -29,28 +29,28 @@ func (m Msg) Isolate() bool {
 	return false
 }
 
-type MsgQueue interface {
+type MsgLast interface {
 	Insert(msg Msg) int64
 	Next(sid string, id int64, limit int) []Msg
 	Last(sid string, limit int) []Msg
 }
 
-type MsgQueueDb struct {
+type MsgLastDb struct {
 	db *gorm.DB
 }
 
-func (m MsgQueueDb) Insert(msg Msg) int64 {
+func (m MsgLastDb) Insert(msg Msg) int64 {
 	m.db.Create(msg)
 	return msg.Id
 }
 
-func (m MsgQueueDb) Next(sid string, lastId int64, limit int) []Msg {
+func (m MsgLastDb) Next(sid string, lastId int64, limit int) []Msg {
 	var msgs []Msg = nil
 	m.db.Where("Sid = ?", sid).Order("Id").Limit(limit).Find(&msgs)
 	return msgs
 }
 
-func (m MsgQueueDb) Last(sid string, limit int) []Msg {
+func (m MsgLastDb) Last(sid string, limit int) []Msg {
 	var msgs []Msg = nil
 	m.db.Order("Id DESC").Limit(limit).Find(&msgs)
 	if msgs != nil {

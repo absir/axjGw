@@ -37,6 +37,8 @@ service Acl {
     Login login(1: i64 cid, 2: binary bytes);
     // 组查询
     Group group(1: string sid);
+    // 挤掉线
+    binary kickBs();
 }
 
 // 转发
@@ -49,14 +51,16 @@ service Pass {
 
 // 网关
 service Gateway {
+    // 关闭连接
+    bool close(1: i64 cid, 2: string reason)
+    // 软关闭连接
+    bool kick(1: i64 cid, 2: binary bytes)
     // 服务编号
     void rid(1: i64 cid, 2: string name, 3: i32 rid)
     // 服务编号
     void rids(1: i64 cid, 2: map<string, i32> rids)
+    // 推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送  // unique 唯一标识(消息队列，一个标识只需要最新数据) 2 last队列 3 last 队列持久化
+    bool push(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes, 6: i32 qs, 7: string unique);
     // 组更新、删除
     void dirty(1: string sid);
-    // 推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 持久发送成功 2 客户端ark // unique 唯一标识(消息队列，一个标识只需要最新数据)
-    bool push(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes, 6: i32 qs, 7: string unique);
-    // 推送Oneway,不关心返回
-    oneway void pushO(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes)
 }

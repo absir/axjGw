@@ -11,11 +11,12 @@ import (
 const (
 	// 特殊请求
 	REQ_PUSH   int32 = 0  // 推送
-	REQ_LAST   int32 = 1  // 消息推送检查+
-	REQ_KEY    int32 = 2  // 秘钥
-	REQ_ACL    int32 = 3  // 请求开启
-	REQ_BEAT   int32 = 4  // 心跳
-	REQ_ROUTE  int32 = 5  // 路由字典
+	REQ_LEAV   int32 = 1  // 软关闭
+	REQ_LAST   int32 = 2  // 消息推送检查+
+	REQ_KEY    int32 = 3  // 秘钥
+	REQ_ACL    int32 = 4  // 请求开启
+	REQ_BEAT   int32 = 5  // 心跳
+	REQ_ROUTE  int32 = 6  // 路由字典
 	REQ_LOOP   int32 = 15 // 连接接受
 	REQ_ONEWAY int32 = 16 // 路由处理
 )
@@ -46,7 +47,7 @@ type HandlerM interface {
 
 type ConnMng struct {
 	HandlerW
-	hanlderM  HandlerM
+	handlerM  HandlerM
 	idWorker  *Util.IdWorker
 	idleTime  int64
 	checkTime time.Duration
@@ -59,7 +60,7 @@ type ConnMng struct {
 func NewConnMng(handler HandlerM, workerId int32, idleTime time.Duration, checkTime time.Duration, connPool bool) *ConnMng {
 	c := new(ConnMng)
 	c.handler = handler
-	c.hanlderM = handler
+	c.handlerM = handler
 	var err error
 	c.idWorker, err = Util.NewIdWorker(workerId)
 	Kt.Panic(err)
@@ -84,7 +85,7 @@ func NewConnMng(handler HandlerM, workerId int32, idleTime time.Duration, checkT
 }
 
 func (c *ConnMng) ConnM(conn Conn) ConnM {
-	return c.hanlderM.ConnM(conn)
+	return c.handlerM.ConnM(conn)
 }
 
 func (c *ConnMng) OpenConn(client Client) Conn {

@@ -22,11 +22,13 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
+  fmt.Fprintln(os.Stderr, "  bool close(i64 cid, string reason)")
+  fmt.Fprintln(os.Stderr, "  bool leave(i64 cid, string bytes)")
   fmt.Fprintln(os.Stderr, "  void rid(i64 cid, string name, i32 rid)")
   fmt.Fprintln(os.Stderr, "  void rids(i64 cid,  rids)")
-  fmt.Fprintln(os.Stderr, "  void dirty(string sid)")
   fmt.Fprintln(os.Stderr, "  bool push(i64 cid, i64 uid, string sid, string uri, string bytes, i32 qs, string unique)")
   fmt.Fprintln(os.Stderr, "  void pushO(i64 cid, i64 uid, string sid, string uri, string bytes)")
+  fmt.Fprintln(os.Stderr, "  void dirty(string sid)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -148,21 +150,53 @@ func main() {
   }
   
   switch cmd {
-  case "rid":
-    if flag.NArg() - 1 != 3 {
-      fmt.Fprintln(os.Stderr, "Rid requires 3 args")
+  case "close":
+    if flag.NArg() - 1 != 2 {
+      fmt.Fprintln(os.Stderr, "Close requires 2 args")
       flag.Usage()
     }
-    argvalue0, err49 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err49 != nil {
+    argvalue0, err55 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err55 != nil {
       Usage()
       return
     }
     value0 := argvalue0
     argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    tmp2, err51 := (strconv.Atoi(flag.Arg(3)))
-    if err51 != nil {
+    fmt.Print(client.Close(context.Background(), value0, value1))
+    fmt.Print("\n")
+    break
+  case "leave":
+    if flag.NArg() - 1 != 2 {
+      fmt.Fprintln(os.Stderr, "Leave requires 2 args")
+      flag.Usage()
+    }
+    argvalue0, err57 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err57 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1 := []byte(flag.Arg(2))
+    value1 := argvalue1
+    fmt.Print(client.Leave(context.Background(), value0, value1))
+    fmt.Print("\n")
+    break
+  case "rid":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "Rid requires 3 args")
+      flag.Usage()
+    }
+    argvalue0, err59 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err59 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1 := flag.Arg(2)
+    value1 := argvalue1
+    tmp2, err61 := (strconv.Atoi(flag.Arg(3)))
+    if err61 != nil {
       Usage()
       return
     }
@@ -176,25 +210,25 @@ func main() {
       fmt.Fprintln(os.Stderr, "Rids requires 2 args")
       flag.Usage()
     }
-    argvalue0, err52 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err52 != nil {
+    argvalue0, err62 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err62 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    arg53 := flag.Arg(2)
-    mbTrans54 := thrift.NewTMemoryBufferLen(len(arg53))
-    defer mbTrans54.Close()
-    _, err55 := mbTrans54.WriteString(arg53)
-    if err55 != nil { 
+    arg63 := flag.Arg(2)
+    mbTrans64 := thrift.NewTMemoryBufferLen(len(arg63))
+    defer mbTrans64.Close()
+    _, err65 := mbTrans64.WriteString(arg63)
+    if err65 != nil { 
       Usage()
       return
     }
-    factory56 := thrift.NewTJSONProtocolFactory()
-    jsProt57 := factory56.GetProtocol(mbTrans54)
+    factory66 := thrift.NewTJSONProtocolFactory()
+    jsProt67 := factory66.GetProtocol(mbTrans64)
     containerStruct1 := gw.NewGatewayRidsArgs()
-    err58 := containerStruct1.ReadField2(context.Background(), jsProt57)
-    if err58 != nil {
+    err68 := containerStruct1.ReadField2(context.Background(), jsProt67)
+    if err68 != nil {
       Usage()
       return
     }
@@ -203,29 +237,19 @@ func main() {
     fmt.Print(client.Rids(context.Background(), value0, value1))
     fmt.Print("\n")
     break
-  case "dirty":
-    if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Dirty requires 1 args")
-      flag.Usage()
-    }
-    argvalue0 := flag.Arg(1)
-    value0 := argvalue0
-    fmt.Print(client.Dirty(context.Background(), value0))
-    fmt.Print("\n")
-    break
   case "push":
     if flag.NArg() - 1 != 7 {
       fmt.Fprintln(os.Stderr, "Push requires 7 args")
       flag.Usage()
     }
-    argvalue0, err60 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err60 != nil {
+    argvalue0, err69 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err69 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err61 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err61 != nil {
+    argvalue1, err70 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err70 != nil {
       Usage()
       return
     }
@@ -236,8 +260,8 @@ func main() {
     value3 := argvalue3
     argvalue4 := []byte(flag.Arg(5))
     value4 := argvalue4
-    tmp5, err65 := (strconv.Atoi(flag.Arg(6)))
-    if err65 != nil {
+    tmp5, err74 := (strconv.Atoi(flag.Arg(6)))
+    if err74 != nil {
       Usage()
       return
     }
@@ -253,14 +277,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "PushO requires 5 args")
       flag.Usage()
     }
-    argvalue0, err67 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err67 != nil {
+    argvalue0, err76 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err76 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err68 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err68 != nil {
+    argvalue1, err77 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err77 != nil {
       Usage()
       return
     }
@@ -272,6 +296,16 @@ func main() {
     argvalue4 := []byte(flag.Arg(5))
     value4 := argvalue4
     fmt.Print(client.PushO(context.Background(), value0, value1, value2, value3, value4))
+    fmt.Print("\n")
+    break
+  case "dirty":
+    if flag.NArg() - 1 != 1 {
+      fmt.Fprintln(os.Stderr, "Dirty requires 1 args")
+      flag.Usage()
+    }
+    argvalue0 := flag.Arg(1)
+    value0 := argvalue0
+    fmt.Print(client.Dirty(context.Background(), value0))
     fmt.Print("\n")
     break
   case "":
