@@ -19,8 +19,8 @@ const (
 	HEAD_URI_I     byte = 0x01 << 3          //请求路由压缩
 	HEAD_DATA      byte = 0x01 << 2          //请求数据
 	HEAD_CRC_MSK_M byte = 0x01 << 2          //头数据校验MOD
-	HEAD_CRC_MSK   byte = HEAD_CRC_MSK_M - 1 //头数据校验
-	HEAD_CRC_MSK_N byte = ^HEAD_CRC_MSK      //头数据校验取反
+	HEAD_CRC_MSK        = HEAD_CRC_MSK_M - 1 //头数据校验
+	HEAD_CRC_MSK_N      = ^HEAD_CRC_MSK      //头数据校验取反
 )
 
 // CRC错误
@@ -46,14 +46,14 @@ type Protocol interface {
 type ProtocolV struct {
 }
 
-func (p ProtocolV) crc(head byte) byte {
+func (that ProtocolV) crc(head byte) byte {
 	return (head & HEAD_CRC_MSK_N) % HEAD_CRC_MSK_M
 }
 
-func (p ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head = bs[0]
 	// 头部校验
-	if p.crc(head) != (head & HEAD_CRC_MSK) {
+	if that.crc(head) != (head & HEAD_CRC_MSK) {
 		err = ERR_CRC
 		return
 	}
@@ -91,14 +91,14 @@ func (p ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, 
 	return
 }
 
-func (p ProtocolV) ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that ProtocolV) ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head, err = reader.ReadByte()
 	if err != nil {
 		return
 	}
 
 	// 头部校验
-	if p.crc(head) != (head & HEAD_CRC_MSK) {
+	if that.crc(head) != (head & HEAD_CRC_MSK) {
 		err = ERR_CRC
 		return
 	}
@@ -152,7 +152,7 @@ func (p ProtocolV) ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (
 	return
 }
 
-func (p ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte {
+func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte {
 	// 头长度
 	var bLen int32 = 1
 
@@ -222,11 +222,11 @@ func (p ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bo
 
 	// 最后设置头
 	bs[0] = head
-	head |= p.crc(head)
+	head |= that.crc(head)
 	return bs
 }
 
-func (p ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error) {
+func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error) {
 	err = nil
 	// 头状态准备
 	if req > 0 {
@@ -265,7 +265,7 @@ func (p ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, req i
 	}
 
 	// 写入头
-	head |= p.crc(head)
+	head |= that.crc(head)
 	_buff[0] = head
 	err = client.Write(_buff[0:1], true)
 	if err != nil {
@@ -325,15 +325,15 @@ func (p ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, req i
 	return
 }
 
-func (p ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte {
+func (that ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte {
 	if data {
 		head |= HEAD_DATA
 	}
 
-	return p.Rep(req, uri, uriI, nil, false, head)
+	return that.Rep(req, uri, uriI, nil, false, head)
 }
 
-func (p ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte {
+func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte {
 	// 数据长度
 	var dLen int32 = 0
 	if data != nil {
@@ -365,7 +365,7 @@ func (p ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte 
 		head |= HEAD_DATA
 		if head != bs[0] {
 			head &= HEAD_CRC_MSK_N
-			head |= p.crc(head)
+			head |= that.crc(head)
 			bs[0] = head
 		}
 
@@ -375,7 +375,7 @@ func (p ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte 
 	return bh
 }
 
-func (p ProtocolV) RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh []byte, data []byte, sticky bool, head byte) (err error) {
+func (that ProtocolV) RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh []byte, data []byte, sticky bool, head byte) (err error) {
 	err = nil
 	var dLen int32 = 0
 	if data != nil {
@@ -390,7 +390,7 @@ func (p ProtocolV) RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh 
 
 	if head != bh[0] {
 		head &= HEAD_CRC_MSK_N
-		head |= p.crc(head)
+		head |= that.crc(head)
 	}
 
 	// 写入锁

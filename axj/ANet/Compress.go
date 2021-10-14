@@ -17,7 +17,7 @@ type Compress interface {
 type CompressZip struct {
 }
 
-func (c CompressZip) Compress(data []byte) ([]byte, error) {
+func (that CompressZip) Compress(data []byte) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	writer := gzip.NewWriter(buffer)
 	_, err := writer.Write(data)
@@ -33,7 +33,7 @@ func (c CompressZip) Compress(data []byte) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func (c CompressZip) UnCompress(data []byte) ([]byte, error) {
+func (that CompressZip) UnCompress(data []byte) ([]byte, error) {
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err

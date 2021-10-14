@@ -16,39 +16,39 @@ type PoolLimit struct {
 	cond   *sync.Cond
 }
 
-func (p PoolLimit) Add() {
-	p.locker.Lock()
-	defer p.locker.Unlock()
-	if p.add >= p.limit {
-		p.cond.Wait()
+func (that PoolLimit) Add() {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.add >= that.limit {
+		that.cond.Wait()
 	}
 
-	p.add++
+	that.add++
 }
 
-func (p PoolLimit) Done() {
-	p.locker.Lock()
-	defer p.locker.Unlock()
-	p.add--
-	if p.add <= 0 {
-		p.cond.Signal()
+func (that PoolLimit) Done() {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	that.add--
+	if that.add <= 0 {
+		that.cond.Signal()
 	}
 }
 
-func (p PoolLimit) Wait() {
-	p.locker.Lock()
-	defer p.locker.Unlock()
+func (that PoolLimit) Wait() {
+	that.locker.Lock()
+	defer that.locker.Unlock()
 	for {
-		if p.add > 0 {
-			p.cond.Wait()
+		if that.add > 0 {
+			that.cond.Wait()
 		}
 
 		break
 	}
 }
 
-func (p PoolLimit) StrictAs(limit int) bool {
-	return p.add == 0 && p.limit == limit
+func (that PoolLimit) StrictAs(limit int) bool {
+	return that.add == 0 && that.limit == limit
 }
 
 func NewPoolLimit(limit int) *PoolLimit {

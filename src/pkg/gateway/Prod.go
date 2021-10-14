@@ -50,44 +50,44 @@ func NewProd(id int32, url string) (*Prod, error) {
 	proto := thrift.NewTCompactProtocolConf(transport, Config.TConfig)
 	prod.client = thrift.NewTStandardClient(proto, proto)
 	prod.passClient = nil
-	prod.gwClient = nil
+	prod.gwIClient = nil
 	return prod, nil
 }
 
-func (m *Prod) GetAclClient() *gw.AclClient {
-	if m.aclClient == nil {
+func (that Prod) GetAclClient() *gw.AclClient {
+	if that.aclClient == nil {
 		locker.Lock()
 		defer locker.Unlock()
-		if m.aclClient == nil {
-			m.aclClient = gw.NewAclClient(m.client)
+		if that.aclClient == nil {
+			that.aclClient = gw.NewAclClient(that.client)
 		}
 	}
 
-	return m.aclClient
+	return that.aclClient
 }
 
-func (m *Prod) GetPassClient() *gw.PassClient {
-	if m.passClient == nil {
+func (that Prod) GetPassClient() *gw.PassClient {
+	if that.passClient == nil {
 		locker.Lock()
 		defer locker.Unlock()
-		if m.passClient == nil {
-			m.passClient = gw.NewPassClient(m.client)
+		if that.passClient == nil {
+			that.passClient = gw.NewPassClient(that.client)
 		}
 	}
 
-	return m.passClient
+	return that.passClient
 }
 
-func (m *Prod) GetGWIClient() *gw.GatewayIClient {
-	if m.gwIClient == nil {
+func (that Prod) GetGWIClient() *gw.GatewayIClient {
+	if that.gwIClient == nil {
 		locker.Lock()
 		defer locker.Unlock()
-		if m.gwIClient == nil {
-			m.gwIClient = gw.NewGatewayIClient(m.client)
+		if that.gwIClient == nil {
+			that.gwIClient = gw.NewGatewayIClient(that.client)
 		}
 	}
 
-	return m.gwIClient
+	return that.gwIClient
 }
 
 type Prods struct {
@@ -118,34 +118,34 @@ func BuildProds(prods *Prods, id int32, url string) *Prods {
 	return prods
 }
 
-func (p *Prods) GetProd(id int32) *Prod {
-	return p.prods[id]
+func (that Prods) GetProd(id int32) *Prod {
+	return that.prods[id]
 }
 
-func (p *Prods) GetProdHash(hash int) *Prod {
-	size := p.ids.Size()
+func (that Prods) GetProdHash(hash int) *Prod {
+	size := that.ids.Size()
 	if size < 1 {
 		return nil
 
 	} else if size == 1 {
-		return p.prods[p.ids.Get(0).(int32)]
+		return that.prods[that.ids.Get(0).(int32)]
 	}
 
-	id := p.ids.Get(hash % size)
-	return p.prods[id.(int32)]
+	id := that.ids.Get(hash % size)
+	return that.prods[id.(int32)]
 }
 
-func (p *Prods) GetProdRand() *Prod {
-	size := p.ids.Size()
+func (that Prods) GetProdRand() *Prod {
+	size := that.ids.Size()
 	if size < 1 {
 		return nil
 
 	} else if size == 1 {
-		return p.prods[p.ids.Get(0).(int32)]
+		return that.prods[that.ids.Get(0).(int32)]
 	}
 
-	id := p.ids.Get(rand.Intn(size))
-	return p.prods[id.(int32)]
+	id := that.ids.Get(rand.Intn(size))
+	return that.prods[id.(int32)]
 }
 
 var prodsMap = new(sync.Map)

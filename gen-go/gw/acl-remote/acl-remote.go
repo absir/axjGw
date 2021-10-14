@@ -24,6 +24,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "\nFunctions:")
   fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
   fmt.Fprintln(os.Stderr, "  Group group(string sid)")
+  fmt.Fprintln(os.Stderr, "  string kickBs()")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -150,8 +151,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Login requires 2 args")
       flag.Usage()
     }
-    argvalue0, err13 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err13 != nil {
+    argvalue0, err16 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err16 != nil {
       Usage()
       return
     }
@@ -169,6 +170,14 @@ func main() {
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
     fmt.Print(client.Group(context.Background(), value0))
+    fmt.Print("\n")
+    break
+  case "kickBs":
+    if flag.NArg() - 1 != 0 {
+      fmt.Fprintln(os.Stderr, "KickBs requires 0 args")
+      flag.Usage()
+    }
+    fmt.Print(client.KickBs(context.Background()))
     fmt.Print("\n")
     break
   case "":

@@ -26,6 +26,7 @@ type msgMng struct {
 	Context   context.Context
 	Last      MsgLast
 	IdWorker  *Util.IdWorker
+	Locker    sync.Locker
 }
 
 var MsgMng *msgMng
@@ -58,6 +59,7 @@ func init() {
 	idWorker, err := Util.NewIdWorker(APro.WorkId())
 	Kt.Panic(err)
 	MsgMng.IdWorker = idWorker
+	MsgMng.Locker = new(sync.Mutex)
 }
 
 type MsgU struct {
@@ -82,6 +84,7 @@ type MsgUser struct {
 	lastLoaded bool
 	conn       *MsgConn
 	connMap    map[string]*MsgConn
+	connNum    int
 	queuing    int64
 }
 
@@ -105,57 +108,130 @@ func NewMsgUser(sid string) *MsgUser {
 	msgUser.lastLoaded = false
 	msgUser.conn = nil
 	msgUser.connMap = nil
+	msgUser.connNum = 0
 	msgUser.queuing = 0
 	return msgUser
 }
 
-func (m *MsgUser) Init(sid string) {
-	m.sid = sid
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	if m.queue != nil {
-		m.queue.Clear()
-	}
-
-	if m.lastQueue != nil {
-		m.lastQueue.Clear()
-	}
-
-	m.lastLoaded = false
-	m.conn = nil
-	m.connMap = nil
-	m.queuing = 0
-}
-
-func (m *MsgUser) lastLoad() {
-	if m.lastLoaded && MsgMng.Last == nil && !MsgMng.LastLoad {
+func (that MsgUser) Conn(cid int64, unique string, kick []byte) {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.close(false, cid, unique, true, kick) {
 		return
 	}
 
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	if m.lastQueue.IsEmpty() {
-		msgs := MsgMng.Last.Last(m.sid, MsgMng.LastMax)
+	conn := new(MsgConn)
+	conn.Init(cid)
+	if unique == "" {
+		that.conn = conn
+
+	} else {
+		if that.connMap == nil {
+			that.connMap = map[string]*MsgConn{}
+		}
+
+		that.connMap[unique] = conn
+	}
+
+	that.connNum++
+}
+
+func (that MsgUser) Close(cid int64, unique string, close bool, kick []byte) bool {
+	return that.close(true, cid, unique, close, kick)
+}
+
+func (that MsgUser) close(locker bool, cid int64, unique string, close bool, kick []byte) bool {
+	if locker {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+	}
+
+	var conn *MsgConn = nil
+	if unique == "" {
+		conn = that.conn
+		if conn == nil {
+			return true
+
+		} else if cid > 0 && cid <= conn.cid {
+			return false
+		}
+
+		that.conn = nil
+
+	} else {
+		if that.connMap == nil {
+			return true
+		}
+
+		conn = that.connMap[unique]
+		if conn == nil {
+			return true
+
+		} else if cid > 0 && cid <= conn.cid {
+			return false
+		}
+
+		delete(that.connMap, unique)
+	}
+
+	// Kick onyway
+	conn.prod.GetGWIClient().KickO(MsgMng.Context, conn.cid)
+	that.connNum--
+	return true
+}
+
+func (that MsgUser) Init(sid string) {
+	that.sid = sid
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.queue != nil {
+		that.queue.Clear()
+	}
+
+	if that.lastQueue != nil {
+		that.lastQueue.Clear()
+	}
+
+	that.lastLoaded = false
+	that.conn = nil
+	that.connMap = nil
+	that.connNum = 0
+	that.queuing = 0
+}
+
+func (that MsgUser) Release() {
+	that.Init("")
+}
+
+func (that MsgUser) lastLoad() {
+	if that.lastLoaded && MsgMng.Last == nil && !MsgMng.LastLoad {
+		return
+	}
+
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.lastQueue.IsEmpty() {
+		msgs := MsgMng.Last.Last(that.sid, MsgMng.LastMax)
 		mLen := len(msgs)
 		for i := 0; i < mLen; i++ {
-			m.lastQueue.Push(msgs[i], true)
+			that.lastQueue.Push(msgs[i], true)
 		}
 	}
 
-	m.lastLoaded = true
+	that.lastLoaded = true
 }
 
-func (m *MsgUser) Clear() {
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	if m.queue != nil {
-		m.queue.Clear()
+func (that MsgUser) Clear() {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.queue != nil {
+		that.queue.Clear()
 	}
 }
 
-func (m *MsgUser) Push(uri string, data []byte, last int, unique string, isolate bool) (bool, error) {
+func (that MsgUser) Push(uri string, data []byte, last int, unique string, isolate bool) (bool, error) {
 	if last > 0 {
-		if m.lastQueue == nil {
+		if that.lastQueue == nil {
 			last = 0
 
 		} else if MsgMng.Last == nil {
@@ -179,102 +255,102 @@ func (m *MsgUser) Push(uri string, data []byte, last int, unique string, isolate
 	}
 
 	msg := msgG.Get()
-	msg.Sid = m.sid
+	msg.Sid = that.sid
 	msg.Uri = uri
 	msg.Data = data
 	if last > 0 {
 		// 添加到队列，持久化消息
-		m.lastMsgG(msgG)
+		that.lastMsgG(msgG)
 		if last > 1 {
 			MsgMng.Last.Insert(*msgG.Get())
 		}
 
 		// 消息更新通知
-		m.lastStart()
+		that.lastStart()
 
 	} else {
-		if m.queue == nil {
-			if m.conn != nil {
-				ret, err := m.conn.Prop().GetGWIClient().Push(MsgMng.Context, m.conn.cid, msg.Uri, msg.Data, msgG.Isolate())
-				return m.conn.OnResult(ret, err, EP_DIRECT, m, ""), err
+		if that.queue == nil {
+			if that.conn != nil {
+				ret, err := that.conn.Prop().GetGWIClient().Push(MsgMng.Context, that.conn.cid, msg.Uri, msg.Data, msgG.Isolate())
+				return that.conn.OnResult(ret, err, EP_DIRECT, that, ""), err
 			}
 
 			return false, NOWAY
 		}
 
 		// 添加到队列，触发队列发送
-		m.addMsgG(msgG)
-		m.queuingStart()
+		that.addMsgG(msgG)
+		that.queuingStart()
 	}
 
 	return true, nil
 }
 
-func (m *MsgUser) lastMsgG(msgG MsgG) {
-	m.locker.Lock()
-	defer m.locker.Unlock()
+func (that MsgUser) lastMsgG(msgG MsgG) {
+	that.locker.Lock()
+	defer that.locker.Unlock()
 	msgG.Get().Id = MsgMng.IdWorker.Generate()
 	// 预加载
-	m.lastLoad()
-	m.lastQueue.Push(msgG, true)
+	that.lastLoad()
+	that.lastQueue.Push(msgG, true)
 }
 
-func (m *MsgUser) addMsgG(msgG MsgG) {
-	m.locker.Lock()
-	defer m.locker.Unlock()
+func (that MsgUser) addMsgG(msgG MsgG) {
+	that.locker.Lock()
+	defer that.locker.Unlock()
 	unique := msgG.Unique()
 	if unique != "" {
-		for i := m.queue.Size() - 1; i >= 0; i-- {
-			g, _ := m.queue.Get(i)
+		for i := that.queue.Size() - 1; i >= 0; i-- {
+			g, _ := that.queue.Get(i)
 			if g != nil && g.(MsgG).Unique() == unique {
-				m.queue.Set(i, nil)
+				that.queue.Set(i, nil)
 				break
 			}
 		}
 	}
 
-	m.queue.Push(msgG, true)
+	that.queue.Push(msgG, true)
 }
 
-func (m *MsgUser) queuingStart() {
-	if m.queuing == 0 || m.queuing == 1 {
-		go m.queuingRun(time.Now().UnixNano())
+func (that MsgUser) queuingStart() {
+	if that.queuing == 0 || that.queuing == 1 {
+		go that.queuingRun(time.Now().UnixNano())
 	}
 }
 
-func (m *MsgUser) queuingEnd(queuing int64) {
-	if m.queuing == queuing {
-		m.queuing = 0
+func (that MsgUser) queuingEnd(queuing int64) {
+	if that.queuing == queuing {
+		that.queuing = 0
 	}
 }
 
-func (m *MsgUser) queuingRun(queuing int64) {
-	m.queuing = queuing
-	defer m.queuingEnd(queuing)
+func (that *MsgUser) queuingRun(queuing int64) {
+	that.queuing = queuing
+	defer that.queuingEnd(queuing)
 	for {
-		msgG := m.queuingGet(queuing)
+		msgG := that.queuingGet(queuing)
 		if msgG == nil {
 			break
 		}
 
 		msg := msgG.(MsgG).Get()
-		ret, err := m.conn.Prop().GetGWIClient().Push(MsgMng.Context, m.conn.cid, msg.Uri, msg.Data, msgG.Isolate())
-		if !m.conn.OnResult(ret, err, EP_QUEUE, m, "") {
+		ret, err := that.conn.Prop().GetGWIClient().Push(MsgMng.Context, that.conn.cid, msg.Uri, msg.Data, msgG.Isolate())
+		if !that.conn.OnResult(ret, err, EP_QUEUE, that, "") {
 			break
 		}
 
-		m.queuingRemove(queuing, msgG)
+		that.queuingRemove(queuing, msgG)
 	}
 }
 
-func (m *MsgUser) queuingGet(queuing int64) MsgG {
-	m.locker.RLocker()
-	defer m.locker.RUnlock()
-	if m.queuing != queuing {
+func (that MsgUser) queuingGet(queuing int64) MsgG {
+	that.locker.RLocker()
+	defer that.locker.RUnlock()
+	if that.queuing != queuing {
 		return nil
 	}
 
-	msgG, _ := m.queue.Get(0)
+	msgG, _ := that.queue.Get(0)
 	if msgG == nil {
 		return nil
 	}
@@ -282,32 +358,32 @@ func (m *MsgUser) queuingGet(queuing int64) MsgG {
 	return msgG.(MsgG)
 }
 
-func (m *MsgUser) queuingRemove(queuing int64, msgG MsgG) {
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	m.queue.Remove(msgG)
+func (that MsgUser) queuingRemove(queuing int64, msgG MsgG) {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	that.queue.Remove(msgG)
 }
 
-func (m *MsgUser) lastStart() {
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	if m.conn != nil {
-		m.conn.lastStart(m, "")
+func (that MsgUser) lastStart() {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.conn != nil {
+		that.conn.lastStart(that, "")
 	}
 
-	if m.connMap != nil {
-		for unique, conn := range m.connMap {
-			conn.lastStart(m, unique)
+	if that.connMap != nil {
+		for unique, conn := range that.connMap {
+			conn.lastStart(that, unique)
 		}
 	}
 }
 
-func (m *MsgUser) idleCheck() {
-	if m.queuing == 1 {
-		m.queuingStart()
+func (that MsgUser) idleCheck() {
+	if that.queuing == 1 {
+		that.queuingStart()
 	}
 
-	m.lastStart()
+	that.lastStart()
 }
 
 type MsgConn struct {
@@ -317,15 +393,15 @@ type MsgConn struct {
 	lastTime int64
 }
 
-func (m *MsgConn) Init(cid int64) {
-	m.cid = cid
-	m.prod = nil
-	m.lasting = 0
-	m.lastTime = 0
+func (that MsgConn) Init(cid int64) {
+	that.cid = cid
+	that.prod = nil
+	that.lasting = 0
+	that.lastTime = 0
 }
 
-func (m *MsgConn) Prop() *Prod {
-	return m.prod
+func (that MsgConn) Prop() *Prod {
+	return that.prod
 }
 
 type EPush int
@@ -336,7 +412,7 @@ const (
 	EP_LAST   EPush = 2
 )
 
-func (m *MsgConn) OnResult(ret gw.Result_, err error, push EPush, user *MsgUser, unique string) bool {
+func (that MsgConn) OnResult(ret gw.Result_, err error, push EPush, user *MsgUser, unique string) bool {
 	if ret == gw.Result__Succuess {
 		return true
 	}
@@ -345,54 +421,54 @@ func (m *MsgConn) OnResult(ret gw.Result_, err error, push EPush, user *MsgUser,
 	return false
 }
 
-func (m *MsgConn) lastStart(user *MsgUser, unique string) {
-	if m.lasting >= 0 {
-		if m.lasting <= 1 {
-			go m.lastRun(time.Now().UnixNano(), user, unique)
+func (that MsgConn) lastStart(user *MsgUser, unique string) {
+	if that.lasting >= 0 {
+		if that.lasting <= 1 {
+			go that.lastRun(time.Now().UnixNano(), user, unique)
 
 		} else {
-			m.lasting = time.Now().UnixNano()
+			that.lasting = time.Now().UnixNano()
 		}
 	}
 }
 
-func (m *MsgConn) lastEnd(lasting int64, user *MsgUser, unique string) {
+func (that MsgConn) lastEnd(lasting int64, user *MsgUser, unique string) {
 	if user != nil {
 		user.locker.Lock()
 		defer user.locker.Unlock()
 	}
 
-	if m.lasting == lasting {
-		m.lasting = 0
+	if that.lasting == lasting {
+		that.lasting = 0
 	}
 }
 
-func (m *MsgConn) lastRun(lasting int64, user *MsgUser, unique string) {
-	m.lasting = lasting
-	defer m.lastEnd(lasting, user, unique)
+func (that MsgConn) lastRun(lasting int64, user *MsgUser, unique string) {
+	that.lasting = lasting
+	defer that.lastEnd(lasting, user, unique)
 	for {
-		ret, err := m.Prop().GetGWIClient().Last(MsgMng.Context, m.cid)
-		m.OnResult(ret, err, EP_LAST, user, unique)
-		if m.lastDone(lasting, user, unique) {
+		ret, err := that.Prop().GetGWIClient().Last(MsgMng.Context, that.cid)
+		that.OnResult(ret, err, EP_LAST, user, unique)
+		if that.lastDone(lasting, user, unique) {
 			break
 		}
 	}
 }
 
-func (m *MsgConn) lastDone(lasting int64, user *MsgUser, unique string) bool {
+func (that MsgConn) lastDone(lasting int64, user *MsgUser, unique string) bool {
 	if user != nil {
 		user.locker.Lock()
 		defer user.locker.Unlock()
 	}
 
-	return m.lasting == lasting || m.lasting == 1
+	return that.lasting == lasting || that.lasting == 1
 }
 
-func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
+func (that MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
 	lastTime := time.Now().UnixNano()
-	m.lastTime = lastTime
+	that.lastTime = lastTime
 	for i := 0; i < MsgMng.LastLoop; i++ {
-		msgG, lastIn := m.lastGet(lastId, user, unique)
+		msgG, lastIn := that.lastGet(lastId, user, unique)
 		if msgG == nil {
 			if lastIn {
 				// 消息已读取完毕
@@ -408,12 +484,12 @@ func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
 
 				for j := 0; j < mLen; j++ {
 					msg := msgs[j]
-					if lastTime != m.lastTime {
+					if lastTime != that.lastTime {
 						return
 					}
 
-					ret, err := m.Prop().GetGWIClient().Push(MsgMng.Context, m.cid, msg.Uri, msg.Data, false)
-					if !m.OnResult(ret, err, EP_DIRECT, user, unique) {
+					ret, err := that.Prop().GetGWIClient().Push(MsgMng.Context, that.cid, msg.Uri, msg.Data, false)
+					if !that.OnResult(ret, err, EP_DIRECT, user, unique) {
 						return
 					}
 				}
@@ -423,12 +499,12 @@ func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
 
 		} else {
 			msg := msgG.Get()
-			if lastTime != m.lastTime {
+			if lastTime != that.lastTime {
 				return
 			}
 
-			ret, err := m.Prop().GetGWIClient().Push(MsgMng.Context, m.cid, msg.Uri, msg.Data, msgG.Isolate())
-			if !m.OnResult(ret, err, EP_DIRECT, user, unique) {
+			ret, err := that.Prop().GetGWIClient().Push(MsgMng.Context, that.cid, msg.Uri, msg.Data, msgG.Isolate())
+			if !that.OnResult(ret, err, EP_DIRECT, user, unique) {
 				return
 			}
 
@@ -438,10 +514,10 @@ func (m *MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
 	}
 
 	// 下一轮消息通知
-	m.lastStart(user, unique)
+	that.lastStart(user, unique)
 }
 
-func (m *MsgConn) lastGet(lastId int64, user *MsgUser, unique string) (MsgG, bool) {
+func (that MsgConn) lastGet(lastId int64, user *MsgUser, unique string) (MsgG, bool) {
 	user.locker.RLocker()
 	defer user.locker.RUnlock()
 	// 预加载

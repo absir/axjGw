@@ -17,15 +17,15 @@ type Msg struct {
 	Data []byte `gorm:""`
 }
 
-func (m *Msg) Get() *Msg {
-	return m
+func (that *Msg) Get() *Msg {
+	return that
 }
 
-func (m Msg) Unique() string {
+func (that Msg) Unique() string {
 	return ""
 }
 
-func (m Msg) Isolate() bool {
+func (that Msg) Isolate() bool {
 	return false
 }
 
@@ -39,20 +39,20 @@ type MsgLastDb struct {
 	db *gorm.DB
 }
 
-func (m MsgLastDb) Insert(msg Msg) int64 {
-	m.db.Create(msg)
+func (that MsgLastDb) Insert(msg Msg) int64 {
+	that.db.Create(msg)
 	return msg.Id
 }
 
-func (m MsgLastDb) Next(sid string, lastId int64, limit int) []Msg {
+func (that MsgLastDb) Next(sid string, lastId int64, limit int) []Msg {
 	var msgs []Msg = nil
-	m.db.Where("Sid = ?", sid).Order("Id").Limit(limit).Find(&msgs)
+	that.db.Where("Sid = ?", sid).Order("Id").Limit(limit).Find(&msgs)
 	return msgs
 }
 
-func (m MsgLastDb) Last(sid string, limit int) []Msg {
+func (that MsgLastDb) Last(sid string, limit int) []Msg {
 	var msgs []Msg = nil
-	m.db.Order("Id DESC").Limit(limit).Find(&msgs)
+	that.db.Order("Id DESC").Limit(limit).Find(&msgs)
 	if msgs != nil {
 		// 倒序
 		mLen := len(msgs)

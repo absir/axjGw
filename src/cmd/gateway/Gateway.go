@@ -77,7 +77,7 @@ func main() {
 	if GCfg.socketAddr != "" && !strings.HasPrefix(GCfg.socketAddr, "!") {
 		if GCfg.pool {
 			// Socket客户端对象池开启
-			ANet.SetClientSocketPool()
+			ANet.SetClientSocketPool(true)
 		}
 
 		// socket服务

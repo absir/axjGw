@@ -28,16 +28,32 @@ type ConnM struct {
 	idleTime int64
 }
 
-func (c *ConnM) Id() int64 {
-	return c.id
+func (that ConnM) PInit() {
+	that.ConnC.PInit()
+	that.id = 0
+	//that.initTime = 0
+	//that.idleTime = 0
 }
 
-func (c *ConnM) InitTime() int64 {
-	return c.initTime
+//func (that ConnM) PRelease() bool {
+//	if that.ConnC.PRelease() {
+//		that.id = 0
+//		return true
+//	}
+//
+//	return false
+//}
+
+func (that ConnM) Id() int64 {
+	return that.id
 }
 
-func (c *ConnM) IdleTime() int64 {
-	return c.idleTime
+func (that ConnM) InitTime() int64 {
+	return that.initTime
+}
+
+func (that ConnM) IdleTime() int64 {
+	return that.idleTime
 }
 
 type HandlerM interface {
@@ -51,7 +67,7 @@ type ConnMng struct {
 	idWorker  *Util.IdWorker
 	idleTime  int64
 	checkTime time.Duration
-	connPool  *sync.Pool
+	connPool  *Util.AllocPool
 	loopTime  int64
 	ConnMap   sync.Map
 	beatBs    []byte
@@ -66,17 +82,9 @@ func NewConnMng(handler HandlerM, workerId int32, idleTime time.Duration, checkT
 	Kt.Panic(err)
 	c.idleTime = int64(idleTime)
 	c.checkTime = checkTime
-	if connPool {
-		c.connPool = new(sync.Pool)
-		c.connPool.New = func() interface{} {
-			conn := c.New()
-			c.Init(conn)
-			return conn
-		}
-
-	} else {
-		c.connPool = nil
-	}
+	c.connPool = Util.NewAllocPool(connPool, func() Util.Pool {
+		return c.New()
+	})
 
 	c.loopTime = 0
 	c.ConnMap = sync.Map{}
@@ -84,81 +92,69 @@ func NewConnMng(handler HandlerM, workerId int32, idleTime time.Duration, checkT
 	return c
 }
 
-func (c *ConnMng) ConnM(conn Conn) ConnM {
-	return c.handlerM.ConnM(conn)
+func (that ConnMng) ConnM(conn Conn) ConnM {
+	return that.handlerM.ConnM(conn)
 }
 
-func (c *ConnMng) OpenConn(client Client) Conn {
-	var conn Conn
-	if c.connPool == nil {
-		conn := c.New()
-		c.Init(conn)
-
-	} else {
-		conn = c.connPool.Get().(Conn)
-	}
-
-	c.Open(conn, client)
+func (that ConnMng) OpenConn(client Client) Conn {
+	conn := that.connPool.Get().(Conn)
+	that.Open(conn, client)
 	return conn
 }
 
-func (c *ConnMng) Init(conn Conn) {
-	conn.Get().Init()
-	c.handler.Init(conn)
-}
-
-func (c *ConnMng) Open(conn Conn, client Client) {
-	conn.Get().Open(client, c)
-	connM := c.ConnM(conn)
-	connM.id = c.idWorker.Generate()
+func (that ConnMng) Open(conn Conn, client Client) {
+	conn.Get().Open(client, that)
+	connM := that.ConnM(conn)
+	connM.id = that.idWorker.Generate()
 	connM.initTime = time.Now().UnixNano()
 	connM.idleTime = connM.initTime
-	connM.Get().poolG = APro.PoolOne
-	c.handler.Open(conn, client)
+	// connM.Get().poolG = APro.PoolOne
+	that.handler.Open(conn, client)
 }
 
-func (c *ConnMng) OnClose(conn Conn, err error, reason interface{}) {
-	if c.connPool != nil {
-		c.connPool.Put(conn)
+func (that ConnMng) OnClose(conn Conn, err error, reason interface{}) {
+	connM := that.ConnM(conn)
+	if connM.id != 0 {
+		that.ConnMap.Delete(connM.id)
+		connM.id = 0
+		that.connPool.Put(conn, true)
 	}
 
-	connM := c.ConnM(conn)
-	c.ConnMap.Delete(connM.id)
-	c.handler.OnClose(conn, err, reason)
+	that.handler.OnClose(conn, err, reason)
 }
 
-func (c *ConnMng) Last(conn Conn, req bool) {
+func (that ConnMng) Last(conn Conn, req bool) {
 	// 心跳延长
-	connM := c.ConnM(conn)
-	connM.idleTime = time.Now().UnixNano() + c.idleTime
-	c.handler.Last(conn, req)
+	connM := that.ConnM(conn)
+	connM.idleTime = time.Now().UnixNano() + that.idleTime
+	that.handler.Last(conn, req)
 }
 
 // 空闲检测
-func (c *ConnMng) IdleStop() {
-	c.loopTime = -1
+func (that ConnMng) IdleStop() {
+	that.loopTime = -1
 }
 
-func (c *ConnMng) IdleLoop() {
+func (that ConnMng) IdleLoop() {
 	loopTime := time.Now().UnixNano()
-	c.loopTime = loopTime
-	for loopTime == c.loopTime {
-		time.Sleep(c.checkTime)
+	that.loopTime = loopTime
+	for loopTime == that.loopTime {
+		time.Sleep(that.checkTime)
 		time := time.Now().UnixNano()
-		c.ConnMap.Range(func(key, value interface{}) bool {
+		that.ConnMap.Range(func(key, value interface{}) bool {
 			conn := value.(Conn)
-			connM := c.ConnM(conn)
+			connM := that.ConnM(conn)
 			connC := connM.ConnC
 			// 已关闭链接
 			if connC.Closed() {
-				c.ConnMap.Delete(key)
+				that.ConnMap.Delete(key)
 				return true
 			}
 
 			if connM.idleTime <= time {
 				// 直接心跳
-				c.Last(conn, false)
-				go connC.Rep(-1, "", 0, c.beatBs, false, false, nil)
+				that.Last(conn, false)
+				go connC.Rep(-1, "", 0, that.beatBs, false, false, nil)
 			}
 
 			return true
@@ -166,10 +162,10 @@ func (c *ConnMng) IdleLoop() {
 	}
 }
 
-func (c *ConnMng) RegConn(conn Conn, poolG int) {
-	c.Last(conn, true)
-	connM := c.ConnM(conn)
-	c.ConnMap.Store(connM.id, conn)
+func (that ConnMng) RegConn(conn Conn, poolG int) {
+	that.Last(conn, true)
+	connM := that.ConnM(conn)
+	that.ConnMap.Store(connM.id, conn)
 	if poolG > 1 {
 		pg := connM.ConnC.poolG
 		if pg == nil || !pg.StrictAs(poolG) {
@@ -178,9 +174,9 @@ func (c *ConnMng) RegConn(conn Conn, poolG int) {
 	}
 }
 
-func (c *ConnMng) UnRegConn(conn Conn, close bool) {
-	connM := c.ConnM(conn)
-	c.ConnMap.Delete(connM.id)
+func (that ConnMng) UnRegConn(conn Conn, close bool) {
+	connM := that.ConnM(conn)
+	that.ConnMap.Delete(connM.id)
 	if close {
 		connM.ConnC.Close(ERR_CLOSED, nil)
 	}

@@ -105,7 +105,7 @@ type RepBatch struct {
 	bhs      []byte
 }
 
-func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
+func (that RepBatch) Init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
 	var head byte = 0
 	dLen := 0
 	if data != nil {
@@ -130,9 +130,9 @@ func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, r
 		data = nil
 	}
 
-	r.data = data
-	r.protocol = protocol
-	r.repOrBH = func(sticky bool) []byte {
+	that.data = data
+	that.protocol = protocol
+	that.repOrBH = func(sticky bool) []byte {
 		if data == nil {
 			return protocol.Rep(req, uri, uriI, data, sticky, head)
 
@@ -141,64 +141,64 @@ func (r *RepBatch) Init(protocol Protocol, compress Compress, compressMin int, r
 		}
 	}
 
-	r.bs = nil
-	r.bss = nil
-	r.bh = nil
-	r.bhs = nil
+	that.bs = nil
+	that.bss = nil
+	that.bh = nil
+	that.bhs = nil
 	return nil
 }
 
-func (r *RepBatch) Rep(client Client, buff *[]byte, encrypt Encrypt, encryKey []byte) error {
-	if r.data == nil {
+func (that RepBatch) Rep(client Client, buff *[]byte, encrypt Encrypt, encryKey []byte) error {
+	if that.data == nil {
 		// 无数据写入
 		if client.Sticky() {
-			if r.bss == nil {
-				r.bss = r.repOrBH(true)
+			if that.bss == nil {
+				that.bss = that.repOrBH(true)
 			}
 
-			return client.Write(r.bss, false)
+			return client.Write(that.bss, false)
 
 		} else {
-			if r.bs == nil {
-				r.bs = r.repOrBH(false)
+			if that.bs == nil {
+				that.bs = that.repOrBH(false)
 			}
 
-			return client.Write(r.bs, false)
+			return client.Write(that.bs, false)
 		}
 	}
 
 	// 有数据通用头
 	var bh []byte
 	if client.Sticky() {
-		bh = r.bhs
+		bh = that.bhs
 		if bh == nil {
-			bh = r.repOrBH(true)
-			r.bhs = bh
+			bh = that.repOrBH(true)
+			that.bhs = bh
 		}
 
 	} else {
-		bh = r.bh
+		bh = that.bh
 		if bh == nil {
-			bh = r.repOrBH(false)
-			r.bh = bh
+			bh = that.repOrBH(false)
+			that.bh = bh
 		}
 	}
 
 	if encrypt == nil || encryKey == nil {
 		// 无加密数据写入
 		if client.Sticky() {
-			if r.bss == nil {
-				r.bss = r.protocol.RepBS(r.bhs, r.data, true, 0)
+			if that.bss == nil {
+				that.bss = that.protocol.RepBS(that.bhs, that.data, true, 0)
 			}
 
-			return client.Write(r.bss, false)
+			return client.Write(that.bss, false)
 
 		} else {
-			if r.bs == nil {
-				r.bs = r.protocol.RepBS(r.bhs, r.data, false, 0)
+			if that.bs == nil {
+				that.bs = that.protocol.RepBS(that.bhs, that.data, false, 0)
 			}
 
-			return client.Write(r.bs, false)
+			return client.Write(that.bs, false)
 		}
 	}
 
@@ -210,17 +210,17 @@ func (r *RepBatch) Rep(client Client, buff *[]byte, encrypt Encrypt, encryKey []
 
 	// 加密数据隔离
 	var data []byte
-	data, err = encrypt.Encrypt(r.data, encryKey, true)
+	data, err = encrypt.Encrypt(that.data, encryKey, true)
 	if err != nil {
 		return err
 	}
 
 	head := HEAD_ENCRY
 	if out {
-		return r.protocol.RepOutBS(locker, client, buff, bh, data, client.Sticky(), head)
+		return that.protocol.RepOutBS(locker, client, buff, bh, data, client.Sticky(), head)
 
 	} else {
-		return client.Write(r.protocol.RepBS(bh, data, client.Sticky(), head), false)
+		return client.Write(that.protocol.RepBS(bh, data, client.Sticky(), head), false)
 	}
 }
 

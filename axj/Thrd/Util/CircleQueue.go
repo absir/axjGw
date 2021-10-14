@@ -16,30 +16,30 @@ func NewCircleQueue(max int) *CircleQueue {
 	return array
 }
 
-func (c *CircleQueue) mod(i int) int {
-	if i < c.max {
+func (that CircleQueue) mod(i int) int {
+	if i < that.max {
 		return i
 	}
 
-	return i - c.max
+	return i - that.max
 }
 
-func (c *CircleQueue) Size() int {
-	return c.mod(c.max + c.tail - c.head)
+func (that CircleQueue) Size() int {
+	return that.mod(that.max + that.tail - that.head)
 }
 
-func (c *CircleQueue) IsEmpty() bool {
-	return c.tail == c.head
+func (that CircleQueue) IsEmpty() bool {
+	return that.tail == that.head
 }
 
-func (c *CircleQueue) IsFull() bool {
-	return c.mod(c.tail+1) == c.head
+func (that CircleQueue) IsFull() bool {
+	return that.mod(that.tail+1) == that.head
 }
 
-func (c *CircleQueue) Push(val interface{}, cover bool) bool {
-	if c.IsFull() {
+func (that CircleQueue) Push(val interface{}, cover bool) bool {
+	if that.IsFull() {
 		if cover {
-			c.head = c.mod(c.head + 1)
+			that.head = that.mod(that.head + 1)
 			return true
 
 		} else {
@@ -47,60 +47,60 @@ func (c *CircleQueue) Push(val interface{}, cover bool) bool {
 		}
 	}
 
-	c.array[c.tail] = val
-	c.tail = c.mod(c.tail + 1)
+	that.array[that.tail] = val
+	that.tail = that.mod(that.tail + 1)
 	return true
 }
 
-func (c *CircleQueue) Pop() (interface{}, bool) {
-	if c.IsEmpty() {
+func (that CircleQueue) Pop() (interface{}, bool) {
+	if that.IsEmpty() {
 		return nil, false
 	}
 
-	head := c.head
-	v := c.array[head]
-	c.head = c.mod(head + 1)
-	c.array[head] = nil
+	head := that.head
+	v := that.array[head]
+	that.head = that.mod(head + 1)
+	that.array[head] = nil
 	return v, true
 }
 
-func (c *CircleQueue) Get(idx int) (interface{}, bool) {
-	if idx < 0 || idx >= c.Size() {
+func (that CircleQueue) Get(idx int) (interface{}, bool) {
+	if idx < 0 || idx >= that.Size() {
 		return nil, false
 	}
 
-	idx = c.mod(c.head + idx)
-	return c.array[idx], true
+	idx = that.mod(that.head + idx)
+	return that.array[idx], true
 }
 
-func (c *CircleQueue) Set(idx int, val interface{}) bool {
-	if idx < 0 || idx >= c.Size() {
+func (that CircleQueue) Set(idx int, val interface{}) bool {
+	if idx < 0 || idx >= that.Size() {
 		return false
 	}
 
-	idx = c.mod(c.head + idx)
-	c.array[idx] = val
+	idx = that.mod(that.head + idx)
+	that.array[idx] = val
 	return true
 }
 
-func (c *CircleQueue) Clear() {
-	c.head = 0
-	c.tail = 0
-	for i := c.max - 1; i >= 0; i-- {
-		c.array[i] = nil
+func (that CircleQueue) Clear() {
+	that.head = 0
+	that.tail = 0
+	for i := that.max - 1; i >= 0; i-- {
+		that.array[i] = nil
 	}
 }
 
-func (c *CircleQueue) Remove(val interface{}) bool {
-	if c.IsEmpty() {
+func (that CircleQueue) Remove(val interface{}) bool {
+	if that.IsEmpty() {
 		return false
 	}
 
-	head := c.head
-	v := c.array[head]
+	head := that.head
+	v := that.array[head]
 	if v == val {
-		c.head = c.mod(head + 1)
-		c.array[head] = nil
+		that.head = that.mod(head + 1)
+		that.array[head] = nil
 		return true
 	}
 

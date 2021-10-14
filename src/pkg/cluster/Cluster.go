@@ -19,20 +19,20 @@ func NewPeer(node Node) *Peer {
 	return peer
 }
 
-func (p *Peer) Client(pubs []KtStr.Matcher, conf *thrift.TConfiguration) *thrift.TSocket {
-	if p.socket == nil {
+func (that Peer) Client(pubs []KtStr.Matcher, conf *thrift.TConfiguration) *thrift.TSocket {
+	if that.socket == nil {
 		var err error = nil
-		if KtStr.Matchers(pubs, p.addr, false) {
-			p.socket, err = thrift.NewTSocketConf(p.addrPub, conf)
+		if KtStr.Matchers(pubs, that.addr, false) {
+			that.socket, err = thrift.NewTSocketConf(that.addrPub, conf)
 
 		} else {
-			p.socket, err = thrift.NewTSocketConf(p.addr, conf)
+			that.socket, err = thrift.NewTSocketConf(that.addr, conf)
 		}
 
 		Kt.Panic(err)
 	}
 
-	return p.socket
+	return that.socket
 }
 
 type Peers struct {

@@ -14,49 +14,49 @@ func New(values ...interface{}) *ArrayList {
 	return list
 }
 
-func (list *ArrayList) Add(values ...interface{}) {
-	if list.size+len(values) >= len(list.elements)-1 {
-		newElements := make([]interface{}, list.size+len(values)+1)
-		copy(newElements, list.elements)
-		list.elements = newElements
+func (that ArrayList) Add(values ...interface{}) {
+	if that.size+len(values) >= len(that.elements)-1 {
+		newElements := make([]interface{}, that.size+len(values)+1)
+		copy(newElements, that.elements)
+		that.elements = newElements
 	}
 
 	for _, value := range values {
-		list.elements[list.size] = value
-		list.size++
+		that.elements[that.size] = value
+		that.size++
 	}
 
 }
 
-func (list *ArrayList) Remove(index int) interface{} {
-	if index < 0 || index >= list.size {
+func (that ArrayList) Remove(index int) interface{} {
+	if index < 0 || index >= that.size {
 		return nil
 	}
 
-	curEle := list.elements[index]
-	list.elements[index] = nil
-	copy(list.elements[index:], list.elements[index+1:list.size])
-	list.size--
+	curEle := that.elements[index]
+	that.elements[index] = nil
+	copy(that.elements[index:], that.elements[index+1:that.size])
+	that.size--
 	return curEle
 }
 
-func (list *ArrayList) Get(index int) interface{} {
-	if index < 0 || index >= list.size {
+func (that ArrayList) Get(index int) interface{} {
+	if index < 0 || index >= that.size {
 		return nil
 	}
-	return list.elements[index]
+	return that.elements[index]
 }
 
-func (list *ArrayList) IsEmpty() bool {
-	return list.size == 0
+func (that ArrayList) IsEmpty() bool {
+	return that.size == 0
 }
 
-func (list *ArrayList) Size() int {
-	return list.size
+func (that ArrayList) Size() int {
+	return that.size
 }
 
-func (list *ArrayList) Contains(value interface{}) bool {
-	for _, curValue := range list.elements {
+func (that ArrayList) Contains(value interface{}) bool {
+	for _, curValue := range that.elements {
 		if curValue == value {
 			return true
 		}

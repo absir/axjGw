@@ -16,12 +16,12 @@ type uriDict struct {
 	UriMapJsonData []byte
 }
 
-func (u uriDict) UriMapUriI() map[string]int32 {
-	return u.uriMapUriI
+func (that uriDict) UriMapUriI() map[string]int32 {
+	return that.uriMapUriI
 }
 
-func (u uriDict) UriIMapUri() map[int32]string {
-	return u.uriIMapUri
+func (that uriDict) UriIMapUri() map[int32]string {
+	return that.uriIMapUri
 }
 
 var UriDict *uriDict

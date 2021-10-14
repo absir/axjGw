@@ -33,51 +33,72 @@ type ConnG struct {
 	ridMap *sync.Map // 请求字典
 }
 
-func (c *ConnG) SetId(uid int64, sid string) {
-	c.uid = uid
-	c.sid = sid
-	c.hash = -1
+func (that ConnG) PInit() {
+	that.ConnM.PInit()
+	that.uid = 0
+	that.sid = ""
+	that.hash = -1
+	that.rid = 0
+	that.ridMap = nil
 }
 
-func (c *ConnG) Hash() int {
-	if c.hash < 0 {
-		conn := c.ConnC
+func (that ConnG) PRelease() bool {
+	if that.ConnM.PRelease() {
+		//that.uid = 0
+		that.sid = ""
+		//that.hash = -1
+		//that.rid = 0
+		//that.ridMap = nil
+		return true
+	}
+
+	return false
+}
+
+func (that ConnG) SetId(uid int64, sid string) {
+	that.uid = uid
+	that.sid = sid
+	that.hash = -1
+}
+
+func (that ConnG) Hash() int {
+	if that.hash < 0 {
+		conn := that.ConnC
 		conn.Locker().Lock()
 		defer conn.Locker().Unlock()
-
-		if c.hash < 0 {
+		if that.hash < 0 {
 			var hash int
-			if c.uid > 0 {
-				hash = int(c.uid)
+			if that.uid > 0 {
+				hash = int(that.uid)
 
-			} else if c.sid != "" {
-				hash = Kt.HashCode(KtUnsafe.StringToBytes(c.sid))
+			} else if that.sid != "" {
+				hash = Kt.HashCode(KtUnsafe.StringToBytes(that.sid))
 
 			} else {
-				hash = int(c.Id())
+				hash = int(that.Id())
 			}
 
 			if hash < 0 {
 				hash = -hash
 			}
 
-			c.hash = hash
+			that.hash = hash
 		}
 	}
 
-	return c.hash
+	return that.hash
 }
 
-func (c *ConnG) GetId(name string) int32 {
+func (that ConnG) GetId(name string) int32 {
 	if name == "" || name == Config.AclProd {
-		return c.rid
+		return that.rid
 	}
 
-	if c.ridMap == nil {
+	if that.ridMap == nil {
 		return 0
 	}
 
-	id, _ := c.ridMap.Load(name)
+	id, _ := that.ridMap.Load(name)
 	if id == nil {
 		return 0
 	}
@@ -85,55 +106,55 @@ func (c *ConnG) GetId(name string) int32 {
 	return id.(int32)
 }
 
-func (c *ConnG) initRidMap() {
-	if c.ridMap == nil {
-		conn := c.ConnC
+func (that ConnG) initRidMap() {
+	if that.ridMap == nil {
+		conn := that.ConnC
 		conn.Locker().Lock()
 		defer conn.Locker().Unlock()
-		if c.ridMap == nil {
-			c.ridMap = new(sync.Map)
+		if that.ridMap == nil {
+			that.ridMap = new(sync.Map)
 		}
 	}
 }
 
-func (c *ConnG) PutRId(name string, id int32) {
+func (that ConnG) PutRId(name string, id int32) {
 	if name == "" || name == Config.AclProd {
-		c.rid = id
+		that.rid = id
 		return
 	}
 
-	if c.ridMap == nil {
+	if that.ridMap == nil {
 		if id <= 0 {
 			return
 		}
 	}
 
-	c.initRidMap()
+	that.initRidMap()
 	if id <= 0 {
-		c.ridMap.Delete(name)
+		that.ridMap.Delete(name)
 
 	} else {
-		c.ridMap.Store(name, id)
+		that.ridMap.Store(name, id)
 	}
 }
 
-func (c *ConnG) PutRIds(ids map[string]int32) {
+func (that ConnG) PutRIds(ids map[string]int32) {
 	if ids == nil {
 		return
 	}
 
 	for name, id := range ids {
-		c.PutRId(name, id)
+		that.PutRId(name, id)
 	}
 }
 
-func (c *ConnG) GetProd(name string, rand bool) *Prod {
+func (that ConnG) GetProd(name string, rand bool) *Prod {
 	prods := GetProds(name)
 	if prods == nil {
 		return nil
 	}
 
-	id := c.GetId(name)
+	id := that.GetId(name)
 	if id > 0 {
 		return prods.GetProd(id)
 	}
@@ -142,31 +163,26 @@ func (c *ConnG) GetProd(name string, rand bool) *Prod {
 		return prods.GetProdRand()
 	}
 
-	return prods.GetProdHash(c.Hash())
+	return prods.GetProdHash(that.Hash())
 }
 
 type HandlerG struct {
 }
 
-func (h *HandlerG) ConnG(conn ANet.Conn) *ConnG {
+func (that HandlerG) ConnG(conn ANet.Conn) *ConnG {
 	return conn.(*ConnG)
 }
 
-func (h *HandlerG) ConnM(conn ANet.Conn) ANet.ConnM {
+func (that HandlerG) ConnM(conn ANet.Conn) ANet.ConnM {
 	return conn.(*ConnG).ConnM
 }
 
-func (h *HandlerG) New() ANet.Conn {
+func (that HandlerG) New() ANet.Conn {
 	return new(ConnG)
 }
 
-func (h *HandlerG) Init(conn ANet.Conn) {
-	connG := h.ConnG(conn)
-	connG.ridMap = nil
-}
-
-func (h *HandlerG) Open(conn ANet.Conn, client ANet.Client) {
-	connG := h.ConnG(conn)
+func (that HandlerG) Open(conn ANet.Conn, client ANet.Client) {
+	connG := that.ConnG(conn)
 	connG.uid = 0
 	connG.sid = ""
 	connG.hash = -1
@@ -174,15 +190,13 @@ func (h *HandlerG) Open(conn ANet.Conn, client ANet.Client) {
 	connG.ridMap = nil
 }
 
-func (h *HandlerG) OnClose(conn ANet.Conn, err error, reason interface{}) {
-	connG := h.ConnG(conn)
-	connG.ridMap = nil
+func (that HandlerG) OnClose(conn ANet.Conn, err error, reason interface{}) {
 }
 
-func (h *HandlerG) Last(conn ANet.Conn, req bool) {
+func (that HandlerG) Last(conn ANet.Conn, req bool) {
 }
 
-func (h *HandlerG) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) bool {
+func (that HandlerG) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) bool {
 	if req >= ANet.REQ_ONEWAY {
 		return false
 	}
@@ -190,9 +204,9 @@ func (h *HandlerG) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data
 	return true
 }
 
-func (h *HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) {
+func (that HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) {
 	reped := false
-	defer h.OnReqErr(conn, req, reped)
+	defer that.OnReqErr(conn, req, reped)
 	name := Config.AclProd
 	if uri[0] == '@' {
 		i := strings.IndexByte(uri, '/')
@@ -202,7 +216,7 @@ func (h *HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, da
 		}
 	}
 
-	connG := h.ConnG(conn)
+	connG := that.ConnG(conn)
 	prod := connG.GetProd(name, false)
 	if prod == nil {
 		if req > ANet.REQ_ONEWAY {
@@ -231,7 +245,7 @@ func (h *HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, da
 	}
 }
 
-func (h *HandlerG) OnReqErr(conn ANet.Conn, req int32, reped bool) {
+func (that HandlerG) OnReqErr(conn ANet.Conn, req int32, reped bool) {
 	if err := recover(); err != nil {
 		AZap.Logger.Warn("rep err", zap.Reflect("err", err))
 	}
@@ -241,10 +255,10 @@ func (h *HandlerG) OnReqErr(conn ANet.Conn, req int32, reped bool) {
 	}
 }
 
-func (h *HandlerG) Processor() ANet.Processor {
+func (that HandlerG) Processor() ANet.Processor {
 	return Processor
 }
 
-func (h HandlerG) UriDict() ANet.UriDict {
+func (that HandlerG) UriDict() ANet.UriDict {
 	return UriDict
 }

@@ -3,6 +3,7 @@ package ANet
 import (
 	"axj/APro"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
 	"errors"
 	"go.uber.org/zap"
 	"sync"
@@ -13,45 +14,72 @@ var ERR_CLOSED = errors.New("CLOSED")
 var ERR_CRASH = errors.New("CRASH")
 
 type Conn interface {
+	Util.Pool
 	Get() *ConnC
 }
 
 type ConnC struct {
-	client    Client
 	locker    sync.Locker
 	encryKey  []byte
 	repBuffer *[]byte
-	poolG     APro.PoolG
+	closed    int8
+	client    Client
 	manager   Manager
+	poolG     APro.PoolG
 }
 
-func (c *ConnC) Get() *ConnC {
-	return c
+func (that ConnC) PInit() {
+	that.locker = new(sync.Mutex)
+	that.encryKey = nil
+	that.repBuffer = nil
+	that.closed = 0
+	that.client = nil
+	that.manager = nil
+	that.poolG = nil
 }
 
-func (c *ConnC) Client() Client {
-	return c.client
+func (that ConnC) PRelease() bool {
+	if that.client != nil {
+		that.Close(nil, nil)
+		return true
+	}
+
+	return false
 }
 
-func (c *ConnC) Locker() sync.Locker {
-	return c.locker
+func (that ConnC) Open(client Client, manager Manager) {
+	that.closed = 0
+	that.client = client
+	that.manager = manager
+	// that.poolG = nil
 }
 
-func (c *ConnC) Closed() bool {
-	return c.client == nil
+func (that *ConnC) Get() *ConnC {
+	return that
 }
 
-func (c *ConnC) Manager() Manager {
-	return c.manager
+func (that ConnC) Client() Client {
+	return that.client
 }
 
-func (c *ConnC) SetEncryKey(encryKey []byte) {
-	c.encryKey = encryKey
+func (that ConnC) Locker() sync.Locker {
+	return that.locker
+}
+
+func (that ConnC) Closed() bool {
+	return that.closed != 0
+}
+
+func (that ConnC) Manager() Manager {
+	return that.manager
+}
+
+func (that ConnC) SetEncryKey(encryKey []byte) {
+	that.encryKey = encryKey
 }
 
 type Handler interface {
 	New() Conn
-	Init(conn Conn)
 	Open(conn Conn, client Client)
 	OnClose(conn Conn, err error, reason interface{})
 	Last(conn Conn, req bool)
@@ -65,56 +93,71 @@ type Manager interface {
 	Handler
 }
 
-func (c *ConnC) Init() {
-	c.client = nil
-	c.locker = new(sync.Mutex)
-	c.encryKey = nil
-	c.repBuffer = nil
-	c.poolG = nil
-	c.manager = nil
+func (that ConnC) Close(err error, reason interface{}) {
+	that.close(err, reason, false)
 }
 
-func (c *ConnC) Open(client Client, manager Manager) {
-	c.client = client
-	// c.poolG = nil
-	c.manager = manager
-}
+const CONN_CLOSED int8 = 127
 
-func (c *ConnC) Close(err error, reason interface{}) {
-	if c.Closed() {
-		return
+func (that *ConnC) close(err error, reason interface{}, inner bool) {
+	if !inner {
+		if that.Closed() {
+			return
+		}
+
+		that.locker.Lock()
+		defer that.locker.Unlock()
+		if that.Closed() {
+			return
+		}
 	}
 
-	c.locker.Lock()
-	defer c.locker.Unlock()
-	if c.Closed() {
-		return
-	}
-
-	client := c.client
-	// 关闭执行
-	defer c.Recover()
-	defer client.Close()
-	c.client = nil
-	// c.poolG = nil
-	c.manager = nil
+	// 关闭中
+	that.closed++
+	// 关闭恢复
+	defer that.recover()
 	// 关闭日志
-	AZap.Logger.Info("Conn close", zap.Error(err), zap.Reflect("reason", reason))
-	if c.manager != nil {
-		c.manager.OnClose(c, err, reason)
+	if that.closed <= 3 {
+		// logger before
+		that.logClose(err, reason)
 	}
+
+	// that.poolG = nil
+	manager := that.manager
+	if manager != nil {
+		that.manager = nil
+		manager.OnClose(that, err, reason)
+	}
+
+	client := that.client
+	if client != nil {
+		that.client = nil
+		client.Close()
+	}
+
+	if that.closed > 3 && that.closed <= 6 {
+		// logger last
+		that.logClose(err, reason)
+	}
+
+	// 已关闭
+	that.closed = CONN_CLOSED
 }
 
-func (c *ConnC) Recover() error {
+func (that ConnC) logClose(err error, reason interface{}) {
+	AZap.Logger.Info("Conn close", zap.Error(err), zap.Reflect("reason", reason))
+}
+
+func (that ConnC) recover() error {
 	if reason := recover(); reason != nil {
 		err, ok := reason.(error)
 		if ok {
 			reason = nil
-			c.Close(err, nil)
+			that.close(err, nil, true)
 
 		} else {
 			err = ERR_CRASH
-			c.Close(err, reason)
+			that.close(err, reason, true)
 		}
 
 		if reason == nil {
@@ -130,16 +173,16 @@ func (c *ConnC) Recover() error {
 	return nil
 }
 
-func (c *ConnC) Req() (err error, req int32, uri string, uriI int32, data []byte) {
-	if c.Closed() {
+func (that *ConnC) Req() (err error, req int32, uri string, uriI int32, data []byte) {
+	if that.Closed() {
 		return ERR_CLOSED, 0, "", 0, nil
 	}
 
-	c.manager.Last(c, true)
-	processor := c.manager.Processor()
-	err, req, uri, uriI, data = Req(c.client, processor.Protocol, processor.Compress, processor.Encrypt, c.encryKey, processor.DataMax)
+	that.manager.Last(that, true)
+	processor := that.manager.Processor()
+	err, req, uri, uriI, data = Req(that.client, processor.Protocol, processor.Compress, processor.Encrypt, that.encryKey, processor.DataMax)
 	if uri == "" && uriI > 0 {
-		uriDict := c.manager.UriDict()
+		uriDict := that.manager.UriDict()
 		if uriDict != nil {
 			uri = uriDict.UriIMapUri()[uriI]
 		}
@@ -148,21 +191,21 @@ func (c *ConnC) Req() (err error, req int32, uri string, uriI int32, data []byte
 	return
 }
 
-func (c *ConnC) ReqLoop() {
+func (that *ConnC) ReqLoop() {
 	for {
-		err, req, uri, uriI, data := c.Req()
+		err, req, uri, uriI, data := that.Req()
 		if err != nil {
-			c.Close(err, nil)
+			that.Close(err, nil)
 			break
 		}
 
-		if !c.manager.OnReq(c, req, uri, uriI, data) {
-			poolG := c.poolG
+		if !that.manager.OnReq(that, req, uri, uriI, data) {
+			poolG := that.poolG
 			if poolG == APro.PoolOne {
-				c.handlerReqIo(nil, req, uri, uriI, data)
+				that.handlerReqIo(nil, req, uri, uriI, data)
 
 			} else {
-				go c.handlerReqIo(poolG, req, uri, uriI, data)
+				go that.handlerReqIo(poolG, req, uri, uriI, data)
 				if poolG != nil {
 					poolG.Add()
 				}
@@ -171,22 +214,22 @@ func (c *ConnC) ReqLoop() {
 	}
 }
 
-func (c *ConnC) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32, data []byte) {
+func (that *ConnC) handlerReqIo(poolG APro.PoolG, req int32, uri string, uriI int32, data []byte) {
 	if poolG == nil {
 		defer poolG.Done()
 	}
 
-	c.manager.OnReqIO(c, req, uri, uriI, data)
+	that.manager.OnReqIO(that, req, uri, uriI, data)
 }
 
 // 单进程阻塞 req < 0 直接 WriteData
-func (c *ConnC) Rep(req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, batch *RepBatch) error {
-	if c.Closed() {
+func (that *ConnC) Rep(req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, batch *RepBatch) error {
+	if that.Closed() {
 		return ERR_CLOSED
 	}
 
-	c.manager.Last(c, false)
-	uriDict := c.manager.UriDict()
+	that.manager.Last(that, false)
+	uriDict := that.manager.UriDict()
 	if uriI <= 0 {
 		if uri != "" && uriDict != nil {
 			uriI = uriDict.UriMapUriI()[uri]
@@ -196,22 +239,22 @@ func (c *ConnC) Rep(req int32, uri string, uriI int32, data []byte, isolate bool
 		}
 	}
 
-	encryKey := c.encryKey
+	encryKey := that.encryKey
 	if !encry {
 		encryKey = nil
 	}
 
-	processor := c.manager.Processor()
+	processor := that.manager.Processor()
 	var err error = nil
 	if batch == nil {
-		err = Rep(c.client, c.repBuffer, processor.Protocol, processor.Compress, processor.CompressMin, processor.Encrypt, encryKey, req, uri, uriI, data, isolate)
+		err = Rep(that.client, that.repBuffer, processor.Protocol, processor.Compress, processor.CompressMin, processor.Encrypt, encryKey, req, uri, uriI, data, isolate)
 
 	} else {
-		err = batch.Rep(c.client, c.repBuffer, processor.Encrypt, encryKey)
+		err = batch.Rep(that.client, that.repBuffer, processor.Encrypt, encryKey)
 	}
 
 	if err != nil {
-		c.Close(err, nil)
+		that.Close(err, nil)
 		return err
 	}
 
@@ -237,38 +280,34 @@ type HandlerW struct {
 	handler Handler
 }
 
-func (h HandlerW) New() Conn {
-	return h.handler.New()
+func (that HandlerW) New() Conn {
+	return that.handler.New()
 }
 
-func (h HandlerW) Init(conn Conn) {
-	h.handler.Init(conn)
+func (that HandlerW) Open(conn Conn, client Client) {
+	that.handler.Open(conn, client)
 }
 
-func (h HandlerW) Open(conn Conn, client Client) {
-	h.handler.Open(conn, client)
+func (that HandlerW) OnClose(conn Conn, err error, reason interface{}) {
+	that.handler.OnClose(conn, err, reason)
 }
 
-func (h HandlerW) OnClose(conn Conn, err error, reason interface{}) {
-	h.handler.OnClose(conn, err, reason)
+func (that HandlerW) Last(conn Conn, req bool) {
+	that.handler.Last(conn, req)
 }
 
-func (h HandlerW) Last(conn Conn, req bool) {
-	h.handler.Last(conn, req)
+func (that HandlerW) OnReq(conn Conn, req int32, uri string, uriI int32, data []byte) bool {
+	return that.handler.OnReq(conn, req, uri, uriI, data)
 }
 
-func (h HandlerW) OnReq(conn Conn, req int32, uri string, uriI int32, data []byte) bool {
-	return h.handler.OnReq(conn, req, uri, uriI, data)
+func (that HandlerW) OnReqIO(conn Conn, req int32, uri string, uriI int32, data []byte) {
+	that.handler.OnReqIO(conn, req, uri, uriI, data)
 }
 
-func (h HandlerW) OnReqIO(conn Conn, req int32, uri string, uriI int32, data []byte) {
-	h.handler.OnReqIO(conn, req, uri, uriI, data)
+func (that HandlerW) Processor() Processor {
+	return that.handler.Processor()
 }
 
-func (h HandlerW) Processor() Processor {
-	return h.handler.Processor()
-}
-
-func (h HandlerW) UriDict() UriDict {
-	return h.handler.UriDict()
+func (that HandlerW) UriDict() UriDict {
+	return that.handler.UriDict()
 }
