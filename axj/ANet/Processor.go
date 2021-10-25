@@ -2,10 +2,27 @@ package ANet
 
 import (
 	"io"
+	"sync"
 )
 
-func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
-	err, bs, read := client.Read()
+type Processor struct {
+	Protocol    Protocol
+	Compress    Compress
+	CompressMin int
+	Encrypt     Encrypt
+	DataMax     int32
+}
+
+func (that Processor) Req(conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
+	return req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, that.DataMax)
+}
+
+func (that Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) error {
+	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate)
+}
+
+func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
+	err, bs, read := conn.ReadA()
 	if err != nil {
 		return
 	}
@@ -15,7 +32,7 @@ func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, d
 		err, head, req, uri, uriI, data = protocol.Req(bs)
 
 	} else if read != nil {
-		err, head, req, uri, uriI, data = protocol.ReqReader(read, client.Sticky(), dataMax)
+		err, head, req, uri, uriI, data = protocol.ReqReader(read, conn.Sticky(), dataMax)
 
 	} else {
 		err = io.EOF
@@ -46,32 +63,29 @@ func Req(client Client, protocol Protocol, compress Compress, decrypt Encrypt, d
 	return
 }
 
-func Rep(client Client, buff *[]byte, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) (err error) {
+func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) (err error) {
 	if req < 0 {
 		// 纯写入data
-		return client.Write(data, false)
-	}
-
-	err, out, locker := client.Output()
-	if err != nil {
-		return err
+		return conn.Write(data)
 	}
 
 	var head byte = 0
 	if data != nil {
-		// 数据处理
-		if compress != nil {
-			bLen := len(data)
-			if compressMin > 0 && bLen > compressMin {
-				var bs []byte
-				bs, err = compress.Compress(data)
-				if err != nil {
-					return err
-				}
+		bLen := len(data)
+		if bLen > 0 {
+			// 数据处理
+			if compress != nil {
+				if compressMin > 0 && bLen > compressMin {
+					var bs []byte
+					bs, err = compress.Compress(data)
+					if err != nil {
+						return err
+					}
 
-				if len(bs) < bLen {
-					head |= HEAD_COMPRESS
-					data = bs
+					if len(bs) < bLen {
+						head |= HEAD_COMPRESS
+						data = bs
+					}
 				}
 			}
 		}
@@ -81,16 +95,21 @@ func Rep(client Client, buff *[]byte, protocol Protocol, compress Compress, comp
 			if err != nil {
 				return err
 			}
-
 			head |= HEAD_ENCRY
 		}
 	}
 
+	// 流写入
+	var wBuff *[]byte = nil
 	if out {
-		return protocol.RepOut(locker, client, buff, req, uri, uriI, data, client.Sticky(), head)
+		wBuff = conn.Out()
+	}
+
+	if wBuff == nil {
+		return conn.Write(protocol.Rep(req, uri, uriI, data, conn.Sticky(), head))
 
 	} else {
-		return client.Write(protocol.Rep(req, uri, uriI, data, client.Sticky(), head), false)
+		return protocol.RepOut(locker, conn, wBuff, req, uri, uriI, data, head)
 	}
 }
 
@@ -105,7 +124,7 @@ type RepBatch struct {
 	bhs      []byte
 }
 
-func (that RepBatch) Init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
+func (that RepBatch) init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
 	var head byte = 0
 	dLen := 0
 	if data != nil {
@@ -148,28 +167,28 @@ func (that RepBatch) Init(protocol Protocol, compress Compress, compressMin int,
 	return nil
 }
 
-func (that RepBatch) Rep(client Client, buff *[]byte, encrypt Encrypt, encryKey []byte) error {
+func (that RepBatch) rep(locker sync.Locker, out bool, conn Conn, encrypt Encrypt, encryKey []byte) error {
 	if that.data == nil {
 		// 无数据写入
-		if client.Sticky() {
+		if conn.Sticky() {
 			if that.bss == nil {
 				that.bss = that.repOrBH(true)
 			}
 
-			return client.Write(that.bss, false)
+			return conn.Write(that.bss)
 
 		} else {
 			if that.bs == nil {
 				that.bs = that.repOrBH(false)
 			}
 
-			return client.Write(that.bs, false)
+			return conn.Write(that.bs)
 		}
 	}
 
 	// 有数据通用头
 	var bh []byte
-	if client.Sticky() {
+	if conn.Sticky() {
 		bh = that.bhs
 		if bh == nil {
 			bh = that.repOrBH(true)
@@ -186,48 +205,40 @@ func (that RepBatch) Rep(client Client, buff *[]byte, encrypt Encrypt, encryKey 
 
 	if encrypt == nil || encryKey == nil {
 		// 无加密数据写入
-		if client.Sticky() {
+		if conn.Sticky() {
 			if that.bss == nil {
 				that.bss = that.protocol.RepBS(that.bhs, that.data, true, 0)
 			}
 
-			return client.Write(that.bss, false)
+			return conn.Write(that.bss)
 
 		} else {
 			if that.bs == nil {
 				that.bs = that.protocol.RepBS(that.bhs, that.data, false, 0)
 			}
 
-			return client.Write(that.bs, false)
+			return conn.Write(that.bs)
 		}
 	}
 
-	// 流写入检测
-	err, out, locker := client.Output()
-	if err != nil {
-		return err
-	}
-
 	// 加密数据隔离
-	var data []byte
-	data, err = encrypt.Encrypt(that.data, encryKey, true)
+	data, err := encrypt.Encrypt(that.data, encryKey, true)
 	if err != nil {
 		return err
 	}
 
 	head := HEAD_ENCRY
+
+	// 流写入
+	var wBuff *[]byte = nil
 	if out {
-		return that.protocol.RepOutBS(locker, client, buff, bh, data, client.Sticky(), head)
+		wBuff = conn.Out()
+	}
+
+	if wBuff == nil {
+		return conn.Write(that.protocol.RepBS(bh, data, conn.Sticky(), head))
 
 	} else {
-		return client.Write(that.protocol.RepBS(bh, data, client.Sticky(), head), false)
+		return that.protocol.RepOutBS(locker, conn, wBuff, bh, data, head)
 	}
-}
-
-type Processor struct {
-	Protocol    Protocol
-	Compress    Compress
-	CompressMin int
-	Encrypt     Encrypt
-	DataMax     int32
 }

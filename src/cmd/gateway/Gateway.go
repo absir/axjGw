@@ -40,7 +40,7 @@ var GCfg = Config{
 var GWorkHash int
 
 var GHandler *gateway.HandlerG
-var GConnMng *ANet.ConnMng
+var GConnMng *ANets.ConnMng
 
 func main() {
 	// 初始化配置
@@ -57,7 +57,7 @@ func main() {
 
 	// ANet服务
 	GHandler = new(gateway.HandlerG)
-	GConnMng = ANet.NewConnMng(GHandler, APro.WorkId(), time.Duration(GCfg.idleTime)*time.Millisecond, time.Duration(GCfg.checkTime)*time.Millisecond, GCfg.pool)
+	GConnMng = ANets.NewConnMng(GHandler, APro.WorkId(), time.Duration(GCfg.idleTime)*time.Millisecond, time.Duration(GCfg.checkTime)*time.Millisecond, GCfg.pool)
 	// 空闲检测
 	go GConnMng.IdleLoop()
 
@@ -66,7 +66,7 @@ func main() {
 		if GCfg.httpWs {
 			// websocket连接
 			http.Handle("ws", websocket.Handler(func(conn *websocket.Conn) {
-				connect(ANet.NewClientWebsocket(conn))
+				connect(ANets.NewClientWebsocket(conn))
 			}))
 		}
 
@@ -77,7 +77,7 @@ func main() {
 	if GCfg.socketAddr != "" && !strings.HasPrefix(GCfg.socketAddr, "!") {
 		if GCfg.pool {
 			// Socket客户端对象池开启
-			ANet.SetClientSocketPool(true)
+			ANets.SetClientSocketPool(true)
 		}
 
 		// socket服务
@@ -90,7 +90,7 @@ func main() {
 				AZap.Logger.Warn("serv Accept err", zap.Error(err))
 			}
 
-			go connect(ANet.NewClientSocket(conn.(*net.TCPConn), GCfg.socketSize, GCfg.socketOut))
+			go connect(ANets.NewClientSocket(conn.(*net.TCPConn), GCfg.socketSize, GCfg.socketOut))
 		}()
 	}
 
@@ -98,7 +98,7 @@ func main() {
 	APro.Signal()
 }
 
-func connect(client ANet.Client) {
+func connect(client ANets.Client) {
 	conn := GConnMng.OpenConn(client)
 	if !connectDo(conn) {
 		return
@@ -107,7 +107,7 @@ func connect(client ANet.Client) {
 	go conn.Get().ReqLoop()
 }
 
-func connectDo(conn ANet.Conn) bool {
+func connectDo(conn ANets.Conn) bool {
 	connM := GConnMng.ConnM(conn)
 	// 交换密钥
 	encrypt := GConnMng.Processor().Encrypt
@@ -116,12 +116,12 @@ func connectDo(conn ANet.Conn) bool {
 		if sKey != nil && cKey != nil {
 			connM.SetEncryKey(sKey)
 			// 路由缓存
-			connM.Get().Rep(ANet.REQ_KEY, "", 0, cKey, false, false, nil)
+			connM.Get().Rep(ANets.REQ_KEY, "", 0, cKey, false, false, nil)
 		}
 	}
 
 	// 服务准备
-	connM.Get().Rep(ANet.REQ_ACL, "", 0, nil, false, false, nil)
+	connM.Get().Rep(ANets.REQ_ACL, "", 0, nil, false, false, nil)
 	// Arl请求
 	err, _, uri, uriI, data := connM.Req()
 	if err != nil || data == nil {
@@ -139,7 +139,7 @@ func connectDo(conn ANet.Conn) bool {
 	if uri != "" && uriI > 0 {
 		if uri != gateway.UriDict.UriMapHash {
 			// 路由缓存
-			connM.Get().Rep(ANet.REQ_ROUTE, gateway.UriDict.UriMapHash, 0, gateway.UriDict.UriMapJsonData, false, false, nil)
+			connM.Get().Rep(ANets.REQ_ROUTE, gateway.UriDict.UriMapHash, 0, gateway.UriDict.UriMapJsonData, false, false, nil)
 		}
 	}
 
@@ -154,6 +154,6 @@ func connectDo(conn ANet.Conn) bool {
 	// 连接注册
 	GConnMng.RegConn(connG, int(login.PoolG))
 	// 开启服务
-	connM.Get().Rep(ANet.REQ_LOOP, "", 0, nil, false, false, nil)
+	connM.Get().Rep(ANets.REQ_LOOP, "", 0, nil, false, false, nil)
 	return true
 }

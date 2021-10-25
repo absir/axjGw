@@ -4,7 +4,6 @@ import (
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtIo"
 	"axj/Kt/KtUnsafe"
-	"bufio"
 	"errors"
 	"io"
 	"sync"
@@ -32,15 +31,15 @@ type Protocol interface {
 	// 请求读取
 	Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 流请求读取
-	ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
+	ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 返回数据
 	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte
 	// 返回流写入
-	RepOut(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error)
+	RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte) (err error)
 	// 批量返回数据头
 	RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte
 	RepBS(bh []byte, data []byte, sticky bool, head byte) []byte
-	RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh []byte, data []byte, sticky bool, head byte) (err error)
+	RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error)
 }
 
 type ProtocolV struct {
@@ -91,7 +90,7 @@ func (that ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri strin
 	return
 }
 
-func (that ProtocolV) ReqReader(reader *bufio.Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head, err = reader.ReadByte()
 	if err != nil {
 		return
@@ -226,7 +225,7 @@ func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky
 	return bs
 }
 
-func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, req int32, uri string, uriI int32, data []byte, sticky bool, head byte) (err error) {
+func (that ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte) (err error) {
 	err = nil
 	// 头状态准备
 	if req > 0 {
@@ -253,13 +252,13 @@ func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, re
 
 	// 写入锁
 	if locker != nil {
-		defer locker.Unlock()
 		locker.Lock()
+		defer locker.Unlock()
 	}
 
 	// buff准备
 	_buff := *buff
-	if _buff == nil {
+	if _buff == nil || len(_buff) < 4 {
 		_buff = make([]byte, 4)
 		buff = &_buff
 	}
@@ -267,7 +266,7 @@ func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, re
 	// 写入头
 	head |= that.crc(head)
 	_buff[0] = head
-	err = client.Write(_buff[0:1], true)
+	err = conn.Write(_buff[0:1])
 	if err != nil {
 		return
 	}
@@ -276,7 +275,7 @@ func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, re
 	// 写入请求
 	if req > 0 {
 		KtBytes.SetVInt(_buff, 0, req, &off)
-		err = client.Write(_buff[0:off], true)
+		err = conn.Write(_buff[0:off])
 		if err != nil {
 			return
 		}
@@ -285,12 +284,12 @@ func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, re
 	// 写入路由
 	if uLen > 0 {
 		KtBytes.SetVInt(_buff, 0, uLen, &off)
-		err = client.Write(_buff[0:off], true)
+		err = conn.Write(_buff[0:off])
 		if err != nil {
 			return
 		}
 
-		err = client.Write(KtUnsafe.StringToBytes(uri), true)
+		err = conn.Write(KtUnsafe.StringToBytes(uri))
 		if err != nil {
 			return
 		}
@@ -299,7 +298,7 @@ func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, re
 	// 写入路由压缩
 	if uriI > 0 {
 		KtBytes.SetVInt(_buff, 0, uriI, &off)
-		err = client.Write(_buff[0:off], true)
+		err = conn.Write(_buff[0:off])
 		if err != nil {
 			return
 		}
@@ -308,15 +307,15 @@ func (that ProtocolV) RepOut(locker sync.Locker, client Client, buff *[]byte, re
 	// 写入数据
 	if dLen > 0 {
 		// 数据
-		if sticky {
+		if conn.Sticky() {
 			KtBytes.SetVInt(_buff, 0, dLen, &off)
-			err = client.Write(_buff[0:off], true)
+			err = conn.Write(_buff[0:off])
 			if err != nil {
 				return
 			}
 		}
 
-		err = client.Write(data, true)
+		err = conn.Write(data)
 		if err != nil {
 			return
 		}
@@ -375,7 +374,7 @@ func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []by
 	return bh
 }
 
-func (that ProtocolV) RepOutBS(locker sync.Locker, client Client, buff *[]byte, bh []byte, data []byte, sticky bool, head byte) (err error) {
+func (that ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error) {
 	err = nil
 	var dLen int32 = 0
 	if data != nil {
@@ -408,30 +407,30 @@ func (that ProtocolV) RepOutBS(locker sync.Locker, client Client, buff *[]byte, 
 
 	// 写入批量头状态
 	_buff[0] = head
-	err = client.Write(_buff[0:1], true)
+	err = conn.Write(_buff[0:1])
 	if err != nil {
 		return
 	}
 
 	// 写入批量头
-	err = client.Write(bh[1:], true)
+	err = conn.Write(bh[1:])
 	if err != nil {
 		return
 	}
 
 	if dLen > 0 {
 		// 写入粘包
-		if sticky {
+		if conn.Sticky() {
 			var off int32
 			KtBytes.SetVInt(_buff, 0, dLen, &off)
-			err = client.Write(_buff[0:off], true)
+			err = conn.Write(_buff[0:off])
 			if err != nil {
 				return
 			}
 		}
 
 		// 写入数据
-		err = client.Write(data, true)
+		err = conn.Write(data)
 		if err != nil {
 			return
 		}

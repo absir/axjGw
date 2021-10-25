@@ -22,8 +22,10 @@ service GatewayI {
     Result close(1: i64 cid, 2: string reason)
     // 软关闭连接
     Result kick(1: i64 cid, 2: binary bytes)
+    oneway void kickO(1: i64 cid)
     // 连接
     Result conn(1: i64 cid, 2: string sid, 3: string unique)
+    oneway void connO(1: i64 cid, 2: string sid, 3: string unique)
     // 服务编号
     Result rid(1: i64 cid, 2: string name, 3: i32 rid)
     // 服务编号

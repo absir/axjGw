@@ -11,8 +11,8 @@ func NewCircleQueue(max int) *CircleQueue {
 	array := new(CircleQueue)
 	array.array = make([]interface{}, max)
 	array.max = max
-	array.head = 0
-	array.tail = 0
+	//array.head = 0
+	//array.tail = 0
 	return array
 }
 

@@ -23,13 +23,20 @@ type msgMng struct {
 	LastLoad  bool
 	LastLoop  int
 	LastUrl   string
+	UserPool  bool
+	CheckTime time.Duration
+	IdleTime  int64
+	loopTime  int64
 	Context   context.Context
 	Last      MsgLast
 	IdWorker  *Util.IdWorker
 	Locker    sync.Locker
+	MsgUsers  *sync.Map
 }
 
-var MsgMng *msgMng
+// 初始变量
+var MsgMng *msgMng = nil
+var msgUserPool *Util.AllocPool = nil
 
 func init() {
 	MsgMng = &msgMng{
@@ -39,6 +46,7 @@ func init() {
 		LastLoad:  false,
 		LastLoop:  10,
 		LastUrl:   "",
+		UserPool:  false,
 	}
 
 	APro.SubCfgBind("msgMng", MsgMng)
@@ -60,6 +68,42 @@ func init() {
 	Kt.Panic(err)
 	MsgMng.IdWorker = idWorker
 	MsgMng.Locker = new(sync.Mutex)
+	MsgMng.MsgUsers = new(sync.Map)
+	msgUserPool = Util.NewAllocPool(MsgMng.UserPool, func() Util.Pool {
+		return new(MsgUser)
+	})
+}
+
+// 空闲检测
+func (that msgMng) IdleStop() {
+	that.loopTime = -1
+}
+
+func (that msgMng) IdleLoop() {
+	loopTime := time.Now().UnixNano()
+	that.loopTime = loopTime
+	for loopTime == that.loopTime {
+		time.Sleep(that.CheckTime)
+		time := time.Now().UnixNano()
+		that.MsgUsers.Range(func(key, value interface{}) bool {
+			user := value.(*MsgUser)
+			connM := that.ConnM(conn)
+			connC := connM.ConnC
+			// 已关闭链接
+			if connC.Closed() {
+				that.ConnMap.Delete(key)
+				return true
+			}
+
+			if connM.idleTime <= time {
+				// 直接心跳
+				that.Last(conn, false)
+				go connC.Rep(-1, "", 0, that.beatBs, false, false, nil)
+			}
+
+			return true
+		})
+	}
 }
 
 type MsgU struct {
@@ -88,29 +132,55 @@ type MsgUser struct {
 	queuing    int64
 }
 
-func NewMsgUser(sid string) *MsgUser {
-	msgUser := new(MsgUser)
-	msgUser.locker = new(sync.RWMutex)
+func (that MsgUser) PInit() {
+	that.locker = new(sync.RWMutex)
 	if MsgMng.QueueMax > 0 {
-		msgUser.queue = Util.NewCircleQueue(MsgMng.QueueMax)
+		that.queue = Util.NewCircleQueue(MsgMng.QueueMax)
 
 	} else {
-		msgUser.queue = nil
+		that.queue = nil
 	}
 
 	if MsgMng.LastMax > 0 {
-		msgUser.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
+		that.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
 
 	} else {
-		msgUser.lastQueue = nil
+		that.lastQueue = nil
 	}
 
+	that.lastLoaded = false
+	that.conn = nil
+	that.connMap = nil
+	that.connNum = 0
+	that.queuing = 0
+}
+
+func (that MsgUser) PRelease() bool {
+	if that.queue != nil {
+		that.queue.Clear()
+	}
+
+	if that.lastQueue != nil {
+		that.lastQueue.Clear()
+	}
+
+	that.conn = nil
+	that.connMap = nil
+	return true
+}
+
+func NewMsgUser(sid string) *MsgUser {
+	msgUser := msgUserPool.Get().(*MsgUser)
 	msgUser.lastLoaded = false
-	msgUser.conn = nil
-	msgUser.connMap = nil
 	msgUser.connNum = 0
 	msgUser.queuing = 0
 	return msgUser
+}
+
+func NewMsgConn(cid int64) *MsgConn {
+	conn := new(MsgConn)
+	conn.pInit(cid)
+	return conn
 }
 
 func (that MsgUser) Conn(cid int64, unique string, kick []byte) {
@@ -120,8 +190,7 @@ func (that MsgUser) Conn(cid int64, unique string, kick []byte) {
 		return
 	}
 
-	conn := new(MsgConn)
-	conn.Init(cid)
+	conn := NewMsgConn(cid)
 	if unique == "" {
 		that.conn = conn
 
@@ -229,7 +298,7 @@ func (that MsgUser) Clear() {
 	}
 }
 
-func (that MsgUser) Push(uri string, data []byte, last int, unique string, isolate bool) (bool, error) {
+func (that *MsgUser) Push(uri string, data []byte, last int, unique string, isolate bool) (bool, error) {
 	if last > 0 {
 		if that.lastQueue == nil {
 			last = 0
@@ -364,7 +433,7 @@ func (that MsgUser) queuingRemove(queuing int64, msgG MsgG) {
 	that.queue.Remove(msgG)
 }
 
-func (that MsgUser) lastStart() {
+func (that *MsgUser) lastStart() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	if that.conn != nil {
@@ -393,7 +462,7 @@ type MsgConn struct {
 	lastTime int64
 }
 
-func (that MsgConn) Init(cid int64) {
+func (that MsgConn) pInit(cid int64) {
 	that.cid = cid
 	that.prod = nil
 	that.lasting = 0

@@ -1,12 +1,13 @@
 package gateway
 
 import (
-	"axj/ANet"
+	"axj/ANets"
 	"axj/Kt/Kt"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"context"
 	"go.uber.org/zap"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -16,16 +17,16 @@ const (
 	ERR_PORD_ERR = 2 // 服务错误
 )
 
-var Processor = ANet.Processor{
-	Protocol:    ANet.ProtocolV{},
-	Compress:    ANet.CompressZip{},
+var Processor = ANets.Processor{
+	Protocol:    ANets.ProtocolV{},
+	Compress:    ANets.CompressZip{},
 	CompressMin: Config.CompressMin,
-	Encrypt:     ANet.EncryptSr{},
+	Encrypt:     ANets.EncryptSr{},
 	DataMax:     Config.DataMax,
 }
 
 type ConnG struct {
-	ANet.ConnM
+	ANets.ConnM
 	uid    int64     // 用户编号int64
 	sid    string    // 用户编号string
 	hash   int       // hash值
@@ -57,6 +58,10 @@ func (that ConnG) PRelease() bool {
 
 func (that ConnG) SetId(uid int64, sid string) {
 	that.uid = uid
+	if uid > 0 {
+		sid = strconv.FormatInt(uid, 10)
+	}
+	
 	that.sid = sid
 	that.hash = -1
 }
@@ -169,19 +174,19 @@ func (that ConnG) GetProd(name string, rand bool) *Prod {
 type HandlerG struct {
 }
 
-func (that HandlerG) ConnG(conn ANet.Conn) *ConnG {
+func (that HandlerG) ConnG(conn ANets.Conn) *ConnG {
 	return conn.(*ConnG)
 }
 
-func (that HandlerG) ConnM(conn ANet.Conn) ANet.ConnM {
+func (that HandlerG) ConnM(conn ANets.Conn) ANets.ConnM {
 	return conn.(*ConnG).ConnM
 }
 
-func (that HandlerG) New() ANet.Conn {
+func (that HandlerG) New() ANets.Conn {
 	return new(ConnG)
 }
 
-func (that HandlerG) Open(conn ANet.Conn, client ANet.Client) {
+func (that HandlerG) Open(conn ANets.Conn, client ANets.Client) {
 	connG := that.ConnG(conn)
 	connG.uid = 0
 	connG.sid = ""
@@ -190,21 +195,21 @@ func (that HandlerG) Open(conn ANet.Conn, client ANet.Client) {
 	connG.ridMap = nil
 }
 
-func (that HandlerG) OnClose(conn ANet.Conn, err error, reason interface{}) {
+func (that HandlerG) OnClose(conn ANets.Conn, err error, reason interface{}) {
 }
 
-func (that HandlerG) Last(conn ANet.Conn, req bool) {
+func (that HandlerG) Last(conn ANets.Conn, req bool) {
 }
 
-func (that HandlerG) OnReq(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) bool {
-	if req >= ANet.REQ_ONEWAY {
+func (that HandlerG) OnReq(conn ANets.Conn, req int32, uri string, uriI int32, data []byte) bool {
+	if req >= ANets.REQ_ONEWAY {
 		return false
 	}
 
 	return true
 }
 
-func (that HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, data []byte) {
+func (that HandlerG) OnReqIO(conn ANets.Conn, req int32, uri string, uriI int32, data []byte) {
 	reped := false
 	defer that.OnReqErr(conn, req, reped)
 	name := Config.AclProd
@@ -219,7 +224,7 @@ func (that HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, 
 	connG := that.ConnG(conn)
 	prod := connG.GetProd(name, false)
 	if prod == nil {
-		if req > ANet.REQ_ONEWAY {
+		if req > ANets.REQ_ONEWAY {
 			// 服务不存在
 			reped = true
 			conn.Get().Rep(req, "", ERR_PROD_NO, nil, false, false, nil)
@@ -228,7 +233,7 @@ func (that HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, 
 		return
 	}
 
-	if req > ANet.REQ_ONEWAY {
+	if req > ANets.REQ_ONEWAY {
 		// 请求返回
 		bs, err := prod.GetPassClient().Req(context.Background(), connG.Id(), connG.uid, connG.sid, uri, data)
 		if err != nil {
@@ -245,20 +250,20 @@ func (that HandlerG) OnReqIO(conn ANet.Conn, req int32, uri string, uriI int32, 
 	}
 }
 
-func (that HandlerG) OnReqErr(conn ANet.Conn, req int32, reped bool) {
+func (that HandlerG) OnReqErr(conn ANets.Conn, req int32, reped bool) {
 	if err := recover(); err != nil {
 		AZap.Logger.Warn("rep err", zap.Reflect("err", err))
 	}
 
-	if !reped && req > ANet.REQ_ONEWAY {
+	if !reped && req > ANets.REQ_ONEWAY {
 		conn.Get().Rep(req, "", ERR_PORD_ERR, nil, false, false, nil)
 	}
 }
 
-func (that HandlerG) Processor() ANet.Processor {
+func (that HandlerG) Processor() ANets.Processor {
 	return Processor
 }
 
-func (that HandlerG) UriDict() ANet.UriDict {
+func (that HandlerG) UriDict() ANets.UriDict {
 	return UriDict
 }

@@ -3,7 +3,6 @@ package etcd
 import (
 	"context"
 	"fmt"
-	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"time"
@@ -47,19 +46,19 @@ func register(ctx context.Context, client *clientv3.Client, name string, val str
 
 // 监控服务目录下的事件
 func watchPrefix(ctx context.Context, client *clientv3.Client, name string) {
-	watcher := clientv3.NewWatcher(client)
-	// Watch 服务目录下的更新
-	watchChan := watcher.Watch(context.TODO(), name, clientv3.WithPrefix())
-	for watchResp := range watchChan {
-		for _, event := range watchResp.Events {
-			service.mutex.Lock()
-			switch event.Type {
-			case mvccpb.PUT: //PUT事件，目录下有了新key
-				service.nodes[string(event.Kv.Key)] = string(event.Kv.Value)
-			case mvccpb.DELETE: //DELETE事件，目录中有key被删掉(Lease过期，key 也会被删掉)
-				delete(service.nodes, string(event.Kv.Key))
-			}
-			service.mutex.Unlock()
-		}
-	}
+	//watcher := clientv3.NewWatcher(client)
+	//// Watch 服务目录下的更新
+	//watchChan := watcher.Watch(context.TODO(), name, clientv3.WithPrefix())
+	//for watchResp := range watchChan {
+	//	for _, event := range watchResp.Events {
+	//		service.mutex.Lock()
+	//		switch event.Type {
+	//		case mvccpb.PUT: //PUT事件，目录下有了新key
+	//			service.nodes[string(event.Kv.Key)] = string(event.Kv.Value)
+	//		case mvccpb.DELETE: //DELETE事件，目录中有key被删掉(Lease过期，key 也会被删掉)
+	//			delete(service.nodes, string(event.Kv.Key))
+	//		}
+	//		service.mutex.Unlock()
+	//	}
+	//}
 }
