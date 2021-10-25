@@ -23,7 +23,6 @@ type msgMng struct {
 	LastLoad  bool
 	LastLoop  int
 	LastUrl   string
-	UserPool  bool
 	CheckTime time.Duration
 	IdleTime  int64
 	loopTime  int64
@@ -36,7 +35,6 @@ type msgMng struct {
 
 // 初始变量
 var MsgMng *msgMng = nil
-var msgUserPool *Util.AllocPool = nil
 
 func init() {
 	MsgMng = &msgMng{
@@ -46,7 +44,6 @@ func init() {
 		LastLoad:  false,
 		LastLoop:  10,
 		LastUrl:   "",
-		UserPool:  false,
 	}
 
 	APro.SubCfgBind("msgMng", MsgMng)

@@ -1,8 +1,8 @@
 package ANet
 
 import (
-	"axj/APro"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
 	"errors"
 	"go.uber.org/zap"
 	"sync"
@@ -40,7 +40,15 @@ type ClientCnn struct {
 	encryKey []byte
 	locker   sync.Locker
 	closed   int8
-	poolG    APro.PoolG
+	limiter  Util.Limiter
+}
+
+func (that ClientCnn) Locker() sync.Locker {
+	return that.locker
+}
+
+func (that ClientCnn) IsClosed() bool {
+	return that.closed != 0
 }
 
 func (that ClientCnn) Open(conn Conn, handler Handler, encryKey []byte) {
@@ -50,8 +58,16 @@ func (that ClientCnn) Open(conn Conn, handler Handler, encryKey []byte) {
 	that.locker = new(sync.Mutex)
 }
 
-func (that ClientCnn) IsClosed() bool {
-	return that.closed != 0
+func (that ClientCnn) SetLimiter(limit int) {
+	if limit == 0 {
+		that.limiter = Util.LimiterOne
+
+	} else if limit > 0 {
+		that.limiter = Util.NewLimiterLocker(limit)
+
+	} else {
+		that.limiter = nil
+	}
 }
 
 func (that ClientCnn) Close(err error, reason interface{}) {
@@ -198,23 +214,23 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 	return err
 }
 
-func closeDelay(conn Conn, delay time.Duration) {
-	if delay < 1 {
-		delay = 1
+func closeDelay(conn Conn, drt time.Duration) {
+	if drt < 1 {
+		drt = 1
 	}
 
-	time.Sleep(delay)
+	time.Sleep(drt)
 	conn.Close()
 }
 
-func (that *ClientCnn) Kick(data []byte, isolate bool, delay time.Duration) {
+func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 	if that.IsClosed() {
 		return
 	}
 
 	conn := that.conn
 	if conn != nil {
-		go closeDelay(conn, delay)
+		go closeDelay(conn, drt)
 		that.conn = nil
 		that.handler.Processor().Rep(nil, true, conn, that.encryKey, REQ_KICK, "", 0, data, isolate)
 	}
@@ -232,8 +248,8 @@ func (that *ClientCnn) ReqLoop() {
 		}
 
 		if !that.handler.OnReq(that, req, uri, uriI, data) {
-			poolG := that.poolG
-			if poolG == APro.PoolOne || (poolG != nil && poolG.StrictAs(1)) {
+			poolG := that.limiter
+			if poolG == Util.LimiterOne || (poolG != nil && poolG.StrictAs(1)) {
 				that.poolReqIO(nil, req, uri, uriI, data)
 
 			} else {
@@ -246,7 +262,7 @@ func (that *ClientCnn) ReqLoop() {
 	}
 }
 
-func (that *ClientCnn) poolReqIO(poolG APro.PoolG, req int32, uri string, uriI int32, data []byte) {
+func (that *ClientCnn) poolReqIO(poolG Util.Limiter, req int32, uri string, uriI int32, data []byte) {
 	if poolG == nil {
 		defer poolG.Done()
 	}

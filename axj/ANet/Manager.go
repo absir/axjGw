@@ -23,15 +23,23 @@ func (that *ClientMng) GetM() *ClientMng {
 	return that
 }
 
+func (that ClientMng) Id() int64 {
+	return that.id
+}
+
+func (that ClientMng) InitTime() int64 {
+	return that.initTime
+}
+
 type HandlerM interface {
 	Handler
 	New(conn Conn) ClientM
-	Check(client Client) // nio
+	Check(time int64, client Client) // nio
 }
 
 type Manager struct {
 	handlerM  HandlerM
-	ClientMap *sync.Map
+	clientMap *sync.Map
 	idWorker  *Util.IdWorker
 	idleDrt   int64
 	checkDrt  time.Duration
@@ -39,12 +47,33 @@ type Manager struct {
 	beatBytes []byte
 }
 
+func (that Manager) HandlerM() HandlerM {
+	return that.handlerM
+}
+
+func (that Manager) ClientMap() *sync.Map {
+	return that.clientMap
+}
+
+func (that Manager) IdWorker() *Util.IdWorker {
+	return that.idWorker
+}
+
+func (that Manager) Client(cid int64) Client {
+	client, ok := that.clientMap.Load(cid)
+	if ok {
+		return client.(Client)
+	}
+
+	return nil
+}
+
 func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkDrt time.Duration) *Manager {
 	idWorker, err := Util.NewIdWorker(workerId)
 	Kt.Panic(err)
 	that := new(Manager)
 	that.handlerM = handlerM
-	that.ClientMap = new(sync.Map)
+	that.clientMap = new(sync.Map)
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
 	that.idWorker = idWorker
@@ -62,13 +91,13 @@ func (that Manager) OnOpen(client Client) {
 		clientM.id = that.idWorker.Generate()
 	}
 
-	that.ClientMap.Store(clientM.id, client)
+	that.clientMap.Store(clientM.id, client)
 	that.handlerM.OnOpen(client)
 }
 
 func (that Manager) OnClose(client Client, err error, reason interface{}) {
 	// Map删除
-	that.ClientMap.Delete(that.ClientM(client).id)
+	that.clientMap.Delete(that.ClientM(client).id)
 	that.handlerM.OnClose(client, err, reason)
 }
 
@@ -108,7 +137,7 @@ func (that Manager) CheckLoop() {
 	for loopTime == that.checkLoop {
 		time.Sleep(that.checkDrt)
 		time := time.Now().UnixNano()
-		that.ClientMap.Range(func(key, value interface{}) bool {
+		that.clientMap.Range(func(key, value interface{}) bool {
 			that.checkClient(time, key, value.(Client))
 			return true
 		})
@@ -116,21 +145,26 @@ func (that Manager) CheckLoop() {
 }
 
 func (that Manager) checkClient(time int64, key interface{}, client Client) {
-	clientM := that.ClientM(client)
-	clientC := clientM.Get()
-	// 已关闭链接
-	if client.Get().IsClosed() {
-		that.ClientMap.Delete(key)
+	clientM, _ := client.(ClientM)
+	if clientM == nil {
+		that.clientMap.Delete(key)
 		return
 	}
 
-	if clientM.idleTime <= time {
+	clientC := client.Get()
+	// 已关闭链接
+	if client.Get().IsClosed() {
+		that.clientMap.Delete(key)
+		return
+	}
+
+	if clientM.GetM().idleTime <= time {
 		// 直接心跳
 		that.OnKeep(client, false)
 		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false)
 	}
 
-	that.handlerM.Check(client)
+	that.handlerM.Check(time, client)
 }
 
 func (that Manager) Open(conn Conn, encryKey []byte, id int64) Client {
@@ -139,7 +173,7 @@ func (that Manager) Open(conn Conn, encryKey []byte, id int64) Client {
 	clientM := that.ClientM(client)
 	clientM.id = id
 	clientM.initTime = time.Now().UnixNano()
-	clientM.idleTime = clientM.initTime
+	clientM.idleTime = clientM.initTime + that.idleDrt
 	client.Get().Open(conn, that, encryKey)
 	handlerM.OnOpen(client)
 	return client

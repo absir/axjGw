@@ -1,4 +1,4 @@
-package thrift
+package ext
 
 import (
 	"github.com/apache/thrift/lib/go/thrift"
@@ -8,6 +8,13 @@ import (
 type TServerSocketIps struct {
 	thrift.TServerSocket
 	Ips func(ip string) bool
+}
+
+func NewTServerSocketIps(socket *thrift.TServerSocket, ips func(ip string) bool) *TServerSocketIps {
+	socketIps := new(TServerSocketIps)
+	socketIps.TServerSocket = *socket
+	socketIps.Ips = ips
+	return socketIps
 }
 
 func (p *TServerSocketIps) Accept() (thrift.TTransport, error) {

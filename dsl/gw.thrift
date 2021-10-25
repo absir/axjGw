@@ -8,27 +8,22 @@ struct Login {
     // 唯一标识(一个标识，只允许一个Conn)
     3: string unique;
     // 最大请求数
-    4: i32 poolG;
+    4: i32 limit;
     // 路由服务编号
     5: i32 rid;
     // 路由服务映射
     6: map<string, i32> rids;
     // 登录返回
     7: binary data;
-}
-
-struct Conn {
-    // 数字编号
-    1: i64 uid;
-    // 字符编号
-    2: string sid;
+    // 登录回调
+    8: bool back
 }
 
 struct Group {
     // 版本
     1: i64 version
-    // 组连接
-    2: list<Conn> conns;
+    // 用户列表
+    2: list<string> users;
     // 读扩散、写扩散
     3: bool readFeed;
 }
@@ -37,8 +32,10 @@ struct Group {
 service Acl {
     // 登录
     Login login(1: i64 cid, 2: binary bytes);
+    // 登录回调
+    void loginBack(1: i64 cid, 2: i64 uid, 3: string sid);
     // 组查询
-    Group group(1: string sid);
+    Group group(1: string gid);
     // 挤掉线
     binary kickBs();
 }

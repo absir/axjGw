@@ -3,12 +3,14 @@ namespace go gw
 include "gw.thrift"
 
 enum Result {
+    // 失败
+    Fail,
     // 成功
-    Succuess,
+    Succ,
     // ID不存在
     IdNone,
-    // 路由冲突
-    RouteErr,
+    // 分布冲突
+    ProdErr,
 }
 
 struct Msg {
@@ -22,10 +24,10 @@ service GatewayI {
     Result close(1: i64 cid, 2: string reason)
     // 软关闭连接
     Result kick(1: i64 cid, 2: binary bytes)
-    oneway void kickO(1: i64 cid)
     // 连接
     Result conn(1: i64 cid, 2: string sid, 3: string unique)
-    oneway void connO(1: i64 cid, 2: string sid, 3: string unique)
+    // 存活
+    Result alive(1: i64 cid)
     // 服务编号
     Result rid(1: i64 cid, 2: string name, 3: i32 rid)
     // 服务编号
@@ -34,7 +36,6 @@ service GatewayI {
     Result last(1: i64 cid)
     // 推送
     Result push(1: i64 cid, 2: string uri, 3: binary bytes, 4: bool isolate);
-    Result pushG(1: list<i64> cids, 2: list<Msg> msgs, 3: bool isolate)
     // 组更新、删除
-    Result dirty(1: string sid);
+    Result dirty(1: string gid);
 }

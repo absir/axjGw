@@ -25,7 +25,7 @@ type Prod struct {
 	// 转发客户端
 	passClient *gw.PassClient
 	// 网关客户端
-	gwIClient *gw.GatewayIClient
+	gwIClient gw.GatewayI
 }
 
 func NewProd(id int32, url string) (*Prod, error) {
@@ -78,12 +78,20 @@ func (that Prod) GetPassClient() *gw.PassClient {
 	return that.passClient
 }
 
-func (that Prod) GetGWIClient() *gw.GatewayIClient {
+func (that Prod) GetGWIClient() gw.GatewayI {
 	if that.gwIClient == nil {
 		locker.Lock()
 		defer locker.Unlock()
 		if that.gwIClient == nil {
-			that.gwIClient = gw.NewGatewayIClient(that.client)
+			if Server.gatewayI != nil {
+				if that.id == Server.WorkId {
+					that.gwIClient = Server.gatewayI
+				}
+			}
+
+			if that.gwIClient == nil {
+				that.gwIClient = gw.NewGatewayIClient(that.client)
+			}
 		}
 	}
 
@@ -96,7 +104,8 @@ type Prods struct {
 	ids   *Util.ArrayList
 }
 
-func BuildProds(prods *Prods, id int32, url string) *Prods {
+func (that *Prods) Add(id int32, url string) *Prods {
+	prods := that
 	if prods == nil {
 		prods = new(Prods)
 		prods.prods = map[int32]*Prod{}
@@ -146,24 +155,4 @@ func (that Prods) GetProdRand() *Prod {
 
 	id := that.ids.Get(rand.Intn(size))
 	return that.prods[id.(int32)]
-}
-
-var prodsMap = new(sync.Map)
-
-func RegProds(name string, prods *Prods) {
-	if prods == nil {
-		prodsMap.Delete(name)
-
-	} else {
-		prodsMap.Store(name, prods)
-	}
-}
-
-func GetProds(name string) *Prods {
-	val, _ := prodsMap.Load(name)
-	if val == nil {
-		return nil
-	}
-
-	return val.(*Prods)
 }

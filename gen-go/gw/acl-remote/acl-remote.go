@@ -23,7 +23,8 @@ func Usage() {
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
   fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
-  fmt.Fprintln(os.Stderr, "  Group group(string sid)")
+  fmt.Fprintln(os.Stderr, "  void loginBack(i64 cid, i64 uid, string sid)")
+  fmt.Fprintln(os.Stderr, "  Group group(string gid)")
   fmt.Fprintln(os.Stderr, "  string kickBs()")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
@@ -151,8 +152,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Login requires 2 args")
       flag.Usage()
     }
-    argvalue0, err16 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err16 != nil {
+    argvalue0, err19 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err19 != nil {
       Usage()
       return
     }
@@ -160,6 +161,28 @@ func main() {
     argvalue1 := []byte(flag.Arg(2))
     value1 := argvalue1
     fmt.Print(client.Login(context.Background(), value0, value1))
+    fmt.Print("\n")
+    break
+  case "loginBack":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "LoginBack requires 3 args")
+      flag.Usage()
+    }
+    argvalue0, err21 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err21 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    argvalue1, err22 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err22 != nil {
+      Usage()
+      return
+    }
+    value1 := argvalue1
+    argvalue2 := flag.Arg(3)
+    value2 := argvalue2
+    fmt.Print(client.LoginBack(context.Background(), value0, value1, value2))
     fmt.Print("\n")
     break
   case "group":

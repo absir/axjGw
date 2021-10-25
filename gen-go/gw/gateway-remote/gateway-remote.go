@@ -155,8 +155,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Close requires 2 args")
       flag.Usage()
     }
-    argvalue0, err60 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err60 != nil {
+    argvalue0, err66 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err66 != nil {
       Usage()
       return
     }
@@ -171,8 +171,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Kick requires 2 args")
       flag.Usage()
     }
-    argvalue0, err62 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err62 != nil {
+    argvalue0, err68 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err68 != nil {
       Usage()
       return
     }
@@ -187,16 +187,16 @@ func main() {
       fmt.Fprintln(os.Stderr, "Rid requires 3 args")
       flag.Usage()
     }
-    argvalue0, err64 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err64 != nil {
+    argvalue0, err70 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err70 != nil {
       Usage()
       return
     }
     value0 := argvalue0
     argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    tmp2, err66 := (strconv.Atoi(flag.Arg(3)))
-    if err66 != nil {
+    tmp2, err72 := (strconv.Atoi(flag.Arg(3)))
+    if err72 != nil {
       Usage()
       return
     }
@@ -210,25 +210,25 @@ func main() {
       fmt.Fprintln(os.Stderr, "Rids requires 2 args")
       flag.Usage()
     }
-    argvalue0, err67 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err67 != nil {
+    argvalue0, err73 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err73 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    arg68 := flag.Arg(2)
-    mbTrans69 := thrift.NewTMemoryBufferLen(len(arg68))
-    defer mbTrans69.Close()
-    _, err70 := mbTrans69.WriteString(arg68)
-    if err70 != nil { 
+    arg74 := flag.Arg(2)
+    mbTrans75 := thrift.NewTMemoryBufferLen(len(arg74))
+    defer mbTrans75.Close()
+    _, err76 := mbTrans75.WriteString(arg74)
+    if err76 != nil { 
       Usage()
       return
     }
-    factory71 := thrift.NewTJSONProtocolFactory()
-    jsProt72 := factory71.GetProtocol(mbTrans69)
+    factory77 := thrift.NewTJSONProtocolFactory()
+    jsProt78 := factory77.GetProtocol(mbTrans75)
     containerStruct1 := gw.NewGatewayRidsArgs()
-    err73 := containerStruct1.ReadField2(context.Background(), jsProt72)
-    if err73 != nil {
+    err79 := containerStruct1.ReadField2(context.Background(), jsProt78)
+    if err79 != nil {
       Usage()
       return
     }
@@ -242,8 +242,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Conn requires 2 args")
       flag.Usage()
     }
-    argvalue0, err74 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err74 != nil {
+    argvalue0, err80 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err80 != nil {
       Usage()
       return
     }
@@ -258,14 +258,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "Push requires 7 args")
       flag.Usage()
     }
-    argvalue0, err76 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err76 != nil {
+    argvalue0, err82 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err82 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err77 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err77 != nil {
+    argvalue1, err83 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err83 != nil {
       Usage()
       return
     }
@@ -276,8 +276,8 @@ func main() {
     value3 := argvalue3
     argvalue4 := []byte(flag.Arg(5))
     value4 := argvalue4
-    tmp5, err81 := (strconv.Atoi(flag.Arg(6)))
-    if err81 != nil {
+    tmp5, err87 := (strconv.Atoi(flag.Arg(6)))
+    if err87 != nil {
       Usage()
       return
     }

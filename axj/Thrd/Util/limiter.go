@@ -1,22 +1,22 @@
-package APro
+package Util
 
 import "sync"
 
-type PoolG interface {
+type Limiter interface {
 	Add()
 	Done()
 	Wait()
 	StrictAs(limit int) bool
 }
 
-type PoolLimit struct {
+type LimiterLocker struct {
 	limit  int
 	add    int
 	locker sync.Locker
 	cond   *sync.Cond
 }
 
-func (that PoolLimit) Add() {
+func (that LimiterLocker) Add() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	if that.add >= that.limit {
@@ -26,7 +26,7 @@ func (that PoolLimit) Add() {
 	that.add++
 }
 
-func (that PoolLimit) Done() {
+func (that LimiterLocker) Done() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	that.add--
@@ -35,7 +35,7 @@ func (that PoolLimit) Done() {
 	}
 }
 
-func (that PoolLimit) Wait() {
+func (that LimiterLocker) Wait() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	for {
@@ -47,12 +47,12 @@ func (that PoolLimit) Wait() {
 	}
 }
 
-func (that PoolLimit) StrictAs(limit int) bool {
+func (that LimiterLocker) StrictAs(limit int) bool {
 	return that.add == 0 && that.limit == limit
 }
 
-func NewPoolLimit(limit int) *PoolLimit {
-	pl := new(PoolLimit)
+func NewLimiterLocker(limit int) *LimiterLocker {
+	pl := new(LimiterLocker)
 	pl.limit = limit
 	pl.add = 0
 	pl.locker = new(sync.Mutex)
@@ -60,4 +60,4 @@ func NewPoolLimit(limit int) *PoolLimit {
 	return pl
 }
 
-var PoolOne = NewPoolLimit(1)
+var LimiterOne = NewLimiterLocker(1)
