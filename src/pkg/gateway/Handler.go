@@ -32,11 +32,14 @@ func (that handler) OnOpen(client ANet.Client) {
 }
 
 func (that handler) OnClose(client ANet.Client, err error, reason interface{}) {
-	panic("implement me")
+	clientG := new(ClientG)
+	if clientG.gid != "" {
+		// 断开连接通知
+		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, clientG.Id(), clientG.gid, clientG.unique)
+	}
 }
 
 func (that handler) OnKeep(client ANet.Client, req bool) {
-	panic("implement me")
 }
 
 func (that handler) OnReq(client ANet.Client, req int32, uri string, uriI int32, data []byte) bool {

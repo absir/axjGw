@@ -2,6 +2,8 @@ package gws
 
 import (
 	"axj/ANet"
+	"axj/Kt/Kt"
+	"axj/Kt/KtUnsafe"
 	"axjGW/pkg/gateway"
 	"context"
 	"gw"
@@ -38,8 +40,28 @@ func (g GatewayIs) Kick(ctx context.Context, cid int64, bytes []byte) (_r gw.Res
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Conn(ctx context.Context, cid int64, sid string, unique string) (_r gw.Result_, _err error) {
-	panic("implement me")
+func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique string) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return gw.Result__ProdErr, nil
+	}
+
+	if gateway.MsgMng.GetMsgGrp(gid).Conn(cid, unique) {
+		return gw.Result__Succ, nil
+	}
+
+	return gw.Result__Fail, nil
+}
+
+func (g GatewayIs) Disc(ctx context.Context, cid int64, gid string, unique string) (_err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return nil
+	}
+
+	if gateway.MsgMng.GetMsgGrp(gid).Close(cid, unique) {
+		return nil
+	}
+
+	return nil
 }
 
 func (g GatewayIs) Alive(ctx context.Context, cid int64) (_r gw.Result_, _err error) {
@@ -51,7 +73,7 @@ func (g GatewayIs) Alive(ctx context.Context, cid int64) (_r gw.Result_, _err er
 	if client == nil {
 		return gw.Result__IdNone, nil
 	}
-	
+
 	return gw.Result__Succ, nil
 }
 
@@ -115,7 +137,7 @@ func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte
 		isolate = false
 	}
 
-	err := client.Get().Rep(true, ANet.REQ_PUSH, "", 0, bytes, false, isolate)
+	err := client.Get().Rep(true, ANet.REQ_PUSH, uri, 0, bytes, false, isolate)
 	if err != nil {
 		return gw.Result__Fail, err
 	}

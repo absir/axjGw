@@ -4,67 +4,118 @@ import (
 	"gorm.io/gorm"
 )
 
-type MsgG interface {
-	Get() *Msg
+type Msg interface {
+	Get() *MsgD
 	Unique() string
 	Isolate() bool
 }
 
-type Msg struct {
-	Id   int64  `gorm:"primary_key"`
-	Sid  string `gorm:"type:varchar(255);not null;index:Sid"`
+type MsgD struct {
+	Id   int64  `gorm:"primary_key"`                          // 消息编号
+	Gid  string `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
+	Fid  int64  `gorm:"index:Fid"`                            // 消息来源编号
 	Uri  string `gorm:"type:varchar(255);"`
 	Data []byte `gorm:""`
 }
 
-func (that *Msg) Get() *Msg {
+func (that *MsgD) Get() *MsgD {
 	return that
 }
 
-func (that Msg) Unique() string {
+func (that MsgD) Unique() string {
 	return ""
 }
 
-func (that Msg) Isolate() bool {
+func (that MsgD) Isolate() bool {
 	return false
 }
 
-type MsgLast interface {
-	Insert(msg Msg) int64
-	Next(sid string, id int64, limit int) []Msg
-	Last(sid string, limit int) []Msg
+type MsgU struct {
+	MsgD
+	unique  string
+	isolate bool
 }
 
-type MsgLastDb struct {
+func (m MsgU) Unique() string {
+	return m.unique
+}
+
+func (m MsgU) Isolate() bool {
+	return m.isolate
+}
+
+func NewMsg(uri string, data []byte, unique string, isolate bool) Msg {
+	if unique == "" && !isolate {
+		return &MsgD{
+			Uri:  uri,
+			Data: data,
+		}
+
+	} else {
+		msg := &MsgU{
+			unique:  unique,
+			isolate: isolate,
+		}
+
+		msg.Uri = uri
+		msg.Data = data
+		return msg
+	}
+}
+
+type MsgDb interface {
+	Insert(msg MsgD) int64                           // 插入消息
+	Next(gid string, lastId int64, limit int) []MsgD // 遍历消息
+	Last(gid string, limit int) []MsgD               // 初始消息缓存
+	Delete(fid int64)                                // 来源删除消息
+	Clear(oId int64)                                 // 清理过期消息
+}
+
+type MsgGorm struct {
 	db *gorm.DB
 }
 
-func (that MsgLastDb) Insert(msg Msg) int64 {
+func (that MsgGorm) AutoMigrate() {
+	migrator := that.db.Migrator()
+	if (!migrator.HasTable(&MsgD{})) {
+		migrator.AutoMigrate(&MsgD{})
+	}
+}
+
+func (that MsgGorm) Insert(msg MsgD) int64 {
 	that.db.Create(msg)
 	return msg.Id
 }
 
-func (that MsgLastDb) Next(sid string, lastId int64, limit int) []Msg {
-	var msgs []Msg = nil
-	that.db.Where("Sid = ?", sid).Order("Id").Limit(limit).Find(&msgs)
-	return msgs
+func (that MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
+	var msgDS []MsgD = nil
+	that.db.Where("Gid = ? AND Id > ?", gid, lastId).Order("Id").Limit(limit).Find(&msgDS)
+	return msgDS
 }
 
-func (that MsgLastDb) Last(sid string, limit int) []Msg {
-	var msgs []Msg = nil
-	that.db.Order("Id DESC").Limit(limit).Find(&msgs)
-	if msgs != nil {
+func (that MsgGorm) Last(gid string, limit int) []MsgD {
+	var msgDS []MsgD = nil
+	that.db.Where("Gid = ?", gid).Order("Id DESC").Limit(limit).Find(&msgDS)
+	if msgDS != nil {
 		// 倒序
-		mLen := len(msgs)
+		mLen := len(msgDS)
 		last := mLen - 1
 		mLen = mLen / 2
 		for i := 0; i < mLen; i++ {
-			msg := msgs[i]
+			msg := msgDS[i]
 			j := last - i
-			msgs[i] = msgs[j]
-			msgs[j] = msg
+			msgDS[i] = msgDS[j]
+			msgDS[j] = msg
 		}
 	}
 
-	return msgs
+	return msgDS
+}
+
+func (that MsgGorm) Delete(fid int64) {
+	that.db.Exec("DELETE FROM MsgD WHERE Fid = ?", fid)
+}
+
+func (that MsgGorm) Clear(oId int64) {
+	that.db.Exec("DELETE FROM MsgD WHERE Id <= ?", oId)
 }

@@ -7,6 +7,8 @@ import (
 )
 
 type config struct {
+	WorkId      int32
+	WorkHash    int
 	CompressMin int                    // 最短压缩
 	DataMax     int32                  // 最大数据(请求)
 	CheckDrt    int64                  // 客户端检查间隔
@@ -20,7 +22,7 @@ type config struct {
 
 var Config *config
 
-func init() {
+func initConfig(workId int32) {
 	Config = &config{
 		CompressMin: 1024,
 		DataMax:     1024 << 10,
@@ -33,4 +35,6 @@ func init() {
 		TConfig:     nil,
 	}
 	APro.SubCfgBind("gateway", Config)
+	Config.WorkId = workId
+	Config.WorkHash = int(workId)
 }

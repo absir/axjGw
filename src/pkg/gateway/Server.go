@@ -2,11 +2,10 @@ package gateway
 
 import (
 	"axj/ANet"
-	"axj/APro"
 	"axj/Kt/Kt"
 	"axj/Kt/KtStr"
+	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
-	"axj/Thrd/Util"
 	"axjGW/pkg/ext"
 	"axjGW/pkg/gws"
 	"context"
@@ -18,48 +17,23 @@ import (
 )
 
 type server struct {
-	WorkId   int32
-	WorkHash int
 	Handler  *handler
 	Manager  *ANet.Manager
 	Context  context.Context
 	prodsMap sync.Map
+	prodsGw  *Prods
 	gatewayI gw.GatewayI
 }
 
 var Server = new(server)
 
-func (that server) IsProdCid(cid int64) bool {
-	workId := Util.GetWorkerId(cid)
-	if workId == that.WorkId {
-		return true
-	}
-
-	return false
-}
-
-func (that server) GetProds(name string) *Prods {
-	val, _ := that.prodsMap.Load(name)
-	if val == nil {
-		return nil
-	}
-
-	return val.(*Prods)
-}
-
-func (that server) PutProds(name string, prods *Prods) {
-	if prods == nil {
-		that.prodsMap.Delete(name)
-
-	} else {
-		that.prodsMap.Store(name, prods)
-	}
-}
-
-func (that server) Init() {
-	workId := APro.WorkId()
-	that.WorkId = workId
-	that.WorkHash = int(workId)
+func (that server) Init(workId int32) {
+	// 配置初始化
+	initConfig(workId)
+	// 路由字典初始化
+	initUriDict()
+	// 消息管理初始化
+	initMsgMng()
 	that.Handler = new(handler)
 	that.Manager = ANet.NewManager(that.Handler, workId, time.Duration(Config.IdleDrt)*time.Millisecond, time.Duration(Config.CheckDrt)*time.Millisecond)
 	that.Context = context.Background()
@@ -68,17 +42,6 @@ func (that server) Init() {
 
 func (that server) StartGw() {
 	go that.Manager.CheckLoop()
-}
-
-func (that server) StartThrift(addr string, ips []string) {
-	socket, err := thrift.NewTServerSocket(addr)
-	Kt.Panic(err)
-	processor := gw.NewGatewayIProcessor(that.gatewayI)
-	matchers := KtStr.ForMatchers(ips, false, true)
-	tServer := thrift.NewTSimpleServer4(processor, ext.NewTServerSocketIps(socket, func(ip string) bool {
-		return KtStr.Matchers(matchers, ip, true)
-	}), thrift.NewTTransportFactory(), thrift.NewTCompactProtocolFactoryConf(Config.TConfig))
-	go tServer.Serve()
 }
 
 func (that server) ConnLoop(conn ANet.Conn) {
@@ -120,8 +83,8 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 
 	// 登录Acl处理
 	id := manager.IdWorker().Generate()
-	aclClient := that.GetProds(Config.AclProd).GetProdHash(that.WorkHash).GetAclClient()
-	login, err := aclClient.Login(MsgMng.Context, id, loginData)
+	aclClient := that.GetProds(Config.AclProd).GetProdHash(Config.WorkHash).GetAclClient()
+	login, err := aclClient.Login(that.Context, id, loginData)
 	if err != nil || login == nil {
 		AZap.Logger.Warn("serv acl Login err", zap.Error(err))
 		return nil
@@ -132,7 +95,7 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 	clientG := that.Handler.ClientG(client)
 	// 用户状态设置
 	clientG.SetId(login.UID, login.Sid, login.Unique)
-	if clientG.Sid() != "" {
+	if clientG.Gid() != "" {
 		// 用户连接保持
 		clientG.ConnKeep()
 		clientG.ConnCheck()
@@ -154,7 +117,7 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 
 	// 注册成功回调
 	if login.Back {
-		aclClient.LoginBack(MsgMng.Context, clientG.Id(), clientG.uid, clientG.sid)
+		aclClient.LoginBack(that.Context, clientG.Id(), clientG.uid, clientG.sid)
 	}
 
 	// 登录成功
@@ -169,4 +132,68 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 	}
 
 	return client
+}
+
+func (that server) StartThrift(addr string, ips []string) {
+	socket, err := thrift.NewTServerSocket(addr)
+	Kt.Panic(err)
+	processor := gw.NewGatewayIProcessor(that.gatewayI)
+	matchers := KtStr.ForMatchers(ips, false, true)
+	go thrift.NewTSimpleServer4(processor, ext.NewTServerSocketIps(socket, func(ip string) bool {
+		return KtStr.Matchers(matchers, ip, true)
+	}), thrift.NewTTransportFactory(), thrift.NewTCompactProtocolFactoryConf(Config.TConfig)).Serve()
+}
+
+func (that server) IsProdCid(cid int64) bool {
+	workId := that.Manager.IdWorker().GetWorkerId(cid)
+	if workId == Config.WorkId {
+		return true
+	}
+
+	return false
+}
+
+func (that server) IsProdHash(hash int) bool {
+	prod := that.GetProds(Config.GwProd).GetProdHash(hash)
+	return prod != nil && prod.id == Config.WorkId
+}
+
+func (that server) GetProds(name string) *Prods {
+	val, _ := that.prodsMap.Load(name)
+	if val == nil {
+		if val == Config.GwProd {
+			if that.prodsGw == nil {
+				prods := new(Prods)
+				prods.Add(Config.WorkId, "")
+				that.prodsGw = prods
+			}
+
+			return that.prodsGw
+		}
+
+		return nil
+	}
+
+	return val.(*Prods)
+}
+
+func (that server) PutProds(name string, prods *Prods) {
+	if prods == nil {
+		that.prodsMap.Delete(name)
+
+	} else {
+		that.prodsMap.Store(name, prods)
+	}
+}
+
+func (that server) GetProdCid(cid int64) *Prod {
+	return that.GetProds(Config.GwProd).GetProd(that.Manager.IdWorker().GetWorkerId(cid))
+}
+
+func (that server) GetProdMid(mid string) *Prod {
+	return that.GetProds(Config.GwProd).GetProdHash(Kt.HashCode(KtUnsafe.StringToBytes(mid)))
+}
+
+func (that server) GetProdClient(clientG *ClientG) *Prod {
+	return that.GetProds(Config.GwProd).GetProdHash(clientG.Hash())
 }

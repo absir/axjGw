@@ -26,7 +26,7 @@ func (that uriDict) UriIMapUri() map[int32]string {
 
 var UriDict *uriDict
 
-func init() {
+func initUriDict() {
 	cfg := APro.FileCfg("uriDict.properties")
 	if cfg == nil {
 		UriDict = nil

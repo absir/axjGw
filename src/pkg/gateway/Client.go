@@ -14,7 +14,7 @@ type ClientG struct {
 	ANet.ClientMng
 	uid      int64     // 用户编号int64
 	sid      string    // 用户编号string
-	gid      string    // 编号字符串
+	gid      string    // 消息组编号
 	unique   string    // 唯一标识
 	hash     int       // hash值
 	rid      int32     // 请求编号
@@ -28,6 +28,10 @@ func (that ClientG) Uid() int64 {
 
 func (that ClientG) Sid() string {
 	return that.sid
+}
+
+func (that ClientG) Gid() string {
+	return that.gid
 }
 
 func (that ClientG) Unique() string {
@@ -139,7 +143,7 @@ func (that ClientG) PutRIds(ids map[string]int32) {
 }
 
 func (that ClientG) GetProd(name string, rand bool) *Prod {
-	prods := GetProds(name)
+	prods := Server.GetProds(name)
 	if prods == nil {
 		return nil
 	}
@@ -160,10 +164,10 @@ func (that ClientG) ConnKeep() {
 	that.connTime = time.Now().Unix() + Config.ConnDrt
 }
 
-func (that ClientG) ConnCheck() {
-	result, err := that.GetProd(Config.GwProd, false).GetGWIClient().Conn(MsgMng.Context, that.Id(), that.sid, that.unique)
+func (that *ClientG) ConnCheck() {
+	result, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.Id(), that.sid, that.unique)
 	if result != gw.Result__Succ {
 		// 用户注册失败
-		that.Close(err, nil)
+		that.Close(err, result)
 	}
 }

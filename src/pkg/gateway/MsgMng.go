@@ -3,17 +3,14 @@ package gateway
 import (
 	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtUnsafe"
 	"axj/Thrd/Util"
-	"context"
-	"errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gw"
 	"sync"
 	"time"
 )
-
-var NOWAY = errors.New("NOWAY")
 
 type msgMng struct {
 	QueueMax  int
@@ -23,20 +20,22 @@ type msgMng struct {
 	LastLoad  bool
 	LastLoop  int
 	LastUrl   string
-	CheckTime time.Duration
-	IdleTime  int64
-	loopTime  int64
-	Context   context.Context
-	Last      MsgLast
-	IdWorker  *Util.IdWorker
-	Locker    sync.Locker
-	MsgUsers  *sync.Map
+	CheckDrt  time.Duration
+	LiveDrt   int64
+	IdleDrt   int64
+	checkLoop int64
+	checkTime int64
+	db        MsgDb
+	idWorkder *Util.IdWorker
+	locker    sync.Locker
+	grpMap    *sync.Map
 }
 
 // 初始变量
-var MsgMng *msgMng = nil
+var MsgMng *msgMng
 
-func init() {
+func initMsgMng() {
+	// 消息管理配置
 	MsgMng = &msgMng{
 		QueueMax:  20,
 		NextLimit: 10,
@@ -44,430 +43,301 @@ func init() {
 		LastLoad:  false,
 		LastLoop:  10,
 		LastUrl:   "",
+		CheckDrt:  5000,
+		LiveDrt:   15000,
+		IdleDrt:   30000,
 	}
 
-	APro.SubCfgBind("msgMng", MsgMng)
-	MsgMng.Context = context.Background()
-	MsgMng.Last = nil
-	if MsgMng.LastUrl != "" {
-		db, err := gorm.Open(mysql.Open(MsgMng.LastUrl), &gorm.Config{
-		})
-		if err != nil {
-			panic(err)
-		}
+	// 配置处理
+	APro.SubCfgBind("msg", MsgMng)
+	that := MsgMng
+	that.CheckDrt = that.CheckDrt * time.Millisecond
+	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
+	that.IdleDrt = that.IdleDrt * int64(time.Millisecond)
 
-		MsgMng.Last = MsgLastDb{
+	// 消息持久化
+	if that.LastUrl != "" {
+		db, err := gorm.Open(mysql.Open(that.LastUrl), &gorm.Config{})
+		Kt.Panic(err)
+
+		msgGorm := MsgGorm{
 			db: db,
 		}
+		// 自动创建表
+		msgGorm.AutoMigrate()
+		that.db = msgGorm
 	}
 
-	idWorker, err := Util.NewIdWorker(APro.WorkId())
-	Kt.Panic(err)
-	MsgMng.IdWorker = idWorker
-	MsgMng.Locker = new(sync.Mutex)
-	MsgMng.MsgUsers = new(sync.Map)
-	msgUserPool = Util.NewAllocPool(MsgMng.UserPool, func() Util.Pool {
-		return new(MsgUser)
-	})
+	// 属性初始化
+	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
+	that.locker = new(sync.Mutex)
+	that.grpMap = new(sync.Map)
+}
+
+type MsgGrp struct {
+	gid      string
+	ghash    int
+	locker   *sync.RWMutex
+	passTime int64
+	sess     *MsgSess
+}
+
+type MsgSess struct {
+	grp        *MsgGrp
+	queue      *Util.CircleQueue
+	queuing    int64
+	lastQueue  *Util.CircleQueue
+	lastLoaded bool
+	client     *MsgClient
+	clientMap  *sync.Map
+	clientNum  int
+}
+
+type MsgClient struct {
+	cid      int64
+	gatewayI gw.GatewayI
+	idleTime int64
 }
 
 // 空闲检测
-func (that msgMng) IdleStop() {
-	that.loopTime = -1
+func (that msgMng) CheckStop() {
+	that.checkLoop = -1
 }
 
-func (that msgMng) IdleLoop() {
+func (that msgMng) CheckLoop() {
 	loopTime := time.Now().UnixNano()
-	that.loopTime = loopTime
-	for loopTime == that.loopTime {
-		time.Sleep(that.CheckTime)
-		time := time.Now().UnixNano()
-		that.MsgUsers.Range(func(key, value interface{}) bool {
-			user := value.(*MsgUser)
-			connM := that.ConnM(conn)
-			connC := connM.ConnC
-			// 已关闭链接
-			if connC.Closed() {
-				that.ConnMap.Delete(key)
-				return true
-			}
-
-			if connM.idleTime <= time {
-				// 直接心跳
-				that.Last(conn, false)
-				go connC.Rep(-1, "", 0, that.beatBs, false, false, nil)
-			}
-
-			return true
-		})
+	that.checkLoop = loopTime
+	for loopTime == that.checkLoop {
+		time.Sleep(that.CheckDrt)
+		that.checkTime = time.Now().UnixNano()
+		that.grpMap.Range(that.checkRange)
 	}
 }
 
-type MsgU struct {
-	Msg
-	unique  string
-	isolate bool
+func (that msgMng) checkRange(key interface{}, val interface{}) bool {
+	that.checkGrp(key, val.(*MsgGrp))
+	return true
 }
 
-func (m MsgU) Unique() string {
-	return m.unique
+func (that msgMng) checkGrp(key interface{}, grp *MsgGrp) {
+	if grp == nil {
+		that.grpMap.Delete(key)
+		return
+	}
+
+	clientNum := 0
+	if Server.IsProdHash(grp.ghash) {
+		sess := grp.sess
+		if sess != nil && sess.clientNum > 0 {
+			// 客户端连接
+			grp.checkClients()
+			clientNum = sess.clientNum
+		}
+	}
+
+	time := that.checkTime
+	if grp.passTime < time {
+		if clientNum > 0 {
+			// 还有客户端连接
+			grp.retain()
+			return
+		}
+
+		that.locker.Lock()
+		defer that.locker.Unlock()
+		grp.locker.Lock()
+		defer grp.locker.Unlock()
+		if grp.passTime > time {
+			return
+		}
+
+		that.grpMap.Delete(key)
+	}
 }
 
-func (m MsgU) Isolate() bool {
-	return m.isolate
-}
-
-type MsgUser struct {
-	sid        string
-	locker     *sync.RWMutex
-	queue      *Util.CircleQueue
-	lastQueue  *Util.CircleQueue
-	lastLoaded bool
-	conn       *MsgConn
-	connMap    map[string]*MsgConn
-	connNum    int
-	queuing    int64
-}
-
-func (that MsgUser) PInit() {
-	that.locker = new(sync.RWMutex)
-	if MsgMng.QueueMax > 0 {
-		that.queue = Util.NewCircleQueue(MsgMng.QueueMax)
+func (that msgMng) GetMsgGrp(gid string) *MsgGrp {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	val, _ := that.grpMap.Load(gid)
+	grp := val.(*MsgGrp)
+	if grp != nil {
+		if Server.IsProdHash(grp.ghash) {
+			grp.retain()
+		}
 
 	} else {
-		that.queue = nil
+		grp = that.newMsgGrp(gid)
+		that.grpMap.Store(gid, grp)
+	}
+
+	return grp
+}
+
+func (that msgMng) newMsgGrp(gid string) *MsgGrp {
+	grp := new(MsgGrp)
+	grp.gid = gid
+	grp.ghash = Kt.HashCode(KtUnsafe.StringToBytes(gid))
+	grp.locker = new(sync.RWMutex)
+	grp.retain()
+	return grp
+}
+
+func (that msgMng) newMsgGrp(gid string) Msg {
+
+}
+
+func (that MsgGrp) retain() {
+	that.passTime = time.Now().UnixNano() + MsgMng.LiveDrt
+}
+
+func (that *MsgGrp) newMsgSess() *MsgSess {
+	sess := new(MsgSess)
+	sess.grp = that
+	if MsgMng.QueueMax > 0 {
+		sess.queue = Util.NewCircleQueue(MsgMng.QueueMax)
 	}
 
 	if MsgMng.LastMax > 0 {
-		that.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
-
-	} else {
-		that.lastQueue = nil
+		sess.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
 	}
 
-	that.lastLoaded = false
-	that.conn = nil
-	that.connMap = nil
-	that.connNum = 0
-	that.queuing = 0
+	return sess
 }
 
-func (that MsgUser) PRelease() bool {
-	if that.queue != nil {
-		that.queue.Clear()
+func (that MsgGrp) newMsgClient(cid int64) *MsgClient {
+	client := new(MsgClient)
+	client.cid = cid
+	client.gatewayI = Server.GetProdCid(cid).GetGWIClient()
+	client.idleTime = time.Now().UnixNano() + that.passTime
+	return client
+}
+
+func (that MsgGrp) getSess() *MsgSess {
+	if that.sess == nil {
+		that.sess = that.newMsgSess()
 	}
 
-	if that.lastQueue != nil {
-		that.lastQueue.Clear()
+	return that.sess
+}
+
+func (that MsgGrp) getClient(unique string) *MsgClient {
+	sess := that.sess
+	if sess == nil {
+		return nil
 	}
 
-	that.conn = nil
-	that.connMap = nil
+	if unique == "" {
+		return sess.client
+	}
+
+	clientMap := sess.clientMap
+	if clientMap == nil {
+		return nil
+	}
+
+	client, _ := clientMap.Load(unique)
+	return client.(*MsgClient)
+}
+
+func (that MsgGrp) closeOld(old *MsgClient, cid int64, unique string) bool {
+	sess := that.sess
+	if sess == nil {
+		return false
+	}
+
+	if old == nil || (cid > 0 && cid != old.cid) {
+		return false
+	}
+
+	if unique == "" {
+		sess.client = nil
+
+	} else {
+		sess.clientMap.Delete(unique)
+	}
+
+	sess.clientNum--
+	// 关闭通知
+	old.gatewayI.Kick(Server.Context, old.cid, nil)
 	return true
 }
 
-func NewMsgUser(sid string) *MsgUser {
-	msgUser := msgUserPool.Get().(*MsgUser)
-	msgUser.lastLoaded = false
-	msgUser.connNum = 0
-	msgUser.queuing = 0
-	return msgUser
-}
-
-func NewMsgConn(cid int64) *MsgConn {
-	conn := new(MsgConn)
-	conn.pInit(cid)
-	return conn
-}
-
-func (that MsgUser) Conn(cid int64, unique string, kick []byte) {
-	that.locker.Lock()
-	defer that.locker.Unlock()
-	if that.close(false, cid, unique, true, kick) {
-		return
-	}
-
-	conn := NewMsgConn(cid)
-	if unique == "" {
-		that.conn = conn
-
-	} else {
-		if that.connMap == nil {
-			that.connMap = map[string]*MsgConn{}
-		}
-
-		that.connMap[unique] = conn
-	}
-
-	that.connNum++
-}
-
-func (that MsgUser) Close(cid int64, unique string, close bool, kick []byte) bool {
-	return that.close(true, cid, unique, close, kick)
-}
-
-func (that MsgUser) close(locker bool, cid int64, unique string, close bool, kick []byte) bool {
-	if locker {
-		that.locker.Lock()
-		defer that.locker.Unlock()
-	}
-
-	var conn *MsgConn = nil
-	if unique == "" {
-		conn = that.conn
-		if conn == nil {
-			return true
-
-		} else if cid > 0 && cid <= conn.cid {
-			return false
-		}
-
-		that.conn = nil
-
-	} else {
-		if that.connMap == nil {
-			return true
-		}
-
-		conn = that.connMap[unique]
-		if conn == nil {
-			return true
-
-		} else if cid > 0 && cid <= conn.cid {
-			return false
-		}
-
-		delete(that.connMap, unique)
-	}
-
-	// Kick onyway
-	conn.prod.GetGWIClient().KickO(MsgMng.Context, conn.cid)
-	that.connNum--
-	return true
-}
-
-func (that MsgUser) Init(sid string) {
-	that.sid = sid
-	that.locker.Lock()
-	defer that.locker.Unlock()
-	if that.queue != nil {
-		that.queue.Clear()
-	}
-
-	if that.lastQueue != nil {
-		that.lastQueue.Clear()
-	}
-
-	that.lastLoaded = false
-	that.conn = nil
-	that.connMap = nil
-	that.connNum = 0
-	that.queuing = 0
-}
-
-func (that MsgUser) Release() {
-	that.Init("")
-}
-
-func (that MsgUser) lastLoad() {
-	if that.lastLoaded && MsgMng.Last == nil && !MsgMng.LastLoad {
+func (that MsgGrp) checkClients() {
+	sess := that.sess
+	if sess == nil {
 		return
 	}
 
 	that.locker.Lock()
 	defer that.locker.Unlock()
-	if that.lastQueue.IsEmpty() {
-		msgs := MsgMng.Last.Last(that.sid, MsgMng.LastMax)
-		mLen := len(msgs)
-		for i := 0; i < mLen; i++ {
-			that.lastQueue.Push(msgs[i], true)
-		}
+	that.checkClient(sess.client, "")
+	if sess.clientMap != nil {
+		sess.clientMap.Range(that.checkRange)
 	}
-
-	that.lastLoaded = true
 }
 
-func (that MsgUser) Clear() {
+func (that MsgGrp) checkRange(key, val interface{}) bool {
+	that.checkClient(val.(*MsgClient), key.(string))
+	return true
+}
+
+func (that MsgGrp) checkClient(client *MsgClient, unique string) {
+	if client == nil {
+		return
+	}
+
+	if client.idleTime > MsgMng.checkTime {
+		// 未空闲
+		return
+	}
+
+	result, _ := client.gatewayI.Alive(Server.Context, client.cid)
+	if result != gw.Result__Succ {
+		that.closeOld(client, client.cid, unique)
+	}
+}
+
+func (that MsgGrp) Conn(cid int64, unique string) bool {
 	that.locker.Lock()
 	defer that.locker.Unlock()
-	if that.queue != nil {
-		that.queue.Clear()
-	}
-}
+	client := that.getClient(unique)
+	if client != nil {
+		if client.cid == cid {
+			return true
 
-func (that *MsgUser) Push(uri string, data []byte, last int, unique string, isolate bool) (bool, error) {
-	if last > 0 {
-		if that.lastQueue == nil {
-			last = 0
-
-		} else if MsgMng.Last == nil {
-			last = 1
+		} else if client.cid > cid {
+			return false
 		}
+
+		that.closeOld(client, client.cid, unique)
 	}
 
-	if last > 0 && unique != "" {
-		unique = ""
-	}
-
-	var msgG MsgG = nil
-	if unique == "" && !isolate {
-		msgG = new(Msg)
+	sess := that.getSess()
+	client = that.newMsgClient(cid)
+	if unique == "" {
+		sess.client = client
 
 	} else {
-		msgU := new(MsgU)
-		msgU.unique = unique
-		msgU.isolate = isolate
-		msgG = msgU
-	}
-
-	msg := msgG.Get()
-	msg.Sid = that.sid
-	msg.Uri = uri
-	msg.Data = data
-	if last > 0 {
-		// 添加到队列，持久化消息
-		that.lastMsgG(msgG)
-		if last > 1 {
-			MsgMng.Last.Insert(*msgG.Get())
+		if sess.clientMap == nil {
+			sess.clientMap = new(sync.Map)
 		}
 
-		// 消息更新通知
-		that.lastStart()
-
-	} else {
-		if that.queue == nil {
-			if that.conn != nil {
-				ret, err := that.conn.Prop().GetGWIClient().Push(MsgMng.Context, that.conn.cid, msg.Uri, msg.Data, msgG.Isolate())
-				return that.conn.OnResult(ret, err, EP_DIRECT, that, ""), err
-			}
-
-			return false, NOWAY
-		}
-
-		// 添加到队列，触发队列发送
-		that.addMsgG(msgG)
-		that.queuingStart()
+		sess.clientMap.Store(unique, client)
 	}
 
-	return true, nil
+	sess.clientNum++
+	return true
 }
 
-func (that MsgUser) lastMsgG(msgG MsgG) {
+func (that MsgGrp) Close(cid int64, unique string) bool {
 	that.locker.Lock()
 	defer that.locker.Unlock()
-	msgG.Get().Id = MsgMng.IdWorker.Generate()
-	// 预加载
-	that.lastLoad()
-	that.lastQueue.Push(msgG, true)
-}
-
-func (that MsgUser) addMsgG(msgG MsgG) {
-	that.locker.Lock()
-	defer that.locker.Unlock()
-	unique := msgG.Unique()
-	if unique != "" {
-		for i := that.queue.Size() - 1; i >= 0; i-- {
-			g, _ := that.queue.Get(i)
-			if g != nil && g.(MsgG).Unique() == unique {
-				that.queue.Set(i, nil)
-				break
-			}
-		}
+	client := that.getClient(unique)
+	if client != nil {
+		return that.closeOld(client, cid, unique)
 	}
 
-	that.queue.Push(msgG, true)
-}
-
-func (that MsgUser) queuingStart() {
-	if that.queuing == 0 || that.queuing == 1 {
-		go that.queuingRun(time.Now().UnixNano())
-	}
-}
-
-func (that MsgUser) queuingEnd(queuing int64) {
-	if that.queuing == queuing {
-		that.queuing = 0
-	}
-}
-
-func (that *MsgUser) queuingRun(queuing int64) {
-	that.queuing = queuing
-	defer that.queuingEnd(queuing)
-	for {
-		msgG := that.queuingGet(queuing)
-		if msgG == nil {
-			break
-		}
-
-		msg := msgG.(MsgG).Get()
-		ret, err := that.conn.Prop().GetGWIClient().Push(MsgMng.Context, that.conn.cid, msg.Uri, msg.Data, msgG.Isolate())
-		if !that.conn.OnResult(ret, err, EP_QUEUE, that, "") {
-			break
-		}
-
-		that.queuingRemove(queuing, msgG)
-	}
-}
-
-func (that MsgUser) queuingGet(queuing int64) MsgG {
-	that.locker.RLocker()
-	defer that.locker.RUnlock()
-	if that.queuing != queuing {
-		return nil
-	}
-
-	msgG, _ := that.queue.Get(0)
-	if msgG == nil {
-		return nil
-	}
-
-	return msgG.(MsgG)
-}
-
-func (that MsgUser) queuingRemove(queuing int64, msgG MsgG) {
-	that.locker.Lock()
-	defer that.locker.Unlock()
-	that.queue.Remove(msgG)
-}
-
-func (that *MsgUser) lastStart() {
-	that.locker.Lock()
-	defer that.locker.Unlock()
-	if that.conn != nil {
-		that.conn.lastStart(that, "")
-	}
-
-	if that.connMap != nil {
-		for unique, conn := range that.connMap {
-			conn.lastStart(that, unique)
-		}
-	}
-}
-
-func (that MsgUser) idleCheck() {
-	if that.queuing == 1 {
-		that.queuingStart()
-	}
-
-	that.lastStart()
-}
-
-type MsgConn struct {
-	cid      int64
-	prod     *Prod
-	lasting  int64
-	lastTime int64
-}
-
-func (that MsgConn) pInit(cid int64) {
-	that.cid = cid
-	that.prod = nil
-	that.lasting = 0
-	that.lastTime = 0
-}
-
-func (that MsgConn) Prop() *Prod {
-	return that.prod
+	return false
 }
 
 type EPush int
@@ -478,8 +348,8 @@ const (
 	EP_LAST   EPush = 2
 )
 
-func (that MsgConn) OnResult(ret gw.Result_, err error, push EPush, user *MsgUser, unique string) bool {
-	if ret == gw.Result__Succuess {
+func (that MsgSess) OnResult(ret gw.Result_, err error, push EPush, client *MsgClient, unique string) bool {
+	if ret == gw.Result__Succ {
 		return true
 	}
 
@@ -487,120 +357,84 @@ func (that MsgConn) OnResult(ret gw.Result_, err error, push EPush, user *MsgUse
 	return false
 }
 
-func (that MsgConn) lastStart(user *MsgUser, unique string) {
-	if that.lasting >= 0 {
-		if that.lasting <= 1 {
-			go that.lastRun(time.Now().UnixNano(), user, unique)
+func (that MsgSess) queuingGet(queuing int64) Msg {
+	that.grp.locker.RLocker()
+	defer that.grp.locker.RUnlock()
+	if that.queuing != queuing {
+		return nil
+	}
 
-		} else {
-			that.lasting = time.Now().UnixNano()
-		}
+	msg, _ := that.queue.Get(0)
+	if msg == nil {
+		return nil
+	}
+
+	return msg.(Msg)
+}
+
+func (that MsgSess) queuingRemove(queuing int64, msg Msg) {
+	that.grp.locker.Lock()
+	defer that.grp.locker.Unlock()
+	that.queue.Remove(msg)
+}
+
+func (that MsgSess) queuingStart() {
+	if that.queuing == 0 || that.queuing == 1 {
+		go that.queuingRun(time.Now().UnixNano())
 	}
 }
 
-func (that MsgConn) lastEnd(lasting int64, user *MsgUser, unique string) {
-	if user != nil {
-		user.locker.Lock()
-		defer user.locker.Unlock()
-	}
-
-	if that.lasting == lasting {
-		that.lasting = 0
+func (that MsgSess) queuingEnd(queuing int64) {
+	if that.queuing == queuing {
+		that.queuing = 0
 	}
 }
 
-func (that MsgConn) lastRun(lasting int64, user *MsgUser, unique string) {
-	that.lasting = lasting
-	defer that.lastEnd(lasting, user, unique)
+func (that MsgSess) queuingRun(queuing int64) {
+	client := that.client
+	if client == nil {
+		return
+	}
+
+	that.queuing = queuing
+	defer that.queuingEnd(queuing)
 	for {
-		ret, err := that.Prop().GetGWIClient().Last(MsgMng.Context, that.cid)
-		that.OnResult(ret, err, EP_LAST, user, unique)
-		if that.lastDone(lasting, user, unique) {
+		if that.queuing != queuing {
 			break
 		}
+
+		msg := that.queuingGet(queuing)
+		if msg == nil {
+			break
+		}
+
+		msgD := msg.Get()
+		ret, err := client.gatewayI.Push(Server.Context, client.cid, msgD.Uri, msgD.Data, msg.Isolate())
+		if !that.OnResult(ret, err, EP_QUEUE, client, "") {
+			break
+		}
+
+		that.queuingRemove(queuing, msg)
 	}
 }
 
-func (that MsgConn) lastDone(lasting int64, user *MsgUser, unique string) bool {
-	if user != nil {
-		user.locker.Lock()
-		defer user.locker.Unlock()
+func (that MsgGrp) addMsg(msg Msg) {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if that.sess == nil {
+		that.sess = that.newMsgSess()
 	}
 
-	return that.lasting == lasting || that.lasting == 1
-}
-
-func (that MsgConn) lastLoop(lastId int64, user *MsgUser, unique string) {
-	lastTime := time.Now().UnixNano()
-	that.lastTime = lastTime
-	for i := 0; i < MsgMng.LastLoop; i++ {
-		msgG, lastIn := that.lastGet(lastId, user, unique)
-		if msgG == nil {
-			if lastIn {
-				// 消息已读取完毕
-				return
-
-			} else {
-				// 缓冲消息
-				msgs := MsgMng.Last.Next(user.sid, lastId, MsgMng.NextLimit)
-				mLen := len(msgs)
-				if mLen <= 0 {
-					return
-				}
-
-				for j := 0; j < mLen; j++ {
-					msg := msgs[j]
-					if lastTime != that.lastTime {
-						return
-					}
-
-					ret, err := that.Prop().GetGWIClient().Push(MsgMng.Context, that.cid, msg.Uri, msg.Data, false)
-					if !that.OnResult(ret, err, EP_DIRECT, user, unique) {
-						return
-					}
-				}
-
+	unique := msg.Unique()
+	if unique != "" {
+		for i := that.sess.Size() - 1; i >= 0; i-- {
+			g, _ := that.sess.Get(i)
+			if g != nil && g.(gateway.MsgD).Unique() == unique {
+				that.sess.Set(i, nil)
 				break
 			}
-
-		} else {
-			msg := msgG.Get()
-			if lastTime != that.lastTime {
-				return
-			}
-
-			ret, err := that.Prop().GetGWIClient().Push(MsgMng.Context, that.cid, msg.Uri, msg.Data, msgG.Isolate())
-			if !that.OnResult(ret, err, EP_DIRECT, user, unique) {
-				return
-			}
-
-			// 遍历Next
-			lastId = msg.Id
 		}
 	}
 
-	// 下一轮消息通知
-	that.lastStart(user, unique)
-}
-
-func (that MsgConn) lastGet(lastId int64, user *MsgUser, unique string) (MsgG, bool) {
-	user.locker.RLocker()
-	defer user.locker.RUnlock()
-	// 预加载
-	user.lastLoad()
-	size := user.lastQueue.Size()
-	i := 0
-	lastIn := false
-	for ; i < size; i++ {
-		msgG, _ := user.lastQueue.Get(i)
-		msg := msgG.(MsgG).Get()
-		if msg.Id > lastId {
-			return msgG.(MsgG), lastIn
-
-		} else {
-			lastIn = true
-		}
-	}
-
-	return nil, lastIn
+	that.sess.Push(msgG, true)
 }

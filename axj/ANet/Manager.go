@@ -1,7 +1,6 @@
 package ANet
 
 import (
-	"axj/Kt/Kt"
 	"axj/Thrd/Util"
 	"sync"
 	"time"
@@ -38,12 +37,13 @@ type HandlerM interface {
 }
 
 type Manager struct {
+	idWorker  *Util.IdWorker
 	handlerM  HandlerM
 	clientMap *sync.Map
-	idWorker  *Util.IdWorker
 	idleDrt   int64
 	checkDrt  time.Duration
 	checkLoop int64
+	checkTime int64
 	beatBytes []byte
 }
 
@@ -69,14 +69,12 @@ func (that Manager) Client(cid int64) Client {
 }
 
 func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkDrt time.Duration) *Manager {
-	idWorker, err := Util.NewIdWorker(workerId)
-	Kt.Panic(err)
 	that := new(Manager)
+	that.idWorker = Util.NewIdWorkerPanic(workerId)
 	that.handlerM = handlerM
 	that.clientMap = new(sync.Map)
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
-	that.idWorker = idWorker
 	that.beatBytes = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0)
 	return that
 }
@@ -136,17 +134,19 @@ func (that Manager) CheckLoop() {
 	that.checkLoop = loopTime
 	for loopTime == that.checkLoop {
 		time.Sleep(that.checkDrt)
-		time := time.Now().UnixNano()
-		that.clientMap.Range(func(key, value interface{}) bool {
-			that.checkClient(time, key, value.(Client))
-			return true
-		})
+		that.checkTime = time.Now().UnixNano()
+		that.clientMap.Range(that.checkRange)
 	}
 }
 
-func (that Manager) checkClient(time int64, key interface{}, client Client) {
-	clientM, _ := client.(ClientM)
-	if clientM == nil {
+func (that Manager) checkRange(key interface{}, val interface{}) bool {
+	that.checkClient(key, val)
+	return true
+}
+
+func (that Manager) checkClient(key interface{}, val interface{}) {
+	client, _ := val.(ClientM)
+	if client == nil {
 		that.clientMap.Delete(key)
 		return
 	}
@@ -158,13 +158,13 @@ func (that Manager) checkClient(time int64, key interface{}, client Client) {
 		return
 	}
 
-	if clientM.GetM().idleTime <= time {
+	if client.GetM().idleTime <= that.checkTime {
 		// 直接心跳
 		that.OnKeep(client, false)
 		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false)
 	}
 
-	that.handlerM.Check(time, client)
+	that.handlerM.Check(that.checkTime, client)
 }
 
 func (that Manager) Open(conn Conn, encryKey []byte, id int64) Client {

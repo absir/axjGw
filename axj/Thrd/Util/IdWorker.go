@@ -1,6 +1,7 @@
 package Util
 
 import (
+	"axj/Kt/Kt"
 	"errors"
 	"fmt"
 	"sync"
@@ -53,28 +54,39 @@ func NewIdWorker(workerId int32) (*IdWorker, error) {
 	}, nil
 }
 
+func NewIdWorkerPanic(workerId int32) *IdWorker {
+	idWorker, err := NewIdWorker(workerId)
+	Kt.Panic(err)
+	return idWorker
+}
+
 // Generate creates and returns a unique snowflake ID
-func (s *IdWorker) Generate() int64 {
-	s.Lock()
-	defer s.Unlock()
+func (that IdWorker) Generate() int64 {
+	that.Lock()
+	defer that.Unlock()
 
 	now := time.Now().UnixNano() / 1000000
-	if s.timestamp == now {
-		s.sequence = (s.sequence + 1) & sequenceMask
-		if s.sequence == 0 {
-			for now <= s.timestamp {
+	if that.timestamp == now {
+		that.sequence = (that.sequence + 1) & sequenceMask
+		if that.sequence == 0 {
+			for now <= that.timestamp {
 				now = time.Now().UnixNano() / 1000000
 			}
 		}
 
 	} else {
-		s.sequence = 0
+		that.sequence = 0
 	}
 
-	s.timestamp = now
-	return (now-twepoch)<<timestampShift | (s.workerId << workerIdShift) | (s.sequence)
+	that.timestamp = now
+	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | (that.sequence)
 }
 
-func GetWorkerId(id int64) int32 {
+func (that IdWorker) Timestamp(nanoTime int64) int64 {
+	now := nanoTime / 1000000
+	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | (that.sequence)
+}
+
+func (that IdWorker) GetWorkerId(id int64) int32 {
 	return (int32)(id>>workerIdShift) & worderIdMask
 }

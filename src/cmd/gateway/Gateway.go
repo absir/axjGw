@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Gw服务初始化
-	gateway.Server.Init()
+	gateway.Server.Init(APro.WorkId())
 	// Gw服务开启
 	gateway.Server.StartGw()
 	// thrift服务开启

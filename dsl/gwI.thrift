@@ -25,7 +25,9 @@ service GatewayI {
     // 软关闭连接
     Result kick(1: i64 cid, 2: binary bytes)
     // 连接
-    Result conn(1: i64 cid, 2: string sid, 3: string unique)
+    Result conn(1: i64 cid, 2: string gid, 3: string unique)
+    // 断开
+    oneway void disc(1: i64 cid, 2: string gid, 3: string unique)
     // 存活
     Result alive(1: i64 cid)
     // 服务编号

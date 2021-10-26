@@ -30,27 +30,29 @@ type Prod struct {
 
 func NewProd(id int32, url string) (*Prod, error) {
 	thrift.NewTTransportFactory()
-	var transport thrift.TTransport
-	var err error
+	var transport thrift.TTransport = nil
+	if url != "" {
+		var err error
+		if strings.HasPrefix(url, "http") {
+			transport, err = thrift.NewTHttpClient(url)
 
-	if strings.HasPrefix(url, "http") {
-		transport, err = thrift.NewTHttpClient(url)
+		} else {
+			transport, err = thrift.NewTSocketConf(url, Config.TConfig)
+		}
 
-	} else {
-		transport, err = thrift.NewTSocketConf(url, Config.TConfig)
-	}
-
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	prod := new(Prod)
 	prod.id = id
 	prod.url = url
-	proto := thrift.NewTCompactProtocolConf(transport, Config.TConfig)
-	prod.client = thrift.NewTStandardClient(proto, proto)
-	prod.passClient = nil
-	prod.gwIClient = nil
+	if transport != nil {
+		proto := thrift.NewTCompactProtocolConf(transport, Config.TConfig)
+		prod.client = thrift.NewTStandardClient(proto, proto)
+	}
+
 	return prod, nil
 }
 
@@ -84,7 +86,7 @@ func (that Prod) GetGWIClient() gw.GatewayI {
 		defer locker.Unlock()
 		if that.gwIClient == nil {
 			if Server.gatewayI != nil {
-				if that.id == Server.WorkId {
+				if that.id == Config.WorkId || that.url == "" {
 					that.gwIClient = Server.gatewayI
 				}
 			}
