@@ -45,7 +45,7 @@ func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique strin
 		return gw.Result__ProdErr, nil
 	}
 
-	if gateway.MsgMng.GetMsgGrp(gid).Conn(cid, unique) {
+	if gateway.MsgMng.GetMsgGrp(gid).Conn(cid, unique) != nil {
 		return gw.Result__Succ, nil
 	}
 
@@ -105,7 +105,7 @@ func (g GatewayIs) Rids(ctx context.Context, cid int64, rids map[string]int32) (
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Last(ctx context.Context, cid int64) (_r gw.Result_, _err error) {
+func (g GatewayIs) Last(ctx context.Context, cid int64, gid string) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -115,7 +115,7 @@ func (g GatewayIs) Last(ctx context.Context, cid int64) (_r gw.Result_, _err err
 		return gw.Result__IdNone, nil
 	}
 
-	err := client.Get().Rep(true, ANet.REQ_LAST, "", 0, nil, false, false)
+	err := client.Get().Rep(true, ANet.REQ_LAST, gid, 0, nil, false, false, 0)
 	if err != nil {
 		return gw.Result__Fail, err
 	}
@@ -123,7 +123,7 @@ func (g GatewayIs) Last(ctx context.Context, cid int64) (_r gw.Result_, _err err
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte, isolate bool) (_r gw.Result_, _err error) {
+func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte, isolate bool, id int64) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -137,7 +137,7 @@ func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte
 		isolate = false
 	}
 
-	err := client.Get().Rep(true, ANet.REQ_PUSH, uri, 0, bytes, false, isolate)
+	err := client.Get().Rep(true, ANet.REQ_PUSH, uri, 0, bytes, false, isolate, id)
 	if err != nil {
 		return gw.Result__Fail, err
 	}
@@ -145,6 +145,70 @@ func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Dirty(ctx context.Context, sid string) (_r gw.Result_, _err error) {
+func (g GatewayIs) GQueue(ctx context.Context, gid string, cid int64, unique string, clear bool) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return gw.Result__ProdErr, nil
+	}
+
+	grp := gateway.MsgMng.GetMsgGrp(gid)
+	client := grp.Conn(cid, unique)
+	if client == nil {
+		return gw.Result__IdNone, nil
+	}
+
+	if clear {
+		grp.Clear(true, false)
+
+	} else {
+		grp.Sess().QueueStart()
+	}
+
+	return gw.Result__Succ, nil
+}
+
+func (g GatewayIs) GClear(ctx context.Context, gid string, queue bool, last bool) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return gw.Result__ProdErr, nil
+	}
+
+	grp := gateway.MsgMng.MsgGrp(gid)
+	if grp != nil {
+		grp.Clear(queue, last)
+	}
+
+	return gw.Result__Succ, nil
+}
+
+func (g GatewayIs) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return gw.Result__ProdErr, nil
+	}
+
+	grp := gateway.MsgMng.GetMsgGrp(gid)
+	client := grp.Conn(cid, unique)
+	if client == nil {
+		return gw.Result__IdNone, nil
+	}
+
+	// 开始拉取
+	go grp.Sess().Lasts(lastId, client, unique)
+	return gw.Result__Succ, nil
+}
+
+func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return gw.Result__ProdErr, nil
+	}
+
+	grp := gateway.MsgMng.GetMsgGrp(gid)
+	_, succ, err := grp.Push(uri, bytes, isolate, qs, queue, unique, fid)
+	if succ {
+		return gw.Result__Succ, nil
+	}
+
+	return gw.Result__Fail, err
+}
+
+func (g GatewayIs) GDirty(ctx context.Context, sid string) (_r gw.Result_, _err error) {
 	panic("implement me")
 }

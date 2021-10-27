@@ -171,3 +171,7 @@ func (that *ClientG) ConnCheck() {
 		that.Close(err, result)
 	}
 }
+
+func (that *ClientG) ConnStart(clear bool, lasts bool) {
+
+}

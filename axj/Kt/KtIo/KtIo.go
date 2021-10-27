@@ -41,12 +41,24 @@ func GetVIntReader(reader io.ByteReader) int32 {
 	return val
 }
 
-func ReadBytesReader(reader io.Reader, bLen int) ([]byte, error) {
-	return readBytesReaderBsLen(reader, make([]byte, bLen), bLen)
+func GetInt64Reader(reader io.ByteReader) int64 {
+	var val int64 = 0
+	vf := 0
+	for i := 0; i < 8; i++ {
+		b, err := reader.ReadByte()
+		if err != nil {
+			return val
+		}
+
+		val += b << vf
+		vf += 8
+	}
+
+	return val
 }
 
-func ReadBytesReaderBs(reader io.Reader, bs []byte) ([]byte, error) {
-	return readBytesReaderBsLen(reader, bs, len(bs))
+func ReadBytesReader(reader io.Reader, bLen int) ([]byte, error) {
+	return readBytesReaderBsLen(reader, make([]byte, bLen), bLen)
 }
 
 func readBytesReaderBsLen(reader io.Reader, bs []byte, bLen int) ([]byte, error) {

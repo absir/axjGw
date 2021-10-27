@@ -15,8 +15,10 @@ struct Login {
     6: map<string, i32> rids;
     // 登录返回
     7: binary data;
+    // 清理队列
+    8: bool clear
     // 登录回调
-    8: bool back
+    9: bool back
 }
 
 struct Group {

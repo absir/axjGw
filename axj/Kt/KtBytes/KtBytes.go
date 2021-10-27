@@ -148,6 +148,47 @@ func GetVInt(bs []byte, off int32, offP *int32) int32 {
 	return val
 }
 
+func GetInt64(bs []byte, off int32, offP *int32) int64 {
+	var val int64 = 0
+	vf := 0
+	for i := 0; i < 8; i++ {
+		b := bs[off]
+		off++
+		val += b << vf
+		vf += 8
+	}
+
+	if offP != nil {
+		offP = &off
+	}
+
+	return val
+}
+
+func SetInt32(bs []byte, off int32, val int32, offP *int32) {
+	for i := 0; i < 4; i++ {
+		bs[off] = byte(val)
+		off++
+		val >>= 8
+	}
+
+	if offP != nil {
+		offP = &off
+	}
+}
+
+func SetInt64(bs []byte, off int32, val int64, offP *int32) {
+	for i := 0; i < 8; i++ {
+		bs[off] = byte(val)
+		off++
+		val >>= 8
+	}
+
+	if offP != nil {
+		offP = &off
+	}
+}
+
 func IndexByte(bs []byte, b byte, start int, end int) int {
 	if start < 0 {
 		start = 0

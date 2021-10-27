@@ -61,7 +61,7 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 		if sKey != nil && cKey != nil {
 			encryptKey = sKey
 			// 连接秘钥
-			err := processor.Rep(nil, true, conn, nil, ANet.REQ_KEY, "", 0, encryptKey, false)
+			err := processor.Rep(nil, true, conn, nil, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
 			if err != nil {
 				return nil
 			}
@@ -69,7 +69,7 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 	}
 
 	// Acl准备
-	err := processor.Rep(nil, true, conn, nil, ANet.REQ_ACL, "", 0, encryptKey, false)
+	err := processor.Rep(nil, true, conn, nil, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
 	if err != nil {
 		return nil
 	}
@@ -111,7 +111,17 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 	if uriRoute > 0 {
 		if uriHash != UriDict.UriMapHash {
 			// 路由缓存
-			processor.Rep(nil, true, conn, nil, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false)
+			processor.Rep(nil, true, conn, nil, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
+		}
+	}
+
+	// 消息处理
+	if clientG.Gid() != "" {
+		// 清理消息队列配置
+		result, err := Server.GetProdClient(clientG).GetGWIClient().Queue(Server.Context, clientG.gid, clientG.Id(), clientG.Unique(), login.Clear)
+		if result != gw.Result__Succ {
+			clientG.Close(err, nil)
+			return nil
 		}
 	}
 
@@ -121,7 +131,7 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 	}
 
 	// 登录成功
-	client.Get().Rep(true, ANet.REQ_LOOP, "", 0, login.Data, false, false)
+	client.Get().Rep(true, ANet.REQ_LOOP, "", 0, login.Data, false, false, 0)
 	if !client.Get().IsClosed() {
 		return nil
 	}

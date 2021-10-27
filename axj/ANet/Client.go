@@ -20,12 +20,13 @@ const CONN_CLOSED int8 = 127
 const (
 	// 特殊请求
 	REQ_PUSH   int32 = 0  // 推送
-	REQ_KICK   int32 = 1  // 软关闭
-	REQ_LAST   int32 = 2  // 消息推送检查+
-	REQ_KEY    int32 = 3  // 秘钥
-	REQ_ACL    int32 = 4  // 请求开启
-	REQ_BEAT   int32 = 5  // 心跳
-	REQ_ROUTE  int32 = 6  // 路由字典
+	REQ_PUSHI  int32 = 1  // 推送+id
+	REQ_KICK   int32 = 2  // 软关闭
+	REQ_LAST   int32 = 3  // 消息推送检查+
+	REQ_KEY    int32 = 4  // 秘钥
+	REQ_ACL    int32 = 5  // 请求开启
+	REQ_BEAT   int32 = 6  // 心跳
+	REQ_ROUTE  int32 = 7  // 路由字典
 	REQ_LOOP   int32 = 15 // 连接接受
 	REQ_ONEWAY int32 = 16 // 路由处理
 )
@@ -177,7 +178,7 @@ func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {
 	return err, req, uri, uriI, data
 }
 
-func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []byte, isolate bool, encry bool) error {
+func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, id int64) error {
 	handler := that.handler
 	uriDict := handler.UriDict()
 	if uriI <= 0 {
@@ -206,7 +207,7 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 		return ERR_CLOSED
 	}
 
-	err := handler.Processor().Rep(nil, out, that.conn, encryKey, req, uri, uriI, data, isolate)
+	err := handler.Processor().Rep(nil, out, that.conn, encryKey, req, uri, uriI, data, isolate, id)
 	if err != nil {
 		that.Close(err, nil)
 	}
@@ -232,7 +233,7 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 	if conn != nil {
 		go closeDelay(conn, drt)
 		that.conn = nil
-		that.handler.Processor().Rep(nil, true, conn, that.encryKey, REQ_KICK, "", 0, data, isolate)
+		that.handler.Processor().Rep(nil, true, conn, that.encryKey, REQ_KICK, "", 0, data, isolate, 0)
 	}
 
 	that.Close(nil, nil)

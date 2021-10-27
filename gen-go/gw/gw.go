@@ -25,6 +25,7 @@ var _ = bytes.Equal
 //  - Rid
 //  - Rids
 //  - Data
+//  - Clear
 //  - Back
 type Login struct {
   UID int64 `thrift:"uid,1" db:"uid" json:"uid"`
@@ -34,7 +35,8 @@ type Login struct {
   Rid int32 `thrift:"rid,5" db:"rid" json:"rid"`
   Rids map[string]int32 `thrift:"rids,6" db:"rids" json:"rids"`
   Data []byte `thrift:"data,7" db:"data" json:"data"`
-  Back bool `thrift:"back,8" db:"back" json:"back"`
+  Clear bool `thrift:"clear,8" db:"clear" json:"clear"`
+  Back bool `thrift:"back,9" db:"back" json:"back"`
 }
 
 func NewLogin() *Login {
@@ -68,6 +70,10 @@ func (p *Login) GetRids() map[string]int32 {
 
 func (p *Login) GetData() []byte {
   return p.Data
+}
+
+func (p *Login) GetClear() bool {
+  return p.Clear
 }
 
 func (p *Login) GetBack() bool {
@@ -159,6 +165,16 @@ func (p *Login) Read(ctx context.Context, iprot thrift.TProtocol) error {
     case 8:
       if fieldTypeId == thrift.BOOL {
         if err := p.ReadField8(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 9:
+      if fieldTypeId == thrift.BOOL {
+        if err := p.ReadField9(ctx, iprot); err != nil {
           return err
         }
       } else {
@@ -267,6 +283,15 @@ func (p *Login)  ReadField8(ctx context.Context, iprot thrift.TProtocol) error {
   if v, err := iprot.ReadBool(ctx); err != nil {
   return thrift.PrependError("error reading field 8: ", err)
 } else {
+  p.Clear = v
+}
+  return nil
+}
+
+func (p *Login)  ReadField9(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(ctx); err != nil {
+  return thrift.PrependError("error reading field 9: ", err)
+} else {
   p.Back = v
 }
   return nil
@@ -284,6 +309,7 @@ func (p *Login) Write(ctx context.Context, oprot thrift.TProtocol) error {
     if err := p.writeField6(ctx, oprot); err != nil { return err }
     if err := p.writeField7(ctx, oprot); err != nil { return err }
     if err := p.writeField8(ctx, oprot); err != nil { return err }
+    if err := p.writeField9(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -373,12 +399,22 @@ func (p *Login) writeField7(ctx context.Context, oprot thrift.TProtocol) (err er
 }
 
 func (p *Login) writeField8(ctx context.Context, oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin(ctx, "back", thrift.BOOL, 8); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:back: ", p), err) }
-  if err := oprot.WriteBool(ctx, bool(p.Back)); err != nil {
-  return thrift.PrependError(fmt.Sprintf("%T.back (8) field write error: ", p), err) }
+  if err := oprot.WriteFieldBegin(ctx, "clear", thrift.BOOL, 8); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:clear: ", p), err) }
+  if err := oprot.WriteBool(ctx, bool(p.Clear)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.clear (8) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field end error 8:back: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 8:clear: ", p), err) }
+  return err
+}
+
+func (p *Login) writeField9(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "back", thrift.BOOL, 9); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:back: ", p), err) }
+  if err := oprot.WriteBool(ctx, bool(p.Back)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.back (9) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 9:back: ", p), err) }
   return err
 }
 
@@ -399,6 +435,7 @@ func (p *Login) Equals(other *Login) bool {
     if _tgt != _src2 { return false }
   }
   if bytes.Compare(p.Data, other.Data) != 0 { return false }
+  if p.Clear != other.Clear { return false }
   if p.Back != other.Back { return false }
   return true
 }

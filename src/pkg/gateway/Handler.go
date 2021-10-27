@@ -29,6 +29,8 @@ func (that handler) ClientG(client ANet.Client) *ClientG {
 }
 
 func (that handler) OnOpen(client ANet.Client) {
+	clientG := new(ClientG)
+	clientG.ConnKeep()
 }
 
 func (that handler) OnClose(client ANet.Client, err error, reason interface{}) {
@@ -68,7 +70,7 @@ func (that handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int3
 		if req > ANet.REQ_ONEWAY {
 			// 服务不存在
 			reped = true
-			clientG.Get().Rep(true, req, "", ERR_PROD_NO, nil, false, false)
+			clientG.Get().Rep(true, req, "", ERR_PROD_NO, nil, false, false, 0)
 		}
 
 		return
@@ -82,7 +84,7 @@ func (that handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int3
 
 		} else {
 			reped = true
-			clientG.Get().Rep(true, req, "", ERR_PROD_NO, bs, false, false)
+			clientG.Get().Rep(true, req, "", ERR_PROD_NO, bs, false, false, 0)
 		}
 
 	} else {
@@ -97,7 +99,7 @@ func (that handler) reqRcvr(client ANet.Client, req int32, reped bool) {
 	}
 
 	if !reped && req > ANet.REQ_ONEWAY {
-		client.Get().Rep(true, req, "", ERR_PORD_ERR, nil, false, false)
+		client.Get().Rep(true, req, "", ERR_PORD_ERR, nil, false, false, 0)
 	}
 }
 

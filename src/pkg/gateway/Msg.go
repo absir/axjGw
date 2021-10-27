@@ -7,7 +7,6 @@ import (
 type Msg interface {
 	Get() *MsgD
 	Unique() string
-	Isolate() bool
 }
 
 type MsgD struct {
@@ -26,26 +25,17 @@ func (that MsgD) Unique() string {
 	return ""
 }
 
-func (that MsgD) Isolate() bool {
-	return false
-}
-
 type MsgU struct {
 	MsgD
-	unique  string
-	isolate bool
+	unique string
 }
 
 func (m MsgU) Unique() string {
 	return m.unique
 }
 
-func (m MsgU) Isolate() bool {
-	return m.isolate
-}
-
-func NewMsg(uri string, data []byte, unique string, isolate bool) Msg {
-	if unique == "" && !isolate {
+func NewMsg(uri string, data []byte, unique string) Msg {
+	if unique == "" {
 		return &MsgD{
 			Uri:  uri,
 			Data: data,
@@ -53,8 +43,7 @@ func NewMsg(uri string, data []byte, unique string, isolate bool) Msg {
 
 	} else {
 		msg := &MsgU{
-			unique:  unique,
-			isolate: isolate,
+			unique: unique,
 		}
 
 		msg.Uri = uri
@@ -64,11 +53,11 @@ func NewMsg(uri string, data []byte, unique string, isolate bool) Msg {
 }
 
 type MsgDb interface {
-	Insert(msg MsgD) int64                           // 插入消息
+	Insert(msg MsgD) error                           // 插入消息
 	Next(gid string, lastId int64, limit int) []MsgD // 遍历消息
 	Last(gid string, limit int) []MsgD               // 初始消息缓存
-	Delete(fid int64)                                // 来源删除消息
-	Clear(oId int64)                                 // 清理过期消息
+	Delete(fid int64) error                          // 来源删除消息
+	Clear(oId int64) error                           // 清理过期消息
 }
 
 type MsgGorm struct {
@@ -82,9 +71,8 @@ func (that MsgGorm) AutoMigrate() {
 	}
 }
 
-func (that MsgGorm) Insert(msg MsgD) int64 {
-	that.db.Create(msg)
-	return msg.Id
+func (that MsgGorm) Insert(msg MsgD) error {
+	return that.db.Create(msg).Error
 }
 
 func (that MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
@@ -112,10 +100,10 @@ func (that MsgGorm) Last(gid string, limit int) []MsgD {
 	return msgDS
 }
 
-func (that MsgGorm) Delete(fid int64) {
-	that.db.Exec("DELETE FROM MsgD WHERE Fid = ?", fid)
+func (that MsgGorm) Delete(fid int64) error {
+	return that.db.Exec("DELETE FROM MsgD WHERE Fid = ?", fid).Error
 }
 
-func (that MsgGorm) Clear(oId int64) {
-	that.db.Exec("DELETE FROM MsgD WHERE Id <= ?", oId)
+func (that MsgGorm) Clear(oId int64) error {
+	return that.db.Exec("DELETE FROM MsgD WHERE Id <= ?", oId).Error
 }

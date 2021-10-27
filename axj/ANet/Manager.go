@@ -75,7 +75,7 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkD
 	that.clientMap = new(sync.Map)
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
-	that.beatBytes = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0)
+	that.beatBytes = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0, 0)
 	return that
 }
 
@@ -161,7 +161,7 @@ func (that Manager) checkClient(key interface{}, val interface{}) {
 	if client.GetM().idleTime <= that.checkTime {
 		// 直接心跳
 		that.OnKeep(client, false)
-		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false)
+		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)
 	}
 
 	that.handlerM.Check(that.checkTime, client)

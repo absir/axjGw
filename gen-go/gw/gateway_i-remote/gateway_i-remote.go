@@ -29,9 +29,13 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "  Result alive(i64 cid)")
   fmt.Fprintln(os.Stderr, "  Result rid(i64 cid, string name, i32 rid)")
   fmt.Fprintln(os.Stderr, "  Result rids(i64 cid,  rids)")
-  fmt.Fprintln(os.Stderr, "  Result last(i64 cid)")
-  fmt.Fprintln(os.Stderr, "  Result push(i64 cid, string uri, string bytes, bool isolate)")
-  fmt.Fprintln(os.Stderr, "  Result dirty(string gid)")
+  fmt.Fprintln(os.Stderr, "  Result last(i64 cid, string gid)")
+  fmt.Fprintln(os.Stderr, "  Result push(i64 cid, string uri, string bytes, bool isolate, i64 id)")
+  fmt.Fprintln(os.Stderr, "  Result gQueue(string gid, i64 cid, string unique, bool clear)")
+  fmt.Fprintln(os.Stderr, "  Result gClear(string gid, bool queue, bool last)")
+  fmt.Fprintln(os.Stderr, "  Result gLasts(string gid, i64 cid, string unique, i64 lastId)")
+  fmt.Fprintln(os.Stderr, "  Result gPush(string gid, string uri, string bytes, bool isolate, i32 qs, bool queue, string unique, i64 fid)")
+  fmt.Fprintln(os.Stderr, "  Result gDirty(string gid)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -158,8 +162,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Close requires 2 args")
       flag.Usage()
     }
-    argvalue0, err32 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err32 != nil {
+    argvalue0, err44 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err44 != nil {
       Usage()
       return
     }
@@ -174,8 +178,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Kick requires 2 args")
       flag.Usage()
     }
-    argvalue0, err34 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err34 != nil {
+    argvalue0, err46 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err46 != nil {
       Usage()
       return
     }
@@ -190,8 +194,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Conn requires 3 args")
       flag.Usage()
     }
-    argvalue0, err36 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err36 != nil {
+    argvalue0, err48 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err48 != nil {
       Usage()
       return
     }
@@ -208,8 +212,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Disc requires 3 args")
       flag.Usage()
     }
-    argvalue0, err39 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err39 != nil {
+    argvalue0, err51 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err51 != nil {
       Usage()
       return
     }
@@ -226,8 +230,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Alive requires 1 args")
       flag.Usage()
     }
-    argvalue0, err42 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err42 != nil {
+    argvalue0, err54 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err54 != nil {
       Usage()
       return
     }
@@ -240,16 +244,16 @@ func main() {
       fmt.Fprintln(os.Stderr, "Rid requires 3 args")
       flag.Usage()
     }
-    argvalue0, err43 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err43 != nil {
+    argvalue0, err55 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err55 != nil {
       Usage()
       return
     }
     value0 := argvalue0
     argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    tmp2, err45 := (strconv.Atoi(flag.Arg(3)))
-    if err45 != nil {
+    tmp2, err57 := (strconv.Atoi(flag.Arg(3)))
+    if err57 != nil {
       Usage()
       return
     }
@@ -263,25 +267,25 @@ func main() {
       fmt.Fprintln(os.Stderr, "Rids requires 2 args")
       flag.Usage()
     }
-    argvalue0, err46 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err46 != nil {
+    argvalue0, err58 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err58 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    arg47 := flag.Arg(2)
-    mbTrans48 := thrift.NewTMemoryBufferLen(len(arg47))
-    defer mbTrans48.Close()
-    _, err49 := mbTrans48.WriteString(arg47)
-    if err49 != nil { 
+    arg59 := flag.Arg(2)
+    mbTrans60 := thrift.NewTMemoryBufferLen(len(arg59))
+    defer mbTrans60.Close()
+    _, err61 := mbTrans60.WriteString(arg59)
+    if err61 != nil { 
       Usage()
       return
     }
-    factory50 := thrift.NewTJSONProtocolFactory()
-    jsProt51 := factory50.GetProtocol(mbTrans48)
+    factory62 := thrift.NewTJSONProtocolFactory()
+    jsProt63 := factory62.GetProtocol(mbTrans60)
     containerStruct1 := gw.NewGatewayIRidsArgs()
-    err52 := containerStruct1.ReadField2(context.Background(), jsProt51)
-    if err52 != nil {
+    err64 := containerStruct1.ReadField2(context.Background(), jsProt63)
+    if err64 != nil {
       Usage()
       return
     }
@@ -291,26 +295,28 @@ func main() {
     fmt.Print("\n")
     break
   case "last":
-    if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Last requires 1 args")
+    if flag.NArg() - 1 != 2 {
+      fmt.Fprintln(os.Stderr, "Last requires 2 args")
       flag.Usage()
     }
-    argvalue0, err53 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err53 != nil {
+    argvalue0, err65 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err65 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    fmt.Print(client.Last(context.Background(), value0))
+    argvalue1 := flag.Arg(2)
+    value1 := argvalue1
+    fmt.Print(client.Last(context.Background(), value0, value1))
     fmt.Print("\n")
     break
   case "push":
-    if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "Push requires 4 args")
+    if flag.NArg() - 1 != 5 {
+      fmt.Fprintln(os.Stderr, "Push requires 5 args")
       flag.Usage()
     }
-    argvalue0, err54 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err54 != nil {
+    argvalue0, err67 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err67 != nil {
       Usage()
       return
     }
@@ -321,17 +327,114 @@ func main() {
     value2 := argvalue2
     argvalue3 := flag.Arg(4) == "true"
     value3 := argvalue3
-    fmt.Print(client.Push(context.Background(), value0, value1, value2, value3))
+    argvalue4, err71 := (strconv.ParseInt(flag.Arg(5), 10, 64))
+    if err71 != nil {
+      Usage()
+      return
+    }
+    value4 := argvalue4
+    fmt.Print(client.Push(context.Background(), value0, value1, value2, value3, value4))
     fmt.Print("\n")
     break
-  case "dirty":
-    if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Dirty requires 1 args")
+  case "gQueue":
+    if flag.NArg() - 1 != 4 {
+      fmt.Fprintln(os.Stderr, "GQueue requires 4 args")
       flag.Usage()
     }
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
-    fmt.Print(client.Dirty(context.Background(), value0))
+    argvalue1, err73 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err73 != nil {
+      Usage()
+      return
+    }
+    value1 := argvalue1
+    argvalue2 := flag.Arg(3)
+    value2 := argvalue2
+    argvalue3 := flag.Arg(4) == "true"
+    value3 := argvalue3
+    fmt.Print(client.GQueue(context.Background(), value0, value1, value2, value3))
+    fmt.Print("\n")
+    break
+  case "gClear":
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "GClear requires 3 args")
+      flag.Usage()
+    }
+    argvalue0 := flag.Arg(1)
+    value0 := argvalue0
+    argvalue1 := flag.Arg(2) == "true"
+    value1 := argvalue1
+    argvalue2 := flag.Arg(3) == "true"
+    value2 := argvalue2
+    fmt.Print(client.GClear(context.Background(), value0, value1, value2))
+    fmt.Print("\n")
+    break
+  case "gLasts":
+    if flag.NArg() - 1 != 4 {
+      fmt.Fprintln(os.Stderr, "GLasts requires 4 args")
+      flag.Usage()
+    }
+    argvalue0 := flag.Arg(1)
+    value0 := argvalue0
+    argvalue1, err80 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err80 != nil {
+      Usage()
+      return
+    }
+    value1 := argvalue1
+    argvalue2 := flag.Arg(3)
+    value2 := argvalue2
+    argvalue3, err82 := (strconv.ParseInt(flag.Arg(4), 10, 64))
+    if err82 != nil {
+      Usage()
+      return
+    }
+    value3 := argvalue3
+    fmt.Print(client.GLasts(context.Background(), value0, value1, value2, value3))
+    fmt.Print("\n")
+    break
+  case "gPush":
+    if flag.NArg() - 1 != 8 {
+      fmt.Fprintln(os.Stderr, "GPush requires 8 args")
+      flag.Usage()
+    }
+    argvalue0 := flag.Arg(1)
+    value0 := argvalue0
+    argvalue1 := flag.Arg(2)
+    value1 := argvalue1
+    argvalue2 := []byte(flag.Arg(3))
+    value2 := argvalue2
+    argvalue3 := flag.Arg(4) == "true"
+    value3 := argvalue3
+    tmp4, err87 := (strconv.Atoi(flag.Arg(5)))
+    if err87 != nil {
+      Usage()
+      return
+    }
+    argvalue4 := int32(tmp4)
+    value4 := argvalue4
+    argvalue5 := flag.Arg(6) == "true"
+    value5 := argvalue5
+    argvalue6 := flag.Arg(7)
+    value6 := argvalue6
+    argvalue7, err90 := (strconv.ParseInt(flag.Arg(8), 10, 64))
+    if err90 != nil {
+      Usage()
+      return
+    }
+    value7 := argvalue7
+    fmt.Print(client.GPush(context.Background(), value0, value1, value2, value3, value4, value5, value6, value7))
+    fmt.Print("\n")
+    break
+  case "gDirty":
+    if flag.NArg() - 1 != 1 {
+      fmt.Fprintln(os.Stderr, "GDirty requires 1 args")
+      flag.Usage()
+    }
+    argvalue0 := flag.Arg(1)
+    value0 := argvalue0
+    fmt.Print(client.GDirty(context.Background(), value0))
     fmt.Print("\n")
     break
   case "":

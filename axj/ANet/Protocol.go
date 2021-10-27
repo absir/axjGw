@@ -33,9 +33,9 @@ type Protocol interface {
 	// 流请求读取
 	ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 返回数据
-	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte
+	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte
 	// 返回流写入
-	RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte) (err error)
+	RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error)
 	// 批量返回数据头
 	RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte
 	RepBS(bh []byte, data []byte, sticky bool, head byte) []byte
@@ -151,7 +151,16 @@ func (that ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err 
 	return
 }
 
-func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte) []byte {
+func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte {
+	if req == REQ_PUSHI {
+		if id == 0 {
+			req = REQ_PUSH
+		}
+
+	} else {
+		id = 0
+	}
+
 	// 头长度
 	var bLen int32 = 1
 
@@ -179,6 +188,10 @@ func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky
 	var dLen int32 = 0
 	if data != nil {
 		dLen = int32(len(data))
+	}
+
+	if req == REQ_PUSHI {
+		bLen += 8
 	}
 
 	if dLen > 0 {
@@ -210,6 +223,11 @@ func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky
 		KtBytes.SetVInt(bs, off, uriI, &off)
 	}
 
+	if req == REQ_PUSHI {
+		// 设置消息编号
+		KtBytes.SetInt64(bs, off, id, &off)
+	}
+
 	if dLen > 0 {
 		// 数据
 		if sticky {
@@ -225,7 +243,16 @@ func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky
 	return bs
 }
 
-func (that ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte) (err error) {
+func (that ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error) {
+	if req == REQ_PUSHI {
+		if id == 0 {
+			req = REQ_PUSH
+		}
+
+	} else {
+		id = 0
+	}
+
 	err = nil
 	// 头状态准备
 	if req > 0 {
@@ -304,6 +331,21 @@ func (that ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req in
 		}
 	}
 
+	// 写入消息编号
+	if req == REQ_PUSHI {
+		KtBytes.SetInt32(_buff, 0, int32(id), &off)
+		err = conn.Write(_buff[0:off])
+		if err != nil {
+			return
+		}
+
+		KtBytes.SetInt32(_buff, 0, int32(id>>32), &off)
+		err = conn.Write(_buff[0:off])
+		if err != nil {
+			return
+		}
+	}
+
 	// 写入数据
 	if dLen > 0 {
 		// 数据
@@ -329,7 +371,7 @@ func (that ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head b
 		head |= HEAD_DATA
 	}
 
-	return that.Rep(req, uri, uriI, nil, false, head)
+	return that.Rep(req, uri, uriI, nil, false, head, 0)
 }
 
 func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte {

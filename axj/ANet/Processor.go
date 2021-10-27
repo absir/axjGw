@@ -17,8 +17,8 @@ func (that Processor) Req(conn Conn, decryKey []byte) (error, int32, string, int
 	return req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, that.DataMax)
 }
 
-func (that Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) error {
-	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate)
+func (that Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
+	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate, id)
 }
 
 func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
@@ -63,7 +63,7 @@ func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decry
 	return
 }
 
-func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool) (err error) {
+func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) (err error) {
 	if req < 0 {
 		// 纯写入data
 		return conn.Write(data)
@@ -106,10 +106,10 @@ func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Co
 	}
 
 	if wBuff == nil {
-		return conn.Write(protocol.Rep(req, uri, uriI, data, conn.Sticky(), head))
+		return conn.Write(protocol.Rep(req, uri, uriI, data, conn.Sticky(), head, id))
 
 	} else {
-		return protocol.RepOut(locker, conn, wBuff, req, uri, uriI, data, head)
+		return protocol.RepOut(locker, conn, wBuff, req, uri, uriI, data, head, id)
 	}
 }
 
@@ -153,7 +153,7 @@ func (that RepBatch) init(protocol Protocol, compress Compress, compressMin int,
 	that.protocol = protocol
 	that.repOrBH = func(sticky bool) []byte {
 		if data == nil {
-			return protocol.Rep(req, uri, uriI, data, sticky, head)
+			return protocol.Rep(req, uri, uriI, data, sticky, head, 0)
 
 		} else {
 			return protocol.RepBH(req, uri, uriI, true, head)
