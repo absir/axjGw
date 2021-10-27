@@ -25,9 +25,16 @@ struct Group {
     // 版本
     1: i64 version
     // 用户列表
-    2: list<string> users;
+    2: list<GroupTeam> teams;
     // 读扩散、写扩散
     3: bool readFeed;
+}
+
+struct GroupTeam {
+    // 用户编号
+    1: string gid;
+    // 写扩散时，不推送，需要点击查看
+    2: bool nofeed;
 }
 
 // 访问控制

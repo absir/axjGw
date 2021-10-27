@@ -209,6 +209,6 @@ func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []by
 	return gw.Result__Fail, err
 }
 
-func (g GatewayIs) GDirty(ctx context.Context, sid string) (_r gw.Result_, _err error) {
+func (g GatewayIs) GDirty(ctx context.Context, gid string) (_r gw.Result_, _err error) {
 	panic("implement me")
 }
