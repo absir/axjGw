@@ -45,7 +45,9 @@ service GatewayI {
     // 主动获取消息
     Result gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId);
     // 推送
-    Result gPush(1: string gid, 2: string uri, 3: binary bytes, 4: bool isolate, 6: i32 qs, 7: bool queue, 8: string unique, 9: i64 fid)
+    i64 gPush(1: string gid, 2: string uri, 3: binary bytes, 4: bool isolate, 6: i32 qs, 7: bool queue, 8: string unique, 9: i64 fid)
+    // 推送确认
+    Result gPushA(1: string gid, 2: i64 id, 3: bool succ)
     // 组更新、删除
-    Result gDirty(1: string gid);
+    Result teamDirty(1: string tid);
 }

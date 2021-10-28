@@ -4,7 +4,6 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtStr"
-	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axjGW/pkg/ext"
 	"axjGW/pkg/gws"
@@ -34,6 +33,10 @@ func (that server) Init(workId int32) {
 	initUriDict()
 	// 消息管理初始化
 	initMsgMng()
+	// 群组管理器
+	initTeamMng()
+	// 聊天管理
+	initChatMng()
 	that.Handler = new(handler)
 	that.Manager = ANet.NewManager(that.Handler, workId, time.Duration(Config.IdleDrt)*time.Millisecond, time.Duration(Config.CheckDrt)*time.Millisecond)
 	that.Context = context.Background()
@@ -118,7 +121,7 @@ func (that server) connOpen(conn ANet.Conn) ANet.Client {
 	// 消息处理
 	if clientG.Gid() != "" {
 		// 清理消息队列配置
-		result, err := Server.GetProdClient(clientG).GetGWIClient().Queue(Server.Context, clientG.gid, clientG.Id(), clientG.Unique(), login.Clear)
+		result, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, clientG.gid, clientG.Id(), clientG.Unique(), login.Clear)
 		if result != gw.Result__Succ {
 			clientG.Close(err, nil)
 			return nil
@@ -200,8 +203,8 @@ func (that server) GetProdCid(cid int64) *Prod {
 	return that.GetProds(Config.GwProd).GetProd(that.Manager.IdWorker().GetWorkerId(cid))
 }
 
-func (that server) GetProdMid(mid string) *Prod {
-	return that.GetProds(Config.GwProd).GetProdHash(Kt.HashCode(KtUnsafe.StringToBytes(mid)))
+func (that server) GetProdGid(gid string) *Prod {
+	return that.GetProds(Config.GwProd).GetProdHashS(gid)
 }
 
 func (that server) GetProdClient(clientG *ClientG) *Prod {

@@ -27,7 +27,7 @@ type msgMng struct {
 	IdleDrt   int64
 	checkLoop int64
 	checkTime int64
-	db        MsgDb
+	Db        MsgDb
 	idWorkder *Util.IdWorker
 	locker    sync.Locker
 	connVer   int32
@@ -71,7 +71,7 @@ func initMsgMng() {
 		}
 		// 自动创建表
 		msgGorm.AutoMigrate()
-		that.db = msgGorm
+		that.Db = msgGorm
 	}
 
 	// 属性初始化
@@ -425,7 +425,7 @@ func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue 
 		msg := NewMsg(uri, bytes, unique)
 		that.lastPush(sess, msg, fid)
 		msgD := msg.Get()
-		if qs >= 3 && MsgMng.db != nil {
+		if qs >= 3 && MsgMng.Db != nil {
 			err = that.insertMsgD(msgD)
 		}
 
@@ -440,14 +440,14 @@ func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue 
 func (that MsgGrp) insertMsgD(msgD *MsgD) error {
 	if msgD.Id > 0 {
 		// sess.lastQueue加强不漏消息
-		return MsgMng.db.Insert(*msgD)
+		return MsgMng.Db.Insert(*msgD)
 
 	} else {
 		// laster加强消息顺序写入
 		that.getLaster().Lock()
 		defer that.getLaster().Unlock()
 		msgD.Id = MsgMng.idWorkder.Generate()
-		return MsgMng.db.Insert(*msgD)
+		return MsgMng.Db.Insert(*msgD)
 	}
 }
 
@@ -712,7 +712,7 @@ func (that MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
 
 			} else {
 				// 缓冲消息
-				msgDs := MsgMng.db.Next(that.grp.gid, lastId, MsgMng.NextLimit)
+				msgDs := MsgMng.Db.Next(that.grp.gid, lastId, MsgMng.NextLimit)
 				mLen := len(msgDs)
 				if mLen <= 0 {
 					return
@@ -762,7 +762,7 @@ func (that MsgSess) inLastLoop(client *MsgClient) int64 {
 }
 
 func (that MsgSess) lastLoad() {
-	if !MsgMng.LastLoad || MsgMng.db == nil || that.lastLoaded {
+	if !MsgMng.LastLoad || MsgMng.Db == nil || that.lastLoaded {
 		return
 	}
 
@@ -783,7 +783,7 @@ func (that MsgSess) lastLoad() {
 			return
 		}
 
-		msgDs := MsgMng.db.Last(that.grp.gid, MsgMng.LastMax)
+		msgDs := MsgMng.Db.Last(that.grp.gid, MsgMng.LastMax)
 		// 锁放在io之后
 		that.grp.locker.Lock()
 		defer that.grp.locker.Unlock()
@@ -830,4 +830,8 @@ func (that MsgSess) lastGet(client *MsgClient, lastLoop int64, lastId int64) (Ms
 	}
 
 	return nil, lastIn
+}
+
+func (that msgMng) dbMsgFail(id int64, gid string) {
+	Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid,)
 }

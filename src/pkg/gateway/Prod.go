@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"axj/Kt/Kt"
+	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"github.com/apache/thrift/lib/go/thrift"
@@ -144,6 +146,14 @@ func (that Prods) GetProdHash(hash int) *Prod {
 
 	id := that.ids.Get(hash % size)
 	return that.prods[id.(int32)]
+}
+
+func (that Prods) GetProdHashS(hash string) *Prod {
+	if that.ids.Size() == 1 {
+		return that.prods[that.ids.Get(0).(int32)]
+	}
+
+	return that.GetProdHash(Kt.HashCode(KtUnsafe.StringToBytes(hash)))
 }
 
 func (that Prods) GetProdRand() *Prod {

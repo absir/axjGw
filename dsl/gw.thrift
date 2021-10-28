@@ -21,16 +21,16 @@ struct Login {
     9: bool back
 }
 
-struct Group {
+struct Team {
     // 版本
     1: i64 version
     // 用户列表
-    2: list<GroupTeam> teams;
+    2: list<Member> members;
     // 读扩散、写扩散
     3: bool readFeed;
 }
 
-struct GroupTeam {
+struct Member {
     // 用户编号
     1: string gid;
     // 写扩散时，不推送，需要点击查看
@@ -44,7 +44,7 @@ service Acl {
     // 登录回调
     void loginBack(1: i64 cid, 2: i64 uid, 3: string sid);
     // 组查询
-    Group group(1: string gid);
+    Team team(1: string tid);
     // 挤掉线
     binary kickBs();
 }

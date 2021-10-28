@@ -449,31 +449,31 @@ func (p *Login) String() string {
 
 // Attributes:
 //  - Version
-//  - Teams
+//  - Members
 //  - ReadFeed
-type Group struct {
+type Team struct {
   Version int64 `thrift:"version,1" db:"version" json:"version"`
-  Teams []*GroupTeam `thrift:"teams,2" db:"teams" json:"teams"`
+  Members []*Member `thrift:"members,2" db:"members" json:"members"`
   ReadFeed bool `thrift:"readFeed,3" db:"readFeed" json:"readFeed"`
 }
 
-func NewGroup() *Group {
-  return &Group{}
+func NewTeam() *Team {
+  return &Team{}
 }
 
 
-func (p *Group) GetVersion() int64 {
+func (p *Team) GetVersion() int64 {
   return p.Version
 }
 
-func (p *Group) GetTeams() []*GroupTeam {
-  return p.Teams
+func (p *Team) GetMembers() []*Member {
+  return p.Members
 }
 
-func (p *Group) GetReadFeed() bool {
+func (p *Team) GetReadFeed() bool {
   return p.ReadFeed
 }
-func (p *Group) Read(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Team) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -531,7 +531,7 @@ func (p *Group) Read(ctx context.Context, iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *Group)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Team)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
   if v, err := iprot.ReadI64(ctx); err != nil {
   return thrift.PrependError("error reading field 1: ", err)
 } else {
@@ -540,19 +540,19 @@ func (p *Group)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *Group)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Team)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
   _, size, err := iprot.ReadListBegin(ctx)
   if err != nil {
     return thrift.PrependError("error reading list begin: ", err)
   }
-  tSlice := make([]*GroupTeam, 0, size)
-  p.Teams =  tSlice
+  tSlice := make([]*Member, 0, size)
+  p.Members =  tSlice
   for i := 0; i < size; i ++ {
-    _elem3 := &GroupTeam{}
+    _elem3 := &Member{}
     if err := _elem3.Read(ctx, iprot); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
     }
-    p.Teams = append(p.Teams, _elem3)
+    p.Members = append(p.Members, _elem3)
   }
   if err := iprot.ReadListEnd(ctx); err != nil {
     return thrift.PrependError("error reading list end: ", err)
@@ -560,7 +560,7 @@ func (p *Group)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *Group)  ReadField3(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Team)  ReadField3(ctx context.Context, iprot thrift.TProtocol) error {
   if v, err := iprot.ReadBool(ctx); err != nil {
   return thrift.PrependError("error reading field 3: ", err)
 } else {
@@ -569,8 +569,8 @@ func (p *Group)  ReadField3(ctx context.Context, iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *Group) Write(ctx context.Context, oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin(ctx, "Group"); err != nil {
+func (p *Team) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "Team"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(ctx, oprot); err != nil { return err }
@@ -584,7 +584,7 @@ func (p *Group) Write(ctx context.Context, oprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *Group) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+func (p *Team) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if err := oprot.WriteFieldBegin(ctx, "version", thrift.I64, 1); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:version: ", p), err) }
   if err := oprot.WriteI64(ctx, int64(p.Version)); err != nil {
@@ -594,13 +594,13 @@ func (p *Group) writeField1(ctx context.Context, oprot thrift.TProtocol) (err er
   return err
 }
 
-func (p *Group) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin(ctx, "teams", thrift.LIST, 2); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:teams: ", p), err) }
-  if err := oprot.WriteListBegin(ctx, thrift.STRUCT, len(p.Teams)); err != nil {
+func (p *Team) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "members", thrift.LIST, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:members: ", p), err) }
+  if err := oprot.WriteListBegin(ctx, thrift.STRUCT, len(p.Members)); err != nil {
     return thrift.PrependError("error writing list begin: ", err)
   }
-  for _, v := range p.Teams {
+  for _, v := range p.Members {
     if err := v.Write(ctx, oprot); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
     }
@@ -609,11 +609,11 @@ func (p *Group) writeField2(ctx context.Context, oprot thrift.TProtocol) (err er
     return thrift.PrependError("error writing list end: ", err)
   }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:teams: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:members: ", p), err) }
   return err
 }
 
-func (p *Group) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
+func (p *Team) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if err := oprot.WriteFieldBegin(ctx, "readFeed", thrift.BOOL, 3); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:readFeed: ", p), err) }
   if err := oprot.WriteBool(ctx, bool(p.ReadFeed)); err != nil {
@@ -623,50 +623,50 @@ func (p *Group) writeField3(ctx context.Context, oprot thrift.TProtocol) (err er
   return err
 }
 
-func (p *Group) Equals(other *Group) bool {
+func (p *Team) Equals(other *Team) bool {
   if p == other {
     return true
   } else if p == nil || other == nil {
     return false
   }
   if p.Version != other.Version { return false }
-  if len(p.Teams) != len(other.Teams) { return false }
-  for i, _tgt := range p.Teams {
-    _src4 := other.Teams[i]
+  if len(p.Members) != len(other.Members) { return false }
+  for i, _tgt := range p.Members {
+    _src4 := other.Members[i]
     if !_tgt.Equals(_src4) { return false }
   }
   if p.ReadFeed != other.ReadFeed { return false }
   return true
 }
 
-func (p *Group) String() string {
+func (p *Team) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("Group(%+v)", *p)
+  return fmt.Sprintf("Team(%+v)", *p)
 }
 
 // Attributes:
 //  - Gid
 //  - Nofeed
-type GroupTeam struct {
+type Member struct {
   Gid string `thrift:"gid,1" db:"gid" json:"gid"`
   Nofeed bool `thrift:"nofeed,2" db:"nofeed" json:"nofeed"`
 }
 
-func NewGroupTeam() *GroupTeam {
-  return &GroupTeam{}
+func NewMember() *Member {
+  return &Member{}
 }
 
 
-func (p *GroupTeam) GetGid() string {
+func (p *Member) GetGid() string {
   return p.Gid
 }
 
-func (p *GroupTeam) GetNofeed() bool {
+func (p *Member) GetNofeed() bool {
   return p.Nofeed
 }
-func (p *GroupTeam) Read(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Member) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -714,7 +714,7 @@ func (p *GroupTeam) Read(ctx context.Context, iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *GroupTeam)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Member)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(ctx); err != nil {
   return thrift.PrependError("error reading field 1: ", err)
 } else {
@@ -723,7 +723,7 @@ func (p *GroupTeam)  ReadField1(ctx context.Context, iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *GroupTeam)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *Member)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
   if v, err := iprot.ReadBool(ctx); err != nil {
   return thrift.PrependError("error reading field 2: ", err)
 } else {
@@ -732,8 +732,8 @@ func (p *GroupTeam)  ReadField2(ctx context.Context, iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *GroupTeam) Write(ctx context.Context, oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin(ctx, "GroupTeam"); err != nil {
+func (p *Member) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "Member"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(ctx, oprot); err != nil { return err }
@@ -746,7 +746,7 @@ func (p *GroupTeam) Write(ctx context.Context, oprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *GroupTeam) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+func (p *Member) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if err := oprot.WriteFieldBegin(ctx, "gid", thrift.STRING, 1); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:gid: ", p), err) }
   if err := oprot.WriteString(ctx, string(p.Gid)); err != nil {
@@ -756,7 +756,7 @@ func (p *GroupTeam) writeField1(ctx context.Context, oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *GroupTeam) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
+func (p *Member) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if err := oprot.WriteFieldBegin(ctx, "nofeed", thrift.BOOL, 2); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:nofeed: ", p), err) }
   if err := oprot.WriteBool(ctx, bool(p.Nofeed)); err != nil {
@@ -766,7 +766,7 @@ func (p *GroupTeam) writeField2(ctx context.Context, oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *GroupTeam) Equals(other *GroupTeam) bool {
+func (p *Member) Equals(other *Member) bool {
   if p == other {
     return true
   } else if p == nil || other == nil {
@@ -777,11 +777,11 @@ func (p *GroupTeam) Equals(other *GroupTeam) bool {
   return true
 }
 
-func (p *GroupTeam) String() string {
+func (p *Member) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("GroupTeam(%+v)", *p)
+  return fmt.Sprintf("Member(%+v)", *p)
 }
 
 type Acl interface {
@@ -795,8 +795,8 @@ type Acl interface {
   //  - Sid
   LoginBack(ctx context.Context, cid int64, uid int64, sid string) (_err error)
   // Parameters:
-  //  - Gid
-  Group(ctx context.Context, gid string) (_r *Group, _err error)
+  //  - Tid
+  Team(ctx context.Context, tid string) (_r *Team, _err error)
   KickBs(ctx context.Context) (_r []byte, _err error)
 }
 
@@ -872,13 +872,13 @@ func (p *AclClient) LoginBack(ctx context.Context, cid int64, uid int64, sid str
 }
 
 // Parameters:
-//  - Gid
-func (p *AclClient) Group(ctx context.Context, gid string) (_r *Group, _err error) {
-  var _args11 AclGroupArgs
-  _args11.Gid = gid
-  var _result13 AclGroupResult
+//  - Tid
+func (p *AclClient) Team(ctx context.Context, tid string) (_r *Team, _err error) {
+  var _args11 AclTeamArgs
+  _args11.Tid = tid
+  var _result13 AclTeamResult
   var _meta12 thrift.ResponseMeta
-  _meta12, _err = p.Client_().Call(ctx, "group", &_args11, &_result13)
+  _meta12, _err = p.Client_().Call(ctx, "team", &_args11, &_result13)
   p.SetLastResponseMeta_(_meta12)
   if _err != nil {
     return
@@ -921,7 +921,7 @@ func NewAclProcessor(handler Acl) *AclProcessor {
   self17 := &AclProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
   self17.processorMap["login"] = &aclProcessorLogin{handler:handler}
   self17.processorMap["loginBack"] = &aclProcessorLoginBack{handler:handler}
-  self17.processorMap["group"] = &aclProcessorGroup{handler:handler}
+  self17.processorMap["team"] = &aclProcessorTeam{handler:handler}
   self17.processorMap["kickBs"] = &aclProcessorKickBs{handler:handler}
 return self17
 }
@@ -1098,17 +1098,17 @@ func (p *aclProcessorLoginBack) Process(ctx context.Context, seqId int32, iprot,
   return true, err
 }
 
-type aclProcessorGroup struct {
+type aclProcessorTeam struct {
   handler Acl
 }
 
-func (p *aclProcessorGroup) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-  args := AclGroupArgs{}
+func (p *aclProcessorTeam) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := AclTeamArgs{}
   var err2 error
   if err2 = args.Read(ctx, iprot); err2 != nil {
     iprot.ReadMessageEnd(ctx)
     x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
-    oprot.WriteMessageBegin(ctx, "group", thrift.EXCEPTION, seqId)
+    oprot.WriteMessageBegin(ctx, "team", thrift.EXCEPTION, seqId)
     x.Write(ctx, oprot)
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
@@ -1142,15 +1142,15 @@ func (p *aclProcessorGroup) Process(ctx context.Context, seqId int32, iprot, opr
     }(tickerCtx, cancel)
   }
 
-  result := AclGroupResult{}
-  var retval *Group
-  if retval, err2 = p.handler.Group(ctx, args.Gid); err2 != nil {
+  result := AclTeamResult{}
+  var retval *Team
+  if retval, err2 = p.handler.Team(ctx, args.Tid); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
     }
-    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing group: " + err2.Error())
-    oprot.WriteMessageBegin(ctx, "group", thrift.EXCEPTION, seqId)
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing team: " + err2.Error())
+    oprot.WriteMessageBegin(ctx, "team", thrift.EXCEPTION, seqId)
     x.Write(ctx, oprot)
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
@@ -1159,7 +1159,7 @@ func (p *aclProcessorGroup) Process(ctx context.Context, seqId int32, iprot, opr
     result.Success = retval
   }
   tickerCancel()
-  if err2 = oprot.WriteMessageBegin(ctx, "group", thrift.REPLY, seqId); err2 != nil {
+  if err2 = oprot.WriteMessageBegin(ctx, "team", thrift.REPLY, seqId); err2 != nil {
     err = thrift.WrapTException(err2)
   }
   if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
@@ -1701,20 +1701,20 @@ func (p *AclLoginBackResult) String() string {
 }
 
 // Attributes:
-//  - Gid
-type AclGroupArgs struct {
-  Gid string `thrift:"gid,1" db:"gid" json:"gid"`
+//  - Tid
+type AclTeamArgs struct {
+  Tid string `thrift:"tid,1" db:"tid" json:"tid"`
 }
 
-func NewAclGroupArgs() *AclGroupArgs {
-  return &AclGroupArgs{}
+func NewAclTeamArgs() *AclTeamArgs {
+  return &AclTeamArgs{}
 }
 
 
-func (p *AclGroupArgs) GetGid() string {
-  return p.Gid
+func (p *AclTeamArgs) GetTid() string {
+  return p.Tid
 }
-func (p *AclGroupArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *AclTeamArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -1752,17 +1752,17 @@ func (p *AclGroupArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AclGroupArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *AclTeamArgs)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(ctx); err != nil {
   return thrift.PrependError("error reading field 1: ", err)
 } else {
-  p.Gid = v
+  p.Tid = v
 }
   return nil
 }
 
-func (p *AclGroupArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin(ctx, "group_args"); err != nil {
+func (p *AclTeamArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "team_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(ctx, oprot); err != nil { return err }
@@ -1774,45 +1774,45 @@ func (p *AclGroupArgs) Write(ctx context.Context, oprot thrift.TProtocol) error 
   return nil
 }
 
-func (p *AclGroupArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin(ctx, "gid", thrift.STRING, 1); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:gid: ", p), err) }
-  if err := oprot.WriteString(ctx, string(p.Gid)); err != nil {
-  return thrift.PrependError(fmt.Sprintf("%T.gid (1) field write error: ", p), err) }
+func (p *AclTeamArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "tid", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:tid: ", p), err) }
+  if err := oprot.WriteString(ctx, string(p.Tid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.tid (1) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:gid: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:tid: ", p), err) }
   return err
 }
 
-func (p *AclGroupArgs) String() string {
+func (p *AclTeamArgs) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("AclGroupArgs(%+v)", *p)
+  return fmt.Sprintf("AclTeamArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Success
-type AclGroupResult struct {
-  Success *Group `thrift:"success,0" db:"success" json:"success,omitempty"`
+type AclTeamResult struct {
+  Success *Team `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
 
-func NewAclGroupResult() *AclGroupResult {
-  return &AclGroupResult{}
+func NewAclTeamResult() *AclTeamResult {
+  return &AclTeamResult{}
 }
 
-var AclGroupResult_Success_DEFAULT *Group
-func (p *AclGroupResult) GetSuccess() *Group {
+var AclTeamResult_Success_DEFAULT *Team
+func (p *AclTeamResult) GetSuccess() *Team {
   if !p.IsSetSuccess() {
-    return AclGroupResult_Success_DEFAULT
+    return AclTeamResult_Success_DEFAULT
   }
 return p.Success
 }
-func (p *AclGroupResult) IsSetSuccess() bool {
+func (p *AclTeamResult) IsSetSuccess() bool {
   return p.Success != nil
 }
 
-func (p *AclGroupResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *AclTeamResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -1850,16 +1850,16 @@ func (p *AclGroupResult) Read(ctx context.Context, iprot thrift.TProtocol) error
   return nil
 }
 
-func (p *AclGroupResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
-  p.Success = &Group{}
+func (p *AclTeamResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  p.Success = &Team{}
   if err := p.Success.Read(ctx, iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
   }
   return nil
 }
 
-func (p *AclGroupResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin(ctx, "group_result"); err != nil {
+func (p *AclTeamResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "team_result"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField0(ctx, oprot); err != nil { return err }
@@ -1871,7 +1871,7 @@ func (p *AclGroupResult) Write(ctx context.Context, oprot thrift.TProtocol) erro
   return nil
 }
 
-func (p *AclGroupResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+func (p *AclTeamResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if p.IsSetSuccess() {
     if err := oprot.WriteFieldBegin(ctx, "success", thrift.STRUCT, 0); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
@@ -1884,11 +1884,11 @@ func (p *AclGroupResult) writeField0(ctx context.Context, oprot thrift.TProtocol
   return err
 }
 
-func (p *AclGroupResult) String() string {
+func (p *AclTeamResult) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("AclGroupResult(%+v)", *p)
+  return fmt.Sprintf("AclTeamResult(%+v)", *p)
 }
 
 type AclKickBsArgs struct {

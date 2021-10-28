@@ -24,7 +24,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "\nFunctions:")
   fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
   fmt.Fprintln(os.Stderr, "  void loginBack(i64 cid, i64 uid, string sid)")
-  fmt.Fprintln(os.Stderr, "  Group group(string gid)")
+  fmt.Fprintln(os.Stderr, "  Team team(string tid)")
   fmt.Fprintln(os.Stderr, "  string kickBs()")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
@@ -185,14 +185,14 @@ func main() {
     fmt.Print(client.LoginBack(context.Background(), value0, value1, value2))
     fmt.Print("\n")
     break
-  case "group":
+  case "team":
     if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "Group requires 1 args")
+      fmt.Fprintln(os.Stderr, "Team requires 1 args")
       flag.Usage()
     }
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
-    fmt.Print(client.Group(context.Background(), value0))
+    fmt.Print(client.Team(context.Background(), value0))
     fmt.Print("\n")
     break
   case "kickBs":

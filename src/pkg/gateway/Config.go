@@ -18,6 +18,7 @@ type config struct {
 	GwProd      string                 // 网关服务名
 	AclProd     string                 // Acl服务名
 	TConfig     *thrift.TConfiguration // thrift server 配置
+	TeamMax     int                    // 群组最大缓存
 }
 
 var Config *config
@@ -33,6 +34,7 @@ func initConfig(workId int32) {
 		GwProd:      "gw",
 		AclProd:     "acl",
 		TConfig:     nil,
+		TeamMax:     65535,
 	}
 	APro.SubCfgBind("gateway", Config)
 	Config.WorkId = workId

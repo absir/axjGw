@@ -199,20 +199,39 @@ func (g GatewayIs) GLasts(ctx context.Context, gid string, cid int64, unique str
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r gw.Result_, _err error) {
+func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r int64, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+		return int64(gw.Result__ProdErr), nil
+	}
+
+	grp := gateway.MsgMng.GetMsgGrp(gid)
+	msg, succ, err := grp.Push(uri, bytes, isolate, qs, queue, unique, fid)
+	if succ {
+		return msg.Get().Id, nil
+	}
+
+	return int64(gw.Result__Fail), err
+}
+
+func (g GatewayIs) GPushA(ctx context.Context, gid string, id int64, succ bool) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
 		return gw.Result__ProdErr, nil
 	}
 
-	grp := gateway.MsgMng.GetMsgGrp(gid)
-	_, succ, err := grp.Push(uri, bytes, isolate, qs, queue, unique, fid)
-	if succ {
-		return gw.Result__Succ, nil
+	if gateway.MsgMng.Db == nil {
+
+	} else {
+
 	}
 
-	return gw.Result__Fail, err
+	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) GDirty(ctx context.Context, gid string) (_r gw.Result_, _err error) {
-	panic("implement me")
+func (g GatewayIs) TeamDirty(ctx context.Context, tid string) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(tid))) {
+		return gw.Result__ProdErr, nil
+	}
+
+	gateway.TeamMng.Dirty(tid)
+	return gw.Result__Fail, nil
 }
