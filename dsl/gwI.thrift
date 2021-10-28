@@ -27,7 +27,7 @@ service GatewayI {
     // 连接
     Result conn(1: i64 cid, 2: string gid, 3: string unique)
     // 断开
-    oneway void disc(1: i64 cid, 2: string gid, 3: string unique)
+    oneway void disc(1: i64 cid, 2: string gid, 3: string unique, 4: i32 connVer)
     // 存活
     Result alive(1: i64 cid)
     // 服务编号
@@ -35,7 +35,7 @@ service GatewayI {
     // 服务编号
     Result rids(1: i64 cid, 2: map<string, i32> rids)
     // 最新消息通知
-    Result last(1: i64 cid, 2: string gid)
+    Result last(1: i64 cid, 2: string gid, 3: i32 connVer)
     // 推送
     Result push(1: i64 cid, 2: string uri, 3: binary bytes, 4: bool isolate, 5: i64 id);
     // 消息队列初始化

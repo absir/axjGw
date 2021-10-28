@@ -3,6 +3,7 @@ package gateway
 import (
 	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtBytes"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/Util"
 	"errors"
@@ -29,11 +30,14 @@ type msgMng struct {
 	db        MsgDb
 	idWorkder *Util.IdWorker
 	locker    sync.Locker
+	connVer   int32
 	grpMap    *sync.Map
 }
 
 // 初始变量
 var MsgMng *msgMng
+
+const connVerMax = KtBytes.VINT_3_MAX - 1
 
 func initMsgMng() {
 	// 消息管理配置
@@ -80,6 +84,7 @@ type MsgGrp struct {
 	gid      string
 	ghash    int
 	locker   *sync.RWMutex
+	laster   sync.Locker
 	passTime int64
 	sess     *MsgSess
 }
@@ -98,6 +103,7 @@ type MsgSess struct {
 type MsgClient struct {
 	cid      int64
 	gatewayI gw.GatewayI
+	connVer  int32
 	idleTime int64
 	lasting  int64
 	lastLoop int64
@@ -191,6 +197,17 @@ func (that msgMng) newMsgGrp(gid string) *MsgGrp {
 	return grp
 }
 
+func (that msgMng) newConnVer() int32 {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	that.connVer++
+	if that.connVer > connVerMax {
+		that.connVer = 1
+	}
+
+	return that.connVer
+}
+
 func (that MsgGrp) Sess() *MsgSess {
 	return that.sess
 }
@@ -202,14 +219,6 @@ func (that MsgGrp) retain() {
 func (that *MsgGrp) newMsgSess() *MsgSess {
 	sess := new(MsgSess)
 	sess.grp = that
-	if MsgMng.QueueMax > 0 {
-		sess.queue = Util.NewCircleQueue(MsgMng.QueueMax)
-	}
-
-	if MsgMng.LastMax > 0 {
-		sess.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
-	}
-
 	return sess
 }
 
@@ -219,6 +228,18 @@ func (that MsgGrp) newMsgClient(cid int64) *MsgClient {
 	client.gatewayI = Server.GetProdCid(cid).GetGWIClient()
 	client.idleTime = time.Now().UnixNano() + that.passTime
 	return client
+}
+
+func (that MsgGrp) getLaster() sync.Locker {
+	if that.laster == nil {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+		if that.laster == nil {
+			that.laster = new(sync.Mutex)
+		}
+	}
+
+	return that.laster
 }
 
 func (that MsgGrp) getSess(create bool) *MsgSess {
@@ -271,7 +292,7 @@ func (that MsgGrp) closeOld(old *MsgClient, cid int64, unique string) bool {
 
 	sess.clientNum--
 	// 关闭通知
-	old.gatewayI.Kick(Server.Context, old.cid, nil)
+	go old.gatewayI.Kick(Server.Context, old.cid, nil)
 	return true
 }
 
@@ -281,8 +302,6 @@ func (that MsgGrp) checkClients() {
 		return
 	}
 
-	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.checkClient(sess.client, "")
 	if sess.clientMap != nil {
 		sess.clientMap.Range(that.checkRange)
@@ -306,6 +325,8 @@ func (that MsgGrp) checkClient(client *MsgClient, unique string) {
 
 	result, _ := client.gatewayI.Alive(Server.Context, client.cid)
 	if result != gw.Result__Succ {
+		that.locker.Lock()
+		defer that.locker.Unlock()
 		that.closeOld(client, client.cid, unique)
 	}
 }
@@ -316,6 +337,7 @@ func (that MsgGrp) Conn(cid int64, unique string) *MsgClient {
 	client := that.getClient(unique)
 	if client != nil {
 		if client.cid == cid {
+			client.connVer = MsgMng.newConnVer()
 			return client
 
 		} else if client.cid > cid {
@@ -327,6 +349,7 @@ func (that MsgGrp) Conn(cid int64, unique string) *MsgClient {
 
 	sess := that.getSess(true)
 	client = that.newMsgClient(cid)
+	client.connVer = MsgMng.newConnVer()
 	if unique == "" {
 		sess.client = client
 
@@ -342,11 +365,11 @@ func (that MsgGrp) Conn(cid int64, unique string) *MsgClient {
 	return client
 }
 
-func (that MsgGrp) Close(cid int64, unique string) bool {
+func (that MsgGrp) Close(cid int64, unique string, connVer int32) bool {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	client := that.getClient(unique)
-	if client != nil {
+	if client != nil && (connVer == 0 || connVer == client.connVer) {
 		return that.closeOld(client, cid, unique)
 	}
 
@@ -401,15 +424,30 @@ func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue 
 		var err error = nil
 		msg := NewMsg(uri, bytes, unique)
 		that.lastPush(sess, msg, fid)
+		msgD := msg.Get()
 		if qs >= 3 && MsgMng.db != nil {
-			err = MsgMng.db.Insert(*msg.Get())
+			err = that.insertMsgD(msgD)
 		}
 
-		if sess != nil {
+		if sess != nil && msg.Get().Id > 0 {
 			sess.LastsStart()
 		}
 
 		return msg, true, err
+	}
+}
+
+func (that MsgGrp) insertMsgD(msgD *MsgD) error {
+	if msgD.Id > 0 {
+		// sess.lastQueue加强不漏消息
+		return MsgMng.db.Insert(*msgD)
+
+	} else {
+		// laster加强消息顺序写入
+		that.getLaster().Lock()
+		defer that.getLaster().Unlock()
+		msgD.Id = MsgMng.idWorkder.Generate()
+		return MsgMng.db.Insert(*msgD)
 	}
 }
 
@@ -418,13 +456,19 @@ func (that MsgGrp) lastPush(sess *MsgSess, msg Msg, fid int64) {
 	msgD := msg.Get()
 	msgD.Gid = that.gid
 	msgD.Fid = fid
+
+	// 顺序队列
+	lastQueue := sess != nil && sess.getLastQueue() != nil
+	if !lastQueue {
+		return
+	}
+
+	sess.lastLoad()
+	// 锁加入队列
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	msgD.Id = MsgMng.idWorkder.Generate()
-	if sess != nil && sess.lastQueue != nil {
-		sess.lastLoad()
-		sess.lastQueue.Push(msg, true)
-	}
+	sess.lastQueue.Push(msg, true)
 }
 
 type ERpc int
@@ -446,12 +490,36 @@ func (that MsgSess) OnResult(ret gw.Result_, err error, rpc ERpc, client *MsgCli
 	return false
 }
 
+func (that MsgSess) getQueue() *Util.CircleQueue {
+	if that.queue == nil && MsgMng.QueueMax > 0 {
+		that.grp.locker.Lock()
+		defer that.grp.locker.Unlock()
+		if that.queue == nil {
+			that.queue = Util.NewCircleQueue(MsgMng.QueueMax)
+		}
+	}
+
+	return that.queue
+}
+
+func (that MsgSess) getLastQueue() *Util.CircleQueue {
+	if that.lastQueue == nil && MsgMng.LastMax > 0 {
+		that.grp.locker.Lock()
+		defer that.grp.locker.Unlock()
+		if that.lastQueue == nil {
+			that.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
+		}
+	}
+
+	return that.lastQueue
+}
+
 func (that MsgSess) QueuePush(msg Msg) (bool, error) {
 	if msg == nil {
 		return false, nil
 	}
 
-	if that.queue == nil {
+	if that.getQueue() == nil {
 		client := that.client
 		if client != nil {
 			msgD := msg.Get()
@@ -613,7 +681,7 @@ func (that MsgSess) lastRun(client *MsgClient, unique string) {
 
 	for {
 		lasting := client.lasting
-		ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid)
+		ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid, client.connVer)
 		that.OnResult(ret, err, ER_LAST, client, unique)
 		if that.lastDone(client, lasting) {
 			break
@@ -702,7 +770,19 @@ func (that MsgSess) lastLoad() {
 		return
 	}
 
-	if that.lastQueue.IsEmpty() {
+	lastQueue := that.getLastQueue()
+	if lastQueue != nil && lastQueue.IsEmpty() {
+		// 加强消息不丢失，读写锁
+		laster := that.grp.laster
+		if laster != nil {
+			laster.Lock()
+			defer laster.Unlock()
+		}
+
+		if that.lastLoaded {
+			return
+		}
+
 		msgDs := MsgMng.db.Last(that.grp.gid, MsgMng.LastMax)
 		// 锁放在io之后
 		that.grp.locker.Lock()
@@ -725,15 +805,16 @@ func (that MsgSess) lastLoad() {
 
 // return bool lastIn, 为true 则内存缓存已覆盖lastId，不需要从db读取列表
 func (that MsgSess) lastGet(client *MsgClient, lastLoop int64, lastId int64) (Msg, bool) {
+	// 预加载
+	that.lastLoad()
+	// 锁查找
 	that.grp.locker.RLocker()
 	defer that.grp.locker.RUnlock()
 	if client.lastLoop != lastLoop {
 		return nil, true
 	}
 
-	// 预加载
-	that.lastLoad()
-	size := that.lastQueue.Size()
+	size := that.getLastQueue().Size()
 	i := 0
 	lastIn := false
 	for ; i < size; i++ {

@@ -235,7 +235,8 @@ type GatewayI interface {
   //  - Cid
   //  - Gid
   //  - Unique
-  Disc(ctx context.Context, cid int64, gid string, unique string) (_err error)
+  //  - ConnVer
+  Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error)
   // Parameters:
   //  - Cid
   Alive(ctx context.Context, cid int64) (_r Result_, _err error)
@@ -251,7 +252,8 @@ type GatewayI interface {
   // Parameters:
   //  - Cid
   //  - Gid
-  Last(ctx context.Context, cid int64, gid string) (_r Result_, _err error)
+  //  - ConnVer
+  Last(ctx context.Context, cid int64, gid string, connVer int32) (_r Result_, _err error)
   // Parameters:
   //  - Cid
   //  - URI
@@ -383,11 +385,13 @@ func (p *GatewayIClient) Conn(ctx context.Context, cid int64, gid string, unique
 //  - Cid
 //  - Gid
 //  - Unique
-func (p *GatewayIClient) Disc(ctx context.Context, cid int64, gid string, unique string) (_err error) {
+//  - ConnVer
+func (p *GatewayIClient) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error) {
   var _args9 GatewayIDiscArgs
   _args9.Cid = cid
   _args9.Gid = gid
   _args9.Unique = unique
+  _args9.ConnVer = connVer
   p.SetLastResponseMeta_(thrift.ResponseMeta{})
   if _, err := p.Client_().Call(ctx, "disc", &_args9, nil); err != nil {
     return err
@@ -449,10 +453,12 @@ func (p *GatewayIClient) Rids(ctx context.Context, cid int64, rids map[string]in
 // Parameters:
 //  - Cid
 //  - Gid
-func (p *GatewayIClient) Last(ctx context.Context, cid int64, gid string) (_r Result_, _err error) {
+//  - ConnVer
+func (p *GatewayIClient) Last(ctx context.Context, cid int64, gid string, connVer int32) (_r Result_, _err error) {
   var _args19 GatewayILastArgs
   _args19.Cid = cid
   _args19.Gid = gid
+  _args19.ConnVer = connVer
   var _result21 GatewayILastResult
   var _meta20 thrift.ResponseMeta
   _meta20, _err = p.Client_().Call(ctx, "last", &_args19, &_result21)
@@ -899,7 +905,7 @@ func (p *gatewayIProcessorDisc) Process(ctx context.Context, seqId int32, iprot,
   tickerCancel := func() {}
   _ = tickerCancel
 
-  if err2 = p.handler.Disc(ctx, args.Cid, args.Gid, args.Unique); err2 != nil {
+  if err2 = p.handler.Disc(ctx, args.Cid, args.Gid, args.Unique, args.ConnVer); err2 != nil {
     tickerCancel()
     return true, thrift.WrapTException(err2)
   }
@@ -1190,7 +1196,7 @@ func (p *gatewayIProcessorLast) Process(ctx context.Context, seqId int32, iprot,
 
   result := GatewayILastResult{}
   var retval Result_
-  if retval, err2 = p.handler.Last(ctx, args.Cid, args.Gid); err2 != nil {
+  if retval, err2 = p.handler.Last(ctx, args.Cid, args.Gid, args.ConnVer); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
@@ -2424,10 +2430,12 @@ func (p *GatewayIConnResult) String() string {
 //  - Cid
 //  - Gid
 //  - Unique
+//  - ConnVer
 type GatewayIDiscArgs struct {
   Cid int64 `thrift:"cid,1" db:"cid" json:"cid"`
   Gid string `thrift:"gid,2" db:"gid" json:"gid"`
   Unique string `thrift:"unique,3" db:"unique" json:"unique"`
+  ConnVer int32 `thrift:"connVer,4" db:"connVer" json:"connVer"`
 }
 
 func NewGatewayIDiscArgs() *GatewayIDiscArgs {
@@ -2445,6 +2453,10 @@ func (p *GatewayIDiscArgs) GetGid() string {
 
 func (p *GatewayIDiscArgs) GetUnique() string {
   return p.Unique
+}
+
+func (p *GatewayIDiscArgs) GetConnVer() int32 {
+  return p.ConnVer
 }
 func (p *GatewayIDiscArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
@@ -2482,6 +2494,16 @@ func (p *GatewayIDiscArgs) Read(ctx context.Context, iprot thrift.TProtocol) err
     case 3:
       if fieldTypeId == thrift.STRING {
         if err := p.ReadField3(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 4:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField4(ctx, iprot); err != nil {
           return err
         }
       } else {
@@ -2531,6 +2553,15 @@ func (p *GatewayIDiscArgs)  ReadField3(ctx context.Context, iprot thrift.TProtoc
   return nil
 }
 
+func (p *GatewayIDiscArgs)  ReadField4(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 4: ", err)
+} else {
+  p.ConnVer = v
+}
+  return nil
+}
+
 func (p *GatewayIDiscArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "disc_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -2538,6 +2569,7 @@ func (p *GatewayIDiscArgs) Write(ctx context.Context, oprot thrift.TProtocol) er
     if err := p.writeField1(ctx, oprot); err != nil { return err }
     if err := p.writeField2(ctx, oprot); err != nil { return err }
     if err := p.writeField3(ctx, oprot); err != nil { return err }
+    if err := p.writeField4(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -2573,6 +2605,16 @@ func (p *GatewayIDiscArgs) writeField3(ctx context.Context, oprot thrift.TProtoc
   return thrift.PrependError(fmt.Sprintf("%T.unique (3) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 3:unique: ", p), err) }
+  return err
+}
+
+func (p *GatewayIDiscArgs) writeField4(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "connVer", thrift.I32, 4); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:connVer: ", p), err) }
+  if err := oprot.WriteI32(ctx, int32(p.ConnVer)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.connVer (4) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 4:connVer: ", p), err) }
   return err
 }
 
@@ -3299,9 +3341,11 @@ func (p *GatewayIRidsResult) String() string {
 // Attributes:
 //  - Cid
 //  - Gid
+//  - ConnVer
 type GatewayILastArgs struct {
   Cid int64 `thrift:"cid,1" db:"cid" json:"cid"`
   Gid string `thrift:"gid,2" db:"gid" json:"gid"`
+  ConnVer int32 `thrift:"connVer,3" db:"connVer" json:"connVer"`
 }
 
 func NewGatewayILastArgs() *GatewayILastArgs {
@@ -3315,6 +3359,10 @@ func (p *GatewayILastArgs) GetCid() int64 {
 
 func (p *GatewayILastArgs) GetGid() string {
   return p.Gid
+}
+
+func (p *GatewayILastArgs) GetConnVer() int32 {
+  return p.ConnVer
 }
 func (p *GatewayILastArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
@@ -3342,6 +3390,16 @@ func (p *GatewayILastArgs) Read(ctx context.Context, iprot thrift.TProtocol) err
     case 2:
       if fieldTypeId == thrift.STRING {
         if err := p.ReadField2(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 3:
+      if fieldTypeId == thrift.I32 {
+        if err := p.ReadField3(ctx, iprot); err != nil {
           return err
         }
       } else {
@@ -3382,12 +3440,22 @@ func (p *GatewayILastArgs)  ReadField2(ctx context.Context, iprot thrift.TProtoc
   return nil
 }
 
+func (p *GatewayILastArgs)  ReadField3(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(ctx); err != nil {
+  return thrift.PrependError("error reading field 3: ", err)
+} else {
+  p.ConnVer = v
+}
+  return nil
+}
+
 func (p *GatewayILastArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "last_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(ctx, oprot); err != nil { return err }
     if err := p.writeField2(ctx, oprot); err != nil { return err }
+    if err := p.writeField3(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -3413,6 +3481,16 @@ func (p *GatewayILastArgs) writeField2(ctx context.Context, oprot thrift.TProtoc
   return thrift.PrependError(fmt.Sprintf("%T.gid (2) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 2:gid: ", p), err) }
+  return err
+}
+
+func (p *GatewayILastArgs) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "connVer", thrift.I32, 3); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:connVer: ", p), err) }
+  if err := oprot.WriteI32(ctx, int32(p.ConnVer)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.connVer (3) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 3:connVer: ", p), err) }
   return err
 }
 

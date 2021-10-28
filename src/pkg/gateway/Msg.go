@@ -56,7 +56,8 @@ type MsgDb interface {
 	Insert(msg MsgD) error                           // 插入消息
 	Next(gid string, lastId int64, limit int) []MsgD // 遍历消息
 	Last(gid string, limit int) []MsgD               // 初始消息缓存
-	Delete(fid int64) error                          // 来源删除消息
+	Delete(id int64) error                           // 删除消息
+	DeleteF(fid int64) error                         // 删除来源消息
 	Clear(oId int64) error                           // 清理过期消息
 }
 
@@ -100,7 +101,11 @@ func (that MsgGorm) Last(gid string, limit int) []MsgD {
 	return msgDS
 }
 
-func (that MsgGorm) Delete(fid int64) error {
+func (that MsgGorm) Delete(id int64) error {
+	return that.db.Exec("DELETE FROM MsgD WHERE id = ?", id).Error
+}
+
+func (that MsgGorm) DeleteF(fid int64) error {
 	return that.db.Exec("DELETE FROM MsgD WHERE Fid = ?", fid).Error
 }
 

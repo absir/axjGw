@@ -52,12 +52,12 @@ func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique strin
 	return gw.Result__Fail, nil
 }
 
-func (g GatewayIs) Disc(ctx context.Context, cid int64, gid string, unique string) (_err error) {
+func (g GatewayIs) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error) {
 	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
 		return nil
 	}
 
-	if gateway.MsgMng.GetMsgGrp(gid).Close(cid, unique) {
+	if gateway.MsgMng.GetMsgGrp(gid).Close(cid, unique, connVer) {
 		return nil
 	}
 
@@ -105,7 +105,7 @@ func (g GatewayIs) Rids(ctx context.Context, cid int64, rids map[string]int32) (
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Last(ctx context.Context, cid int64, gid string) (_r gw.Result_, _err error) {
+func (g GatewayIs) Last(ctx context.Context, cid int64, gid string, connVer int32) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -115,7 +115,11 @@ func (g GatewayIs) Last(ctx context.Context, cid int64, gid string) (_r gw.Resul
 		return gw.Result__IdNone, nil
 	}
 
-	err := client.Get().Rep(true, ANet.REQ_LAST, gid, 0, nil, false, false, 0)
+	if gid == gateway.Server.Handler.ClientG(client).Gid() {
+		gid = ""
+	}
+
+	err := client.Get().Rep(true, ANet.REQ_LAST, gid, connVer, nil, false, false, 0)
 	if err != nil {
 		return gw.Result__Fail, err
 	}

@@ -449,11 +449,11 @@ func (p *Login) String() string {
 
 // Attributes:
 //  - Version
-//  - Users
+//  - Teams
 //  - ReadFeed
 type Group struct {
   Version int64 `thrift:"version,1" db:"version" json:"version"`
-  Users []string `thrift:"users,2" db:"users" json:"users"`
+  Teams []*GroupTeam `thrift:"teams,2" db:"teams" json:"teams"`
   ReadFeed bool `thrift:"readFeed,3" db:"readFeed" json:"readFeed"`
 }
 
@@ -466,8 +466,8 @@ func (p *Group) GetVersion() int64 {
   return p.Version
 }
 
-func (p *Group) GetUsers() []string {
-  return p.Users
+func (p *Group) GetTeams() []*GroupTeam {
+  return p.Teams
 }
 
 func (p *Group) GetReadFeed() bool {
@@ -545,16 +545,14 @@ func (p *Group)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
   if err != nil {
     return thrift.PrependError("error reading list begin: ", err)
   }
-  tSlice := make([]string, 0, size)
-  p.Users =  tSlice
+  tSlice := make([]*GroupTeam, 0, size)
+  p.Teams =  tSlice
   for i := 0; i < size; i ++ {
-var _elem3 string
-    if v, err := iprot.ReadString(ctx); err != nil {
-    return thrift.PrependError("error reading field 0: ", err)
-} else {
-    _elem3 = v
-}
-    p.Users = append(p.Users, _elem3)
+    _elem3 := &GroupTeam{}
+    if err := _elem3.Read(ctx, iprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
+    }
+    p.Teams = append(p.Teams, _elem3)
   }
   if err := iprot.ReadListEnd(ctx); err != nil {
     return thrift.PrependError("error reading list end: ", err)
@@ -597,20 +595,21 @@ func (p *Group) writeField1(ctx context.Context, oprot thrift.TProtocol) (err er
 }
 
 func (p *Group) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin(ctx, "users", thrift.LIST, 2); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:users: ", p), err) }
-  if err := oprot.WriteListBegin(ctx, thrift.STRING, len(p.Users)); err != nil {
+  if err := oprot.WriteFieldBegin(ctx, "teams", thrift.LIST, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:teams: ", p), err) }
+  if err := oprot.WriteListBegin(ctx, thrift.STRUCT, len(p.Teams)); err != nil {
     return thrift.PrependError("error writing list begin: ", err)
   }
-  for _, v := range p.Users {
-    if err := oprot.WriteString(ctx, string(v)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err) }
+  for _, v := range p.Teams {
+    if err := v.Write(ctx, oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+    }
   }
   if err := oprot.WriteListEnd(ctx); err != nil {
     return thrift.PrependError("error writing list end: ", err)
   }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:users: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:teams: ", p), err) }
   return err
 }
 
@@ -631,10 +630,10 @@ func (p *Group) Equals(other *Group) bool {
     return false
   }
   if p.Version != other.Version { return false }
-  if len(p.Users) != len(other.Users) { return false }
-  for i, _tgt := range p.Users {
-    _src4 := other.Users[i]
-    if _tgt != _src4 { return false }
+  if len(p.Teams) != len(other.Teams) { return false }
+  for i, _tgt := range p.Teams {
+    _src4 := other.Teams[i]
+    if !_tgt.Equals(_src4) { return false }
   }
   if p.ReadFeed != other.ReadFeed { return false }
   return true
@@ -645,6 +644,144 @@ func (p *Group) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("Group(%+v)", *p)
+}
+
+// Attributes:
+//  - Gid
+//  - Nofeed
+type GroupTeam struct {
+  Gid string `thrift:"gid,1" db:"gid" json:"gid"`
+  Nofeed bool `thrift:"nofeed,2" db:"nofeed" json:"nofeed"`
+}
+
+func NewGroupTeam() *GroupTeam {
+  return &GroupTeam{}
+}
+
+
+func (p *GroupTeam) GetGid() string {
+  return p.Gid
+}
+
+func (p *GroupTeam) GetNofeed() bool {
+  return p.Nofeed
+}
+func (p *GroupTeam) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if fieldTypeId == thrift.STRING {
+        if err := p.ReadField1(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 2:
+      if fieldTypeId == thrift.BOOL {
+        if err := p.ReadField2(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GroupTeam)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(ctx); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Gid = v
+}
+  return nil
+}
+
+func (p *GroupTeam)  ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(ctx); err != nil {
+  return thrift.PrependError("error reading field 2: ", err)
+} else {
+  p.Nofeed = v
+}
+  return nil
+}
+
+func (p *GroupTeam) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "GroupTeam"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(ctx, oprot); err != nil { return err }
+    if err := p.writeField2(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GroupTeam) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "gid", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:gid: ", p), err) }
+  if err := oprot.WriteString(ctx, string(p.Gid)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.gid (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:gid: ", p), err) }
+  return err
+}
+
+func (p *GroupTeam) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "nofeed", thrift.BOOL, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:nofeed: ", p), err) }
+  if err := oprot.WriteBool(ctx, bool(p.Nofeed)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.nofeed (2) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:nofeed: ", p), err) }
+  return err
+}
+
+func (p *GroupTeam) Equals(other *GroupTeam) bool {
+  if p == other {
+    return true
+  } else if p == nil || other == nil {
+    return false
+  }
+  if p.Gid != other.Gid { return false }
+  if p.Nofeed != other.Nofeed { return false }
+  return true
+}
+
+func (p *GroupTeam) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GroupTeam(%+v)", *p)
 }
 
 type Acl interface {
