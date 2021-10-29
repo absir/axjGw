@@ -64,13 +64,19 @@ service Gateway {
     // 软关闭连接
     bool kick(1: i64 cid, 2: binary bytes)
     // 服务编号
-    void rid(1: i64 cid, 2: string name, 3: i32 rid)
+    bool rid(1: i64 cid, 2: string name, 3: i32 rid)
     // 服务编号
-    void rids(1: i64 cid, 2: map<string, i32> rids)
-    // 注册监听
-    void conn(1: i64 cid, 2: string sid)
+    bool rids(1: i64 cid, 2: map<string, i32> rids)
+    // 注册监听gid
+    bool conn(1: i64 cid, 2: string gid, 3: string unique)
+    // 断开监听gid
+    bool disc(1: i64 cid, 2: string gid, 3: string unique, 4: i32 connVer)
+    // 获取更新消息
+    bool lasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId);
     // 推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
-    bool push(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes, 6: i32 qs, 7: string unique);
+    bool push(1: i64 cid, 2: i64 uid, 3: string sid, 4: string uri, 5: binary bytes, 6: i32 qs, 7: string unique, 8: bool queue)
+    // readfeed读扩散，常用于聊天室
+    bool tPush(1: string tid, 2: bool readfeed, 4: string uri, 5: binary bytes, 6: i32 qs, 7: string unique, 8: bool queue)
     // 组更新、删除
-    void dirty(1: string sid);
+    bool tDirty(1: string tid);
 }
