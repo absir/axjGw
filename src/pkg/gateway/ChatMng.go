@@ -8,15 +8,15 @@ import (
 )
 
 type chatMng struct {
-	FDrt         time.Duration
-	FStep        int
-	FTimeout     int64
-	FTimeoutD    int64
-	TStartsDrt   int64
-	TStartsLimit int
-	TStartLimit  int
-	TLive        int64
-	TPushQueue   int
+	FDrt         time.Duration // fid特殊状态消息检查间隔(比如消息发送失败)
+	FStep        int           // fid特殊状态消息检查, 单次获取消息列表数
+	FTimeout     int64         // fid特殊状态， 检查开始超时时间
+	FTimeoutD    int64         // fid特殊状态， 检查最大超时时间， 超过删除特殊状态
+	TStartsDrt   int64         // 群消息发送管道检查间隔
+	TStartsLimit int           // 群消息检查单次获取管道数
+	TStartLimit  int           // 群消息检查单次获取列表数
+	TIdleLive    int64         // 群消息发送管道，调用空闲存活时间
+	TPushQueue   int           // 群消息发送管道, 内存管道最大值
 	loopTime     int64
 	checkLoop    int64
 	checkTime    int64
@@ -36,7 +36,7 @@ func initChatMng() {
 		TStartsDrt:   3000,
 		TStartsLimit: 3000,
 		TStartLimit:  30,
-		TLive:        30000,
+		TIdleLive:    30000,
 		TPushQueue:   30,
 	}
 
@@ -47,7 +47,7 @@ func initChatMng() {
 	that.FTimeout = that.FTimeout * int64(time.Millisecond)
 	that.FTimeoutD = that.FTimeoutD * int64(time.Millisecond)
 	that.TStartsDrt = that.TStartsDrt * int64(time.Millisecond)
-	that.TLive = that.TLive * int64(time.Millisecond)
+	that.TIdleLive = that.TIdleLive * int64(time.Millisecond)
 	that.locker = new(sync.Mutex)
 	that.teamMap = new(sync.Map)
 }
@@ -221,7 +221,7 @@ func (that ChatTeam) startIn() bool {
 }
 
 func (that ChatTeam) startOut() {
-	that.starting = time.Now().UnixNano() + ChatMng.TLive
+	that.starting = time.Now().UnixNano() + ChatMng.TIdleLive
 }
 
 func (that ChatTeam) startRun() {

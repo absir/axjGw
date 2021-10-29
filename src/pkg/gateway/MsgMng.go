@@ -15,16 +15,15 @@ import (
 )
 
 type msgMng struct {
-	QueueMax  int
-	NextLimit int
-	LastLimit int
-	LastMax   int
-	LastLoad  bool
-	LastLoop  int
-	LastUrl   string
-	CheckDrt  time.Duration
-	LiveDrt   int64
-	IdleDrt   int64
+	QueueMax  int           // 主client消息队列大小
+	NextLimit int           // last消息，单次读取列表数
+	LastLimit int           // last消息队类，初始化载入列表数
+	LastMax   int           // last消息队列大小
+	LastLoad  bool          // 是否执行 last消息队类，初始化载入列表数
+	LastUrl   string        // 消息持久化，数据库连接
+	CheckDrt  time.Duration // 执行检查逻辑，间隔
+	LiveDrt   int64         // 连接断开，存活时间
+	IdleDrt   int64         // 连接检查，间隔
 	checkLoop int64
 	checkTime int64
 	Db        MsgDb
@@ -46,7 +45,6 @@ func initMsgMng() {
 		NextLimit: 10,
 		LastMax:   20,
 		LastLoad:  false,
-		LastLoop:  10,
 		LastUrl:   "",
 		CheckDrt:  5000,
 		LiveDrt:   15000,

@@ -17,15 +17,12 @@ import (
 )
 
 type Config struct {
-	IdleTime   int64
-	CheckTime  int64
-	HttpAddr   string
-	HttpWs     bool
-	SocketAddr string
-	SocketSize int
-	SocketOut  bool
-	ThriftAddr string
-	ThriftIps  []string
+	HttpAddr   string   // http服务地址
+	HttpWs     bool     // 启用ws网关
+	SocketAddr string   // socket服务地址
+	ThriftAddr string   // thrift服务地址
+	ThriftIps  []string // thrfit调用Ip白名单，支持*通配
+	LastUrl    string   // 消息持久化，数据库连接
 }
 
 var GCfg = Config{
