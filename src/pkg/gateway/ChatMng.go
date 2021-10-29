@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"axj/APro"
+	"axj/Thrd/Util"
 	"sync"
 	"time"
 )
@@ -15,6 +16,7 @@ type chatMng struct {
 	TStartsLimit int
 	TStartLimit  int
 	TLive        int64
+	TPushQueue   int
 	loopTime     int64
 	checkLoop    int64
 	checkTime    int64
@@ -35,6 +37,7 @@ func initChatMng() {
 		TStartsLimit: 3000,
 		TStartLimit:  30,
 		TLive:        30000,
+		TPushQueue:   30,
 	}
 
 	// 配置处理
@@ -71,7 +74,7 @@ func (that chatMng) CheckLoop() {
 				for i := 0; i < tLen; i++ {
 					// 启动组管道
 					tId := tIds[i]
-					Server.GetProdGid(tId).GetGWIClient().TeamStarts(Server.Context, tId)
+					Server.GetProdGid(tId).GetGWIClient().TStarts(Server.Context, tId)
 				}
 			}
 
@@ -97,27 +100,10 @@ func (that chatMng) checkChatTeam(key, val interface{}) bool {
 }
 
 const (
-	F_SUCC = 0
-	F_FAIL = 1
+	F_SUCC     = 0
+	F_FAIL     = 1
+	R_SUCC_MIN = 32
 )
-
-// 点对点发送聊天
-func (that chatMng) Send(fromId string, toId string, uri string, bytes []byte) (bool, error) {
-	fClient := Server.GetProdGid(fromId).GetGWIClient()
-	fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, 3, false, "", F_FAIL)
-	if fid < 32 {
-		return false, err
-	}
-
-	tid, err := Server.GetProdGid(toId).GetGWIClient().GPush(Server.Context, toId, uri, bytes, true, 3, false, "", fid)
-	if tid < 32 {
-		fClient.GPushA(Server.Context, fromId, fid, false)
-		return false, err
-	}
-
-	fClient.GPushA(Server.Context, fromId, fid, true)
-	return true, err
-}
 
 func (that chatMng) MsgSucc(id int64) error {
 	if MsgMng.Db == nil {
@@ -138,73 +124,20 @@ func (that chatMng) MsgFail(id int64, gid string) error {
 		return err
 	}
 
-	if result <= 32 {
+	if result < R_SUCC_MIN {
 		return ERR_FAIL
 	}
 
 	return MsgMng.Db.Delete(id)
 }
 
-// 发送群聊天
-func (that chatMng) Team(fromId string, tid string, readfeed bool, uri string, bytes []byte, qs int32, queue bool, unique string) (bool, error) {
-	if !readfeed {
-		if MsgMng.Db == nil {
-			return false, ERR_NOWAY
-		}
-
-		team := TeamMng.GetTeam(tid)
-		if !team.ReadFeed {
-			// 写扩散
-			fClient := Server.GetProdGid(fromId).GetGWIClient()
-			fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, 3, false, "", F_FAIL)
-			if fid < 32 {
-				return false, err
-			}
-
-			msgTeam := &MsgTeam{
-				Id:      fid,
-				Tid:     tid,
-				Members: team.Members,
-				Index:   0,
-				Uri:     uri,
-				Data:    bytes,
-			}
-
-			err = MsgMng.Db.TeamInsert(msgTeam)
-			if err != nil {
-				fClient.GPushA(Server.Context, fromId, fid, false)
-				return false, err
-			}
-
-			fClient.GPushA(Server.Context, fromId, fid, true)
-			Server.GetProdGid(tid).GetGWIClient().TeamStarts(Server.Context, tid)
-			return true, nil
-		}
-	}
-
-	// 读扩散
-	ret, err := Server.GetProdGid(tid).GetGWIClient().GPush(Server.Context, tid, uri, bytes, false, qs, queue, unique, 0)
-	if err != nil {
-		return false, err
-	}
-
-	if ret <= 32 {
-		return false, ERR_FAIL
-	}
-
-	return true, nil
-}
-
-func (that chatMng) TeamStarts(tid string) {
-
-}
-
 type ChatTeam struct {
 	tid      string
 	starting int64
+	msgQueue *Util.CircleQueue
 }
 
-func (that chatMng) teamStart(tid string) {
+func (that chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 	val, _ := that.teamMap.Load(tid)
 	chatTeam := val.(*ChatTeam)
 	if chatTeam == nil {
@@ -221,10 +154,54 @@ func (that chatMng) teamStart(tid string) {
 		}
 	}
 
-	chatTeam.Start()
+	chatTeam.Start(msgTeam)
 }
 
-func (that ChatTeam) Start() {
+func (that ChatTeam) addMsgTeam(msgTeam *MsgTeam) {
+	if msgTeam == nil || ChatMng.TPushQueue <= 0 {
+		return
+	}
+
+	MsgMng.locker.Lock()
+	defer MsgMng.locker.Unlock()
+	if that.msgQueue == nil {
+		that.msgQueue = Util.NewCircleQueue(ChatMng.TPushQueue)
+	}
+
+	that.msgQueue.Push(msgTeam, true)
+}
+
+func (that ChatTeam) getMsgTeam() *MsgTeam {
+	if that.msgQueue == nil {
+		return nil
+	}
+
+	MsgMng.locker.Lock()
+	defer MsgMng.locker.Unlock()
+	if that.msgQueue == nil {
+		return nil
+	}
+
+	val, _ := that.msgQueue.Get(0)
+	return val.(*MsgTeam)
+}
+
+func (that ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
+	if that.msgQueue == nil {
+		return
+	}
+
+	MsgMng.locker.Lock()
+	defer MsgMng.locker.Unlock()
+	if that.msgQueue == nil {
+		return
+	}
+
+	that.msgQueue.Remove(msgTeam)
+}
+
+func (that ChatTeam) Start(msgTeam *MsgTeam) {
+	that.addMsgTeam(msgTeam)
 	if that.starting != 0 {
 		return
 	}
@@ -255,6 +232,19 @@ func (that ChatTeam) startRun() {
 
 	defer that.startOut()
 	for {
+		for {
+			msgTeam := that.getMsgTeam()
+			if msgTeam == nil {
+				break
+			}
+
+			if !that.msgTeamPush(msgTeam, false) {
+				return
+			}
+
+			that.removeMsgTeam(msgTeam)
+		}
+
 		msgTeams := MsgMng.Db.TeamList(that.tid, ChatMng.TStartLimit)
 		if msgTeams == nil {
 			return
@@ -266,14 +256,14 @@ func (that ChatTeam) startRun() {
 		}
 
 		for i := 0; i < mLen; i++ {
-			if !that.msgTeamPush(&msgTeams[i]) {
+			if !that.msgTeamPush(&msgTeams[i], true) {
 				return
 			}
 		}
 	}
 }
 
-func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam) bool {
+func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 	// 执行hash校验
 	if !Server.IsProdHashS(msgTeam.Tid) {
 		return false
@@ -281,7 +271,10 @@ func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam) bool {
 
 	members := msgTeam.Members
 	if members == nil {
-		MsgMng.Db.TeamUpdate(msgTeam, 1)
+		if db {
+			MsgMng.Db.TeamUpdate(msgTeam, 1)
+		}
+
 		return true
 	}
 
@@ -292,7 +285,10 @@ func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam) bool {
 	}
 
 	if index >= mLen {
-		MsgMng.Db.TeamUpdate(msgTeam, index)
+		if db {
+			MsgMng.Db.TeamUpdate(msgTeam, index)
+		}
+
 		return true
 	}
 
@@ -304,9 +300,12 @@ func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam) bool {
 			// 不推送到gid， 需要主动拉去tid_gid
 			gid := that.tid + "_" + member.Gid
 			ret, err := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid, msgTeam.Uri, msgTeam.Data, false, 3, false, "", msgTeam.Id)
-			if err != nil || ret <= 32 {
+			if err != nil || ret < R_SUCC_MIN {
 				// 已执行索引
-				MsgMng.Db.TeamUpdate(msgTeam, indexDid)
+				if db {
+					MsgMng.Db.TeamUpdate(msgTeam, indexDid)
+				}
+
 				return false
 			}
 
@@ -316,15 +315,126 @@ func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam) bool {
 			// 直接推送到gid
 			gid := member.Gid
 			ret, err := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid, msgTeam.Uri, msgTeam.Data, false, 3, false, "", msgTeam.Id)
-			if err != nil || ret <= 32 {
+			if err != nil || ret < R_SUCC_MIN {
 				// 已执行索引
-				MsgMng.Db.TeamUpdate(msgTeam, indexDid)
+				if db {
+					MsgMng.Db.TeamUpdate(msgTeam, indexDid)
+				}
+
 				return false
 			}
 
 			indexDid = index
 		}
+
+		if !db {
+			msgTeam.Index = indexDid
+		}
 	}
 
-	return MsgMng.Db.TeamUpdate(msgTeam, -1) == nil
+	if db {
+		return MsgMng.Db.TeamUpdate(msgTeam, -1) == nil
+	}
+
+	return true
+}
+
+// 点对点发送聊天 调用注意分布一致hash 入口
+func (that chatMng) Send(fromId string, toId string, uri string, bytes []byte, db bool) (bool, error) {
+	fClient := Server.GetProdGid(fromId).GetGWIClient()
+	fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, 3, false, "", F_FAIL)
+	if fid < R_SUCC_MIN {
+		return false, err
+	}
+
+	var qs int32 = 3
+	if !db {
+		qs = 2
+	}
+
+	tid, err := Server.GetProdGid(toId).GetGWIClient().GPush(Server.Context, toId, uri, bytes, true, qs, false, "", fid)
+	if tid < R_SUCC_MIN {
+		if db {
+			fClient.GPushA(Server.Context, fromId, fid, false)
+		}
+
+		return false, err
+	}
+
+	if db {
+		fClient.GPushA(Server.Context, fromId, fid, true)
+	}
+
+	return true, err
+}
+
+// 发送群聊天 调用注意分布一致hash 入口
+func (that chatMng) TeamPush(fromId string, tid string, readfeed bool, uri string, bytes []byte, queue bool, db bool) (bool, error) {
+	var qs int32 = 3
+	if !db {
+		qs = 2
+	}
+
+	if !readfeed {
+		if MsgMng.Db == nil {
+			qs = 2
+		}
+
+		team := TeamMng.GetTeam(tid)
+		if !team.ReadFeed {
+			// 写扩散
+			fClient := Server.GetProdGid(fromId).GetGWIClient()
+			fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, qs, false, "", F_FAIL)
+			if fid < R_SUCC_MIN {
+				return false, err
+			}
+
+			msgTeam := &MsgTeam{
+				Id:      fid,
+				Tid:     tid,
+				Members: team.Members,
+				Index:   0,
+				Uri:     uri,
+				Data:    bytes,
+			}
+
+			msgDb := MsgMng.Db != nil && qs == 3
+
+			if msgDb {
+				err = MsgMng.Db.TeamInsert(msgTeam)
+				if err != nil {
+					if db {
+						fClient.GPushA(Server.Context, fromId, fid, false)
+					}
+
+					return false, err
+				}
+			}
+
+			if db {
+				fClient.GPushA(Server.Context, fromId, fid, true)
+			}
+
+			if msgDb {
+				that.TeamStart(tid, nil)
+
+			} else {
+				that.TeamStart(tid, msgTeam)
+			}
+
+			return true, nil
+		}
+	}
+
+	// 读扩散
+	ret, err := Server.GetProdGid(tid).GetGWIClient().GPush(Server.Context, tid, uri, bytes, false, qs, queue, "", 0)
+	if err != nil {
+		return false, err
+	}
+
+	if ret <= R_SUCC_MIN {
+		return false, ERR_FAIL
+	}
+
+	return true, nil
 }

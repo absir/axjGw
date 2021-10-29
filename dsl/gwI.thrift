@@ -48,8 +48,12 @@ service GatewayI {
     i64 gPush(1: string gid, 2: string uri, 3: binary bytes, 4: bool isolate, 6: i32 qs, 7: bool queue, 8: string unique, 9: i64 fid)
     // 推送确认
     Result gPushA(1: string gid, 2: i64 id, 3: bool succ)
+    // 点对点聊天
+    Result send(1: string fromId, 2: string toId, 3: string uri, 4: binary bytes, 5: bool db)
+    // 群消息发送
+    Result tPush(1: string fromId, 2: string tid, 3: bool readfeed, 4: string uri, 5: binary bytes, 6: bool db, 7: bool queue)
     // 组更新、删除
-    Result teamDirty(1: string tid);
+    Result tDirty(1: string tid);
     // 组发送管道启动
-    Result teamStarts(1: string tid);
+    Result tStarts(1: string tid);
 }

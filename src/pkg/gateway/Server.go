@@ -40,7 +40,7 @@ func (that server) Init(workId int32) {
 	that.Handler = new(handler)
 	that.Manager = ANet.NewManager(that.Handler, workId, time.Duration(Config.IdleDrt)*time.Millisecond, time.Duration(Config.CheckDrt)*time.Millisecond)
 	that.Context = context.Background()
-	that.gatewayI = new(gws.GatewayIs)
+	that.gatewayI = new(gws.GatewayIS)
 }
 
 func (that server) StartGw() {

@@ -7,10 +7,10 @@ import (
 	"gw"
 )
 
-type GatewayIs struct {
+type GatewayIS struct {
 }
 
-func (g GatewayIs) Close(ctx context.Context, cid int64, reason string) (_r gw.Result_, _err error) {
+func (g GatewayIS) Close(ctx context.Context, cid int64, reason string) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -24,7 +24,7 @@ func (g GatewayIs) Close(ctx context.Context, cid int64, reason string) (_r gw.R
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Kick(ctx context.Context, cid int64, bytes []byte) (_r gw.Result_, _err error) {
+func (g GatewayIS) Kick(ctx context.Context, cid int64, bytes []byte) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -38,7 +38,7 @@ func (g GatewayIs) Kick(ctx context.Context, cid int64, bytes []byte) (_r gw.Res
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique string) (_r gw.Result_, _err error) {
+func (g GatewayIS) Conn(ctx context.Context, cid int64, gid string, unique string) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -50,7 +50,7 @@ func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique strin
 	return gw.Result__Fail, nil
 }
 
-func (g GatewayIs) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error) {
+func (g GatewayIS) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (g GatewayIs) Disc(ctx context.Context, cid int64, gid string, unique strin
 	return nil
 }
 
-func (g GatewayIs) Alive(ctx context.Context, cid int64) (_r gw.Result_, _err error) {
+func (g GatewayIS) Alive(ctx context.Context, cid int64) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -75,7 +75,7 @@ func (g GatewayIs) Alive(ctx context.Context, cid int64) (_r gw.Result_, _err er
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Rid(ctx context.Context, cid int64, name string, rid int32) (_r gw.Result_, _err error) {
+func (g GatewayIS) Rid(ctx context.Context, cid int64, name string, rid int32) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -89,7 +89,7 @@ func (g GatewayIs) Rid(ctx context.Context, cid int64, name string, rid int32) (
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Rids(ctx context.Context, cid int64, rids map[string]int32) (_r gw.Result_, _err error) {
+func (g GatewayIS) Rids(ctx context.Context, cid int64, rids map[string]int32) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -103,7 +103,7 @@ func (g GatewayIs) Rids(ctx context.Context, cid int64, rids map[string]int32) (
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Last(ctx context.Context, cid int64, gid string, connVer int32) (_r gw.Result_, _err error) {
+func (g GatewayIS) Last(ctx context.Context, cid int64, gid string, connVer int32) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -125,7 +125,7 @@ func (g GatewayIs) Last(ctx context.Context, cid int64, gid string, connVer int3
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte, isolate bool, id int64) (_r gw.Result_, _err error) {
+func (g GatewayIS) Push(ctx context.Context, cid int64, uri string, bytes []byte, isolate bool, id int64) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -152,7 +152,7 @@ func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) GQueue(ctx context.Context, gid string, cid int64, unique string, clear bool) (_r gw.Result_, _err error) {
+func (g GatewayIS) GQueue(ctx context.Context, gid string, cid int64, unique string, clear bool) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -173,7 +173,7 @@ func (g GatewayIs) GQueue(ctx context.Context, gid string, cid int64, unique str
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) GClear(ctx context.Context, gid string, queue bool, last bool) (_r gw.Result_, _err error) {
+func (g GatewayIS) GClear(ctx context.Context, gid string, queue bool, last bool) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -186,7 +186,7 @@ func (g GatewayIs) GClear(ctx context.Context, gid string, queue bool, last bool
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r gw.Result_, _err error) {
+func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -202,7 +202,7 @@ func (g GatewayIs) GLasts(ctx context.Context, gid string, cid int64, unique str
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r int64, _err error) {
+func (g GatewayIS) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r int64, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return int64(gw.Result__ProdErr), nil
 	}
@@ -216,7 +216,7 @@ func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []by
 	return int64(gw.Result__Fail), err
 }
 
-func (g GatewayIs) GPushA(ctx context.Context, gid string, id int64, succ bool) (_r gw.Result_, _err error) {
+func (g GatewayIS) GPushA(ctx context.Context, gid string, id int64, succ bool) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -235,7 +235,33 @@ func (g GatewayIs) GPushA(ctx context.Context, gid string, id int64, succ bool) 
 	return gw.Result__Fail, err
 }
 
-func (g GatewayIs) TeamDirty(ctx context.Context, tid string) (_r gw.Result_, _err error) {
+func (g GatewayIS) Send(ctx context.Context, fromId string, toId string, uri string, bytes []byte, db bool) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHashS(fromId) {
+		return gw.Result__ProdErr, nil
+	}
+
+	succ, err := gateway.ChatMng.Send(fromId, toId, uri, bytes, db)
+	if !succ || err != nil {
+		return gw.Result__Fail, err
+	}
+
+	return gw.Result__Succ, nil
+}
+
+func (g GatewayIS) TPush(ctx context.Context, fromId string, tid string, readfeed bool, uri string, bytes []byte, db bool, queue bool) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHashS(tid) {
+		return gw.Result__ProdErr, nil
+	}
+
+	succ, err := gateway.ChatMng.TeamPush(fromId, tid, readfeed, uri, bytes, queue, db)
+	if !succ || err != nil {
+		return gw.Result__Fail, err
+	}
+
+	return gw.Result__Succ, nil
+}
+
+func (g GatewayIS) TDirty(ctx context.Context, tid string) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(tid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -244,11 +270,11 @@ func (g GatewayIs) TeamDirty(ctx context.Context, tid string) (_r gw.Result_, _e
 	return gw.Result__Fail, nil
 }
 
-func (g GatewayIs) TeamStarts(ctx context.Context, tid string) (_r gw.Result_, _err error) {
+func (g GatewayIS) TStarts(ctx context.Context, tid string) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(tid) {
 		return gw.Result__ProdErr, nil
 	}
 
-	gateway.ChatMng.TeamStarts(tid)
+	gateway.ChatMng.TeamStart(tid, nil)
 	return gw.Result__Succ, nil
 }
