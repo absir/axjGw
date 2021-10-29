@@ -2,8 +2,6 @@ package gws
 
 import (
 	"axj/ANet"
-	"axj/Kt/Kt"
-	"axj/Kt/KtUnsafe"
 	"axjGW/pkg/gateway"
 	"context"
 	"gw"
@@ -41,7 +39,7 @@ func (g GatewayIs) Kick(ctx context.Context, cid int64, bytes []byte) (_r gw.Res
 }
 
 func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique string) (_r gw.Result_, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
 
@@ -53,7 +51,7 @@ func (g GatewayIs) Conn(ctx context.Context, cid int64, gid string, unique strin
 }
 
 func (g GatewayIs) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return nil
 	}
 
@@ -141,7 +139,12 @@ func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte
 		isolate = false
 	}
 
-	err := client.Get().Rep(true, ANet.REQ_PUSH, uri, 0, bytes, false, isolate, id)
+	req := ANet.REQ_PUSH
+	if id > 0 {
+		req = ANet.REQ_PUSHI
+	}
+
+	err := client.Get().Rep(true, req, uri, 0, bytes, false, isolate, id)
 	if err != nil {
 		return gw.Result__Fail, err
 	}
@@ -150,7 +153,7 @@ func (g GatewayIs) Push(ctx context.Context, cid int64, uri string, bytes []byte
 }
 
 func (g GatewayIs) GQueue(ctx context.Context, gid string, cid int64, unique string, clear bool) (_r gw.Result_, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
 
@@ -171,7 +174,7 @@ func (g GatewayIs) GQueue(ctx context.Context, gid string, cid int64, unique str
 }
 
 func (g GatewayIs) GClear(ctx context.Context, gid string, queue bool, last bool) (_r gw.Result_, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
 
@@ -184,7 +187,7 @@ func (g GatewayIs) GClear(ctx context.Context, gid string, queue bool, last bool
 }
 
 func (g GatewayIs) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r gw.Result_, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
 
@@ -200,38 +203,52 @@ func (g GatewayIs) GLasts(ctx context.Context, gid string, cid int64, unique str
 }
 
 func (g GatewayIs) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r int64, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return int64(gw.Result__ProdErr), nil
 	}
 
 	grp := gateway.MsgMng.GetMsgGrp(gid)
-	msg, succ, err := grp.Push(uri, bytes, isolate, qs, queue, unique, fid)
+	id, succ, err := grp.Push(uri, bytes, isolate, qs, queue, unique, fid)
 	if succ {
-		return msg.Get().Id, nil
+		return id, nil
 	}
 
 	return int64(gw.Result__Fail), err
 }
 
 func (g GatewayIs) GPushA(ctx context.Context, gid string, id int64, succ bool) (_r gw.Result_, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(gid))) {
+	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
 
-	if gateway.MsgMng.Db == nil {
+	var err error = nil
+	if succ {
+		err = gateway.ChatMng.MsgSucc(id)
 
 	} else {
-
+		err = gateway.ChatMng.MsgFail(id, gid)
+	}
+	if err == nil {
+		return gw.Result__Succ, nil
 	}
 
-	return gw.Result__Succ, nil
+	return gw.Result__Fail, err
 }
 
 func (g GatewayIs) TeamDirty(ctx context.Context, tid string) (_r gw.Result_, _err error) {
-	if !gateway.Server.IsProdHash(Kt.HashCode(KtUnsafe.StringToBytes(tid))) {
+	if !gateway.Server.IsProdHashS(tid) {
 		return gw.Result__ProdErr, nil
 	}
 
 	gateway.TeamMng.Dirty(tid)
 	return gw.Result__Fail, nil
+}
+
+func (g GatewayIs) TeamStarts(ctx context.Context, tid string) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHashS(tid) {
+		return gw.Result__ProdErr, nil
+	}
+
+	gateway.ChatMng.TeamStarts(tid)
+	return gw.Result__Succ, nil
 }

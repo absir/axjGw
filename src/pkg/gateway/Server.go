@@ -45,6 +45,8 @@ func (that server) Init(workId int32) {
 
 func (that server) StartGw() {
 	go that.Manager.CheckLoop()
+	go MsgMng.CheckLoop()
+	go ChatMng.CheckLoop()
 }
 
 func (that server) ConnLoop(conn ANet.Conn) {
@@ -168,6 +170,11 @@ func (that server) IsProdCid(cid int64) bool {
 
 func (that server) IsProdHash(hash int) bool {
 	prod := that.GetProds(Config.GwProd).GetProdHash(hash)
+	return prod != nil && prod.id == Config.WorkId
+}
+
+func (that server) IsProdHashS(hash string) bool {
+	prod := that.GetProds(Config.GwProd).GetProdHashS(hash)
 	return prod != nil && prod.id == Config.WorkId
 }
 

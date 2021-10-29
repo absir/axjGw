@@ -403,7 +403,7 @@ func (that MsgGrp) Clear(queue bool, last bool) {
 	}
 }
 
-func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (Msg, bool, error) {
+func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (int64, bool, error) {
 	if qs >= 2 {
 		if MsgMng.LastMax <= 0 {
 			qs = 1
@@ -413,14 +413,22 @@ func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue 
 	sess := that.getSess(queue)
 	if qs <= 1 {
 		if sess == nil {
-			return nil, false, NOWAY
+			return 0, false, ERR_NOWAY
 		}
 
 		msg := NewMsg(uri, bytes, unique)
 		succ, err := sess.QueuePush(msg)
-		return msg, succ, err
+		return msg.Get().Id, succ, err
 
 	} else {
+		if qs >= 0 && fid > 0 && MsgMng.Db != nil {
+			// 唯一性校验
+			id := MsgMng.Db.FidGet(fid, that.gid)
+			if id > 0 {
+				return id, true, nil
+			}
+		}
+
 		var err error = nil
 		msg := NewMsg(uri, bytes, unique)
 		that.lastPush(sess, msg, fid)
@@ -433,21 +441,21 @@ func (that MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue 
 			sess.LastsStart()
 		}
 
-		return msg, true, err
+		return msg.Get().Id, true, err
 	}
 }
 
 func (that MsgGrp) insertMsgD(msgD *MsgD) error {
 	if msgD.Id > 0 {
 		// sess.lastQueue加强不漏消息
-		return MsgMng.Db.Insert(*msgD)
+		return MsgMng.Db.Insert(msgD)
 
 	} else {
 		// laster加强消息顺序写入
 		that.getLaster().Lock()
 		defer that.getLaster().Unlock()
 		msgD.Id = MsgMng.idWorkder.Generate()
-		return MsgMng.Db.Insert(*msgD)
+		return MsgMng.Db.Insert(msgD)
 	}
 }
 
@@ -478,7 +486,8 @@ const (
 	ER_LAST ERpc = 2
 )
 
-var NOWAY = errors.New("NOWAY")
+var ERR_NOWAY = errors.New("ERR_NOWAY")
+var ERR_FAIL = errors.New("ERR_FAIL")
 
 func (that MsgSess) OnResult(ret gw.Result_, err error, rpc ERpc, client *MsgClient, unique string) bool {
 	if ret == gw.Result__Succ {
@@ -488,6 +497,25 @@ func (that MsgSess) OnResult(ret gw.Result_, err error, rpc ERpc, client *MsgCli
 
 	// 消息发送失败
 	return false
+}
+
+func (that MsgSess) Push(msgD *MsgD, client *MsgClient, unique string) bool {
+	if msgD == nil {
+		return true
+	}
+
+	if msgD.Uri == "" && msgD.Data == nil {
+		if msgD.Fid <= 0 {
+			return true
+		}
+
+		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, client.cid, msgD.Uri, msgD.Data, false, msgD.Fid)
+		return that.OnResult(ret, err, ER_PUSH, client, unique)
+
+	} else {
+		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, client.cid, msgD.Uri, msgD.Data, false, msgD.Id)
+		return that.OnResult(ret, err, ER_PUSH, client, unique)
+	}
 }
 
 func (that MsgSess) getQueue() *Util.CircleQueue {
@@ -527,7 +555,7 @@ func (that MsgSess) QueuePush(msg Msg) (bool, error) {
 			return that.OnResult(ret, err, ER_PUSH, client, ""), err
 		}
 
-		return false, NOWAY
+		return false, ERR_NOWAY
 	}
 
 	that.grp.locker.Lock()
@@ -595,9 +623,7 @@ func (that MsgSess) queueRun() {
 			break
 		}
 
-		msgD := msg.Get()
-		ret, err := client.gatewayI.Push(Server.Context, client.cid, msgD.Uri, msgD.Data, true, 0)
-		if !that.OnResult(ret, err, ER_PUSH, client, "") {
+		if !that.Push(msg.Get(), client, "") {
 			break
 		}
 
@@ -686,6 +712,9 @@ func (that MsgSess) lastRun(client *MsgClient, unique string) {
 		if that.lastDone(client, lasting) {
 			break
 		}
+
+		// 休眠一秒， 防止通知过于频繁
+		time.Sleep(time.Second)
 	}
 }
 
@@ -703,7 +732,12 @@ func (that MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
 	}
 
 	lastLoop := that.inLastLoop(client)
-	for i := 0; i < MsgMng.LastLoop; i++ {
+	if lastId < 65535 && MsgMng.Db != nil {
+		// 从最近多少条开始
+		lastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
+	}
+
+	for lastLoop == client.lastLoop {
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
 		if msg == nil {
 			if lastIn {
@@ -725,8 +759,7 @@ func (that MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
 						return
 					}
 
-					ret, err := client.gatewayI.Push(Server.Context, client.cid, msgD.Uri, msgD.Data, false, msgD.Id)
-					if !that.OnResult(ret, err, ER_PUSH, client, unique) {
+					if !that.Push(msg.Get(), client, "") {
 						return
 					}
 				}
@@ -742,8 +775,7 @@ func (that MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
 				return
 			}
 
-			ret, err := client.gatewayI.Push(Server.Context, client.cid, msgD.Uri, msgD.Data, true, msgD.Id)
-			if !that.OnResult(ret, err, ER_PUSH, client, unique) {
+			if !that.Push(msg.Get(), client, "") {
 				return
 			}
 
@@ -830,8 +862,4 @@ func (that MsgSess) lastGet(client *MsgClient, lastLoop int64, lastId int64) (Ms
 	}
 
 	return nil, lastIn
-}
-
-func (that msgMng) dbMsgFail(id int64, gid string) {
-	Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid,)
 }

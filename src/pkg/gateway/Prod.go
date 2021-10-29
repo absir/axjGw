@@ -131,6 +131,10 @@ func (that *Prods) Add(id int32, url string) *Prods {
 	return prods
 }
 
+func (that Prods) Size() int {
+	return that.ids.Size()
+}
+
 func (that Prods) GetProd(id int32) *Prod {
 	return that.prods[id]
 }

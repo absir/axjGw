@@ -50,4 +50,6 @@ service GatewayI {
     Result gPushA(1: string gid, 2: i64 id, 3: bool succ)
     // 组更新、删除
     Result teamDirty(1: string tid);
+    // 组发送管道启动
+    Result teamStarts(1: string tid);
 }
