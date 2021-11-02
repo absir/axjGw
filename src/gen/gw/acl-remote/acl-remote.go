@@ -25,7 +25,6 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
   fmt.Fprintln(os.Stderr, "  void loginBack(i64 cid, i64 uid, string sid)")
   fmt.Fprintln(os.Stderr, "  Team team(string tid)")
-  fmt.Fprintln(os.Stderr, "  string kickBs()")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -153,8 +152,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "Login requires 2 args")
       flag.Usage()
     }
-    argvalue0, err21 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err21 != nil {
+    argvalue0, err18 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err18 != nil {
       Usage()
       return
     }
@@ -169,14 +168,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "LoginBack requires 3 args")
       flag.Usage()
     }
-    argvalue0, err23 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err23 != nil {
+    argvalue0, err20 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err20 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err24 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err24 != nil {
+    argvalue1, err21 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err21 != nil {
       Usage()
       return
     }
@@ -194,14 +193,6 @@ func main() {
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
     fmt.Print(client.Team(context.Background(), value0))
-    fmt.Print("\n")
-    break
-  case "kickBs":
-    if flag.NArg() - 1 != 0 {
-      fmt.Fprintln(os.Stderr, "KickBs requires 0 args")
-      flag.Usage()
-    }
-    fmt.Print(client.KickBs(context.Background()))
     fmt.Print("\n")
     break
   case "":

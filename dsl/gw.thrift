@@ -46,8 +46,6 @@ service Acl {
     void loginBack(1: i64 cid, 2: i64 uid, 3: string sid);
     // 组查询
     Team team(1: string tid);
-    // 挤掉线
-    binary kickBs();
 }
 
 // 转发
