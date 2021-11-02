@@ -2,9 +2,9 @@ package gws
 
 import (
 	"axj/ANet"
+	"axjGW/gen/gw"
 	"axjGW/pkg/gateway"
 	"context"
-	"gw"
 )
 
 type GatewayIS struct {
@@ -85,7 +85,7 @@ func (g GatewayIS) Rid(ctx context.Context, cid int64, name string, rid int32) (
 		return gw.Result__IdNone, nil
 	}
 
-	gateway.Server.Handler.ClientG(client).PutRId(name, rid)
+	gateway.Handler.ClientG(client).PutRId(name, rid)
 	return gw.Result__Succ, nil
 }
 
@@ -99,7 +99,7 @@ func (g GatewayIS) Rids(ctx context.Context, cid int64, rids map[string]int32) (
 		return gw.Result__IdNone, nil
 	}
 
-	gateway.Server.Handler.ClientG(client).PutRIds(rids)
+	gateway.Handler.ClientG(client).PutRIds(rids)
 	return gw.Result__Succ, nil
 }
 
@@ -113,7 +113,7 @@ func (g GatewayIS) Last(ctx context.Context, cid int64, gid string, connVer int3
 		return gw.Result__IdNone, nil
 	}
 
-	if gid == gateway.Server.Handler.ClientG(client).Gid() {
+	if gid == gateway.Handler.ClientG(client).Gid() {
 		gid = ""
 	}
 

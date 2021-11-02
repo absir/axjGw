@@ -13,38 +13,48 @@ const (
 	ERR_PORD_ERR = 2 // 服务错误
 )
 
-var Processor = ANet.Processor{
-	Protocol:    ANet.ProtocolV{},
-	Compress:    ANet.CompressZip{},
-	CompressMin: Config.CompressMin,
-	Encrypt:     ANet.EncryptSr{},
-	DataMax:     Config.DataMax,
+var processor *ANet.Processor
+var Handler *handler
+
+func initHandler() {
+	processor = &ANet.Processor{
+		Protocol:    &ANet.ProtocolV{},
+		Compress:    &ANet.CompressZip{},
+		CompressMin: Config.CompressMin,
+		DataMax:     Config.DataMax,
+	}
+
+	if Config.Encrypt {
+		processor.Encrypt = &ANet.EncryptSr{}
+	}
+
+	Handler = new(handler)
 }
 
 type handler struct {
 }
 
-func (that handler) ClientG(client ANet.Client) *ClientG {
+func (that *handler) ClientG(client ANet.Client) *ClientG {
 	return client.(*ClientG)
 }
 
-func (that handler) OnOpen(client ANet.Client) {
+func (that *handler) OnOpen(client ANet.Client) {
 	clientG := new(ClientG)
 	clientG.ConnKeep()
 }
 
-func (that handler) OnClose(client ANet.Client, err error, reason interface{}) {
+func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) {
 	clientG := new(ClientG)
 	if clientG.gid != "" {
 		// 断开连接通知
-		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, clientG.Id(), clientG.gid, clientG.unique)
+		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, clientG.Id(), clientG.gid, clientG.unique, 0)
 	}
 }
 
-func (that handler) OnKeep(client ANet.Client, req bool) {
+func (that *handler) OnKeep(client ANet.Client, req bool) {
 }
 
-func (that handler) OnReq(client ANet.Client, req int32, uri string, uriI int32, data []byte) bool {
+func (that *handler) OnReq(client ANet.Client, req int32, uri string, uriI int32, data []byte) bool {
 	if req >= ANet.REQ_ONEWAY {
 		return false
 	}
@@ -52,7 +62,7 @@ func (that handler) OnReq(client ANet.Client, req int32, uri string, uriI int32,
 	return true
 }
 
-func (that handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, data []byte) {
+func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, data []byte) {
 	reped := false
 	defer that.reqRcvr(client, req, reped)
 	name := Config.AclProd
@@ -93,7 +103,7 @@ func (that handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int3
 	}
 }
 
-func (that handler) reqRcvr(client ANet.Client, req int32, reped bool) {
+func (that *handler) reqRcvr(client ANet.Client, req int32, reped bool) {
 	if err := recover(); err != nil {
 		AZap.Logger.Warn("rep err", zap.Reflect("err", err))
 	}
@@ -103,21 +113,21 @@ func (that handler) reqRcvr(client ANet.Client, req int32, reped bool) {
 	}
 }
 
-func (that handler) Processor() ANet.Processor {
-	return Processor
+func (that *handler) Processor() *ANet.Processor {
+	return processor
 }
 
-func (that handler) UriDict() ANet.UriDict {
+func (that *handler) UriDict() ANet.UriDict {
 	return UriDict
 }
 
-func (that handler) New(conn ANet.Conn) ANet.ClientM {
+func (that *handler) New(conn ANet.Conn) ANet.ClientM {
 	clientG := new(ClientG)
 	clientG.hash = -1
 	return clientG
 }
 
-func (that handler) Check(time int64, client ANet.Client) {
+func (that *handler) Check(time int64, client ANet.Client) {
 	clientG := new(ClientG)
 	if clientG.connTime < time {
 		clientG.ConnKeep()

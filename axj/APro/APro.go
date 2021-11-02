@@ -226,8 +226,8 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 
 // 子配置
 func SubCfg(sub string) Kt.Map {
+	m := Kt.If(Cfg == nil, nil, KtCfg.Get(Cfg, sub))
 	var cfg Kt.Map = nil
-	m := Kt.If(Cfg == nil, nil, KtCfg.Get(cfg, sub))
 	if m != nil {
 		mp, ok := m.(*Kt.Map)
 		if ok && mp != nil {
@@ -250,10 +250,9 @@ func SubCfgBind(sub string, bind interface{}) interface{} {
 }
 
 func FileCfg(file string) KtCfg.Cfg {
-	file, err := filepath.EvalSymlinks(filepath.Join(Path(), file))
-	Kt.Err(err, true)
+	file = filepath.Join(Path(), file)
 	f, err := os.Open(file)
-	if err == os.ErrNotExist {
+	if os.IsNotExist(err) {
 		return nil
 	}
 

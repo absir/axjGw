@@ -53,12 +53,15 @@ func initChatMng() {
 }
 
 // 空闲检测
-// 空闲检测
-func (that chatMng) CheckStop() {
+func (that *chatMng) CheckStop() {
 	that.checkLoop = -1
 }
 
-func (that chatMng) CheckLoop() {
+func (that *chatMng) CheckLoop() {
+	if MsgMng.Db == nil {
+		return
+	}
+
 	loopTime := time.Now().UnixNano()
 	that.checkLoop = loopTime
 	for loopTime == that.checkLoop {
@@ -83,11 +86,11 @@ func (that chatMng) CheckLoop() {
 	}
 }
 
-func (that chatMng) checkMsgD(msgD *MsgD) bool {
+func (that *chatMng) checkMsgD(msgD *MsgD) bool {
 	return that.MsgFail(msgD.Id, msgD.Gid) == nil
 }
 
-func (that chatMng) checkChatTeam(key, val interface{}) bool {
+func (that *chatMng) checkChatTeam(key, val interface{}) bool {
 	chatTeam := val.(*ChatTeam)
 	if chatTeam == nil {
 		that.teamMap.Delete(key)
@@ -105,7 +108,7 @@ const (
 	R_SUCC_MIN = 32
 )
 
-func (that chatMng) MsgSucc(id int64) error {
+func (that *chatMng) MsgSucc(id int64) error {
 	if MsgMng.Db == nil {
 		return ERR_NOWAY
 	}
@@ -113,7 +116,7 @@ func (that chatMng) MsgSucc(id int64) error {
 	return MsgMng.Db.UpdateF(id, F_SUCC)
 }
 
-func (that chatMng) MsgFail(id int64, gid string) error {
+func (that *chatMng) MsgFail(id int64, gid string) error {
 	if MsgMng.Db == nil {
 		return ERR_NOWAY
 	}
@@ -137,7 +140,7 @@ type ChatTeam struct {
 	msgQueue *Util.CircleQueue
 }
 
-func (that chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
+func (that *chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 	val, _ := that.teamMap.Load(tid)
 	chatTeam := val.(*ChatTeam)
 	if chatTeam == nil {
@@ -157,7 +160,7 @@ func (that chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 	chatTeam.Start(msgTeam)
 }
 
-func (that ChatTeam) addMsgTeam(msgTeam *MsgTeam) {
+func (that *ChatTeam) addMsgTeam(msgTeam *MsgTeam) {
 	if msgTeam == nil || ChatMng.TPushQueue <= 0 {
 		return
 	}
@@ -171,7 +174,7 @@ func (that ChatTeam) addMsgTeam(msgTeam *MsgTeam) {
 	that.msgQueue.Push(msgTeam, true)
 }
 
-func (that ChatTeam) getMsgTeam() *MsgTeam {
+func (that *ChatTeam) getMsgTeam() *MsgTeam {
 	if that.msgQueue == nil {
 		return nil
 	}
@@ -186,7 +189,7 @@ func (that ChatTeam) getMsgTeam() *MsgTeam {
 	return val.(*MsgTeam)
 }
 
-func (that ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
+func (that *ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
 	if that.msgQueue == nil {
 		return
 	}
@@ -200,7 +203,7 @@ func (that ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
 	that.msgQueue.Remove(msgTeam)
 }
 
-func (that ChatTeam) Start(msgTeam *MsgTeam) {
+func (that *ChatTeam) Start(msgTeam *MsgTeam) {
 	that.addMsgTeam(msgTeam)
 	if that.starting != 0 {
 		return
@@ -209,7 +212,7 @@ func (that ChatTeam) Start(msgTeam *MsgTeam) {
 	go that.startRun()
 }
 
-func (that ChatTeam) startIn() bool {
+func (that *ChatTeam) startIn() bool {
 	ChatMng.locker.Lock()
 	defer ChatMng.locker.Unlock()
 	if that.starting != 1 {
@@ -220,11 +223,11 @@ func (that ChatTeam) startIn() bool {
 	return false
 }
 
-func (that ChatTeam) startOut() {
+func (that *ChatTeam) startOut() {
 	that.starting = time.Now().UnixNano() + ChatMng.TIdleLive
 }
 
-func (that ChatTeam) startRun() {
+func (that *ChatTeam) startRun() {
 	// 协程进入保护
 	if !that.startIn() {
 		return
@@ -263,7 +266,7 @@ func (that ChatTeam) startRun() {
 	}
 }
 
-func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
+func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 	// 执行hash校验
 	if !Server.IsProdHashS(msgTeam.Tid) {
 		return false
@@ -340,7 +343,7 @@ func (that ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 }
 
 // 点对点发送聊天 调用注意分布一致hash 入口
-func (that chatMng) Send(fromId string, toId string, uri string, bytes []byte, db bool) (bool, error) {
+func (that *chatMng) Send(fromId string, toId string, uri string, bytes []byte, db bool) (bool, error) {
 	fClient := Server.GetProdGid(fromId).GetGWIClient()
 	fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, 3, false, "", F_FAIL)
 	if fid < R_SUCC_MIN {
@@ -369,7 +372,7 @@ func (that chatMng) Send(fromId string, toId string, uri string, bytes []byte, d
 }
 
 // 发送群聊天 调用注意分布一致hash 入口
-func (that chatMng) TeamPush(fromId string, tid string, readfeed bool, uri string, bytes []byte, queue bool, db bool) (bool, error) {
+func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri string, bytes []byte, queue bool, db bool) (bool, error) {
 	var qs int32 = 3
 	if !db {
 		qs = 2

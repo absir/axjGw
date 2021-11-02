@@ -4,7 +4,7 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtUnsafe"
-	"gw"
+	"axjGW/gen/gw"
 	"strconv"
 	"sync"
 	"time"
@@ -22,23 +22,23 @@ type ClientG struct {
 	connTime int64     // 最后连接时间
 }
 
-func (that ClientG) Uid() int64 {
+func (that *ClientG) Uid() int64 {
 	return that.uid
 }
 
-func (that ClientG) Sid() string {
+func (that *ClientG) Sid() string {
 	return that.sid
 }
 
-func (that ClientG) Gid() string {
+func (that *ClientG) Gid() string {
 	return that.gid
 }
 
-func (that ClientG) Unique() string {
+func (that *ClientG) Unique() string {
 	return that.unique
 }
 
-func (that ClientG) SetId(uid int64, sid string, unique string) {
+func (that *ClientG) SetId(uid int64, sid string, unique string) {
 	that.uid = uid
 	that.sid = sid
 	if uid > 0 {
@@ -52,7 +52,7 @@ func (that ClientG) SetId(uid int64, sid string, unique string) {
 	that.hash = -1
 }
 
-func (that ClientG) Hash() int {
+func (that *ClientG) Hash() int {
 	if that.hash < 0 {
 		clientC := that.Get()
 		clientC.Locker().Lock()
@@ -83,7 +83,7 @@ func (that ClientG) Hash() int {
 	return that.hash
 }
 
-func (that ClientG) GetId(name string) int32 {
+func (that *ClientG) GetId(name string) int32 {
 	if name == "" || name == Config.AclProd {
 		return that.rid
 	}
@@ -100,7 +100,7 @@ func (that ClientG) GetId(name string) int32 {
 	return id.(int32)
 }
 
-func (that ClientG) initRidMap() {
+func (that *ClientG) initRidMap() {
 	if that.ridMap == nil {
 		clientC := that.Get()
 		clientC.Locker().Lock()
@@ -111,7 +111,7 @@ func (that ClientG) initRidMap() {
 	}
 }
 
-func (that ClientG) PutRId(name string, id int32) {
+func (that *ClientG) PutRId(name string, id int32) {
 	if name == "" || name == Config.AclProd {
 		that.rid = id
 		return
@@ -132,7 +132,7 @@ func (that ClientG) PutRId(name string, id int32) {
 	}
 }
 
-func (that ClientG) PutRIds(ids map[string]int32) {
+func (that *ClientG) PutRIds(ids map[string]int32) {
 	if ids == nil {
 		return
 	}
@@ -142,7 +142,7 @@ func (that ClientG) PutRIds(ids map[string]int32) {
 	}
 }
 
-func (that ClientG) GetProd(name string, rand bool) *Prod {
+func (that *ClientG) GetProd(name string, rand bool) *Prod {
 	prods := Server.GetProds(name)
 	if prods == nil {
 		return nil
@@ -160,7 +160,7 @@ func (that ClientG) GetProd(name string, rand bool) *Prod {
 	return prods.GetProdHash(that.Hash())
 }
 
-func (that ClientG) ConnKeep() {
+func (that *ClientG) ConnKeep() {
 	that.connTime = time.Now().Unix() + Config.ConnDrt
 }
 
@@ -173,5 +173,4 @@ func (that *ClientG) ConnCheck() {
 }
 
 func (that *ClientG) ConnStart(clear bool, lasts bool) {
-
 }

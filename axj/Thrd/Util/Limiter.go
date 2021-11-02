@@ -16,7 +16,7 @@ type LimiterLocker struct {
 	cond   *sync.Cond
 }
 
-func (that LimiterLocker) Add() {
+func (that *LimiterLocker) Add() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	if that.add >= that.limit {
@@ -26,7 +26,7 @@ func (that LimiterLocker) Add() {
 	that.add++
 }
 
-func (that LimiterLocker) Done() {
+func (that *LimiterLocker) Done() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	that.add--
@@ -35,7 +35,7 @@ func (that LimiterLocker) Done() {
 	}
 }
 
-func (that LimiterLocker) Wait() {
+func (that *LimiterLocker) Wait() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	for {
@@ -47,7 +47,7 @@ func (that LimiterLocker) Wait() {
 	}
 }
 
-func (that LimiterLocker) StrictAs(limit int) bool {
+func (that *LimiterLocker) StrictAs(limit int) bool {
 	return that.add == 0 && that.limit == limit
 }
 

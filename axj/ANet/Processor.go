@@ -13,11 +13,11 @@ type Processor struct {
 	DataMax     int32
 }
 
-func (that Processor) Req(conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
+func (that *Processor) Req(conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
 	return req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, that.DataMax)
 }
 
-func (that Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
+func (that *Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
 	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate, id)
 }
 
@@ -124,7 +124,7 @@ type RepBatch struct {
 	bhs      []byte
 }
 
-func (that RepBatch) init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
+func (that *RepBatch) init(protocol Protocol, compress Compress, compressMin int, req int32, uri string, uriI int32, data []byte) error {
 	var head byte = 0
 	dLen := 0
 	if data != nil {
@@ -167,7 +167,7 @@ func (that RepBatch) init(protocol Protocol, compress Compress, compressMin int,
 	return nil
 }
 
-func (that RepBatch) rep(locker sync.Locker, out bool, conn Conn, encrypt Encrypt, encryKey []byte) error {
+func (that *RepBatch) rep(locker sync.Locker, out bool, conn Conn, encrypt Encrypt, encryKey []byte) error {
 	if that.data == nil {
 		// 无数据写入
 		if conn.Sticky() {

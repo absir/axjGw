@@ -45,11 +45,11 @@ type Protocol interface {
 type ProtocolV struct {
 }
 
-func (that ProtocolV) crc(head byte) byte {
+func (that *ProtocolV) crc(head byte) byte {
 	return (head & HEAD_CRC_MSK_N) % HEAD_CRC_MSK_M
 }
 
-func (that ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that *ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head = bs[0]
 	// 头部校验
 	if that.crc(head) != (head & HEAD_CRC_MSK) {
@@ -90,7 +90,7 @@ func (that ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri strin
 	return
 }
 
-func (that ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that *ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head, err = reader.ReadByte()
 	if err != nil {
 		return
@@ -151,7 +151,7 @@ func (that ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err 
 	return
 }
 
-func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte {
+func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte {
 	if req == REQ_PUSHI {
 		if id == 0 {
 			req = REQ_PUSH
@@ -243,7 +243,7 @@ func (that ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky
 	return bs
 }
 
-func (that ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error) {
+func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error) {
 	if req == REQ_PUSHI {
 		if id == 0 {
 			req = REQ_PUSH
@@ -366,7 +366,7 @@ func (that ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req in
 	return
 }
 
-func (that ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte {
+func (that *ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte {
 	if data {
 		head |= HEAD_DATA
 	}
@@ -416,7 +416,7 @@ func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []by
 	return bh
 }
 
-func (that ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error) {
+func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error) {
 	err = nil
 	var dLen int32 = 0
 	if data != nil {

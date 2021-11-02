@@ -22,11 +22,11 @@ func (that *ClientMng) GetM() *ClientMng {
 	return that
 }
 
-func (that ClientMng) Id() int64 {
+func (that *ClientMng) Id() int64 {
 	return that.id
 }
 
-func (that ClientMng) InitTime() int64 {
+func (that *ClientMng) InitTime() int64 {
 	return that.initTime
 }
 
@@ -47,19 +47,19 @@ type Manager struct {
 	beatBytes []byte
 }
 
-func (that Manager) HandlerM() HandlerM {
+func (that *Manager) HandlerM() HandlerM {
 	return that.handlerM
 }
 
-func (that Manager) ClientMap() *sync.Map {
+func (that *Manager) ClientMap() *sync.Map {
 	return that.clientMap
 }
 
-func (that Manager) IdWorker() *Util.IdWorker {
+func (that *Manager) IdWorker() *Util.IdWorker {
 	return that.idWorker
 }
 
-func (that Manager) Client(cid int64) Client {
+func (that *Manager) Client(cid int64) Client {
 	client, ok := that.clientMap.Load(cid)
 	if ok {
 		return client.(Client)
@@ -79,11 +79,11 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkD
 	return that
 }
 
-func (that Manager) ClientM(client Client) *ClientMng {
+func (that *Manager) ClientM(client Client) *ClientMng {
 	return client.(ClientM).GetM()
 }
 
-func (that Manager) OnOpen(client Client) {
+func (that *Manager) OnOpen(client Client) {
 	clientM := that.ClientM(client)
 	if clientM.id <= 0 {
 		clientM.id = that.idWorker.Generate()
@@ -93,18 +93,18 @@ func (that Manager) OnOpen(client Client) {
 	that.handlerM.OnOpen(client)
 }
 
-func (that Manager) OnClose(client Client, err error, reason interface{}) {
+func (that *Manager) OnClose(client Client, err error, reason interface{}) {
 	// Map删除
 	that.clientMap.Delete(that.ClientM(client).id)
 	that.handlerM.OnClose(client, err, reason)
 }
 
-func (that Manager) OnKeep(client Client, req bool) {
+func (that *Manager) OnKeep(client Client, req bool) {
 	that.ClientM(client).idleTime = time.Now().UnixNano() + that.idleDrt
 	that.handlerM.OnKeep(client, req)
 }
 
-func (that Manager) OnReq(client Client, req int32, uri string, uriI int32, data []byte) bool {
+func (that *Manager) OnReq(client Client, req int32, uri string, uriI int32, data []byte) bool {
 	if req == REQ_BEAT {
 		return true
 	}
@@ -112,24 +112,24 @@ func (that Manager) OnReq(client Client, req int32, uri string, uriI int32, data
 	return that.handlerM.OnReq(client, req, uri, uriI, data)
 }
 
-func (that Manager) OnReqIO(client Client, req int32, uri string, uriI int32, data []byte) {
+func (that *Manager) OnReqIO(client Client, req int32, uri string, uriI int32, data []byte) {
 	that.handlerM.OnReqIO(client, req, uri, uriI, data)
 }
 
-func (that Manager) Processor() Processor {
+func (that *Manager) Processor() *Processor {
 	return that.handlerM.Processor()
 }
 
-func (that Manager) UriDict() UriDict {
+func (that *Manager) UriDict() UriDict {
 	return that.handlerM.UriDict()
 }
 
 // 空闲检测
-func (that Manager) CheckStop() {
+func (that *Manager) CheckStop() {
 	that.checkLoop = -1
 }
 
-func (that Manager) CheckLoop() {
+func (that *Manager) CheckLoop() {
 	loopTime := time.Now().UnixNano()
 	that.checkLoop = loopTime
 	for loopTime == that.checkLoop {
@@ -139,12 +139,12 @@ func (that Manager) CheckLoop() {
 	}
 }
 
-func (that Manager) checkRange(key interface{}, val interface{}) bool {
+func (that *Manager) checkRange(key interface{}, val interface{}) bool {
 	that.checkClient(key, val)
 	return true
 }
 
-func (that Manager) checkClient(key interface{}, val interface{}) {
+func (that *Manager) checkClient(key interface{}, val interface{}) {
 	client, _ := val.(ClientM)
 	if client == nil {
 		that.clientMap.Delete(key)
@@ -167,7 +167,7 @@ func (that Manager) checkClient(key interface{}, val interface{}) {
 	that.handlerM.Check(that.checkTime, client)
 }
 
-func (that Manager) Open(conn Conn, encryKey []byte, id int64) Client {
+func (that *Manager) Open(conn Conn, encryKey []byte, id int64) Client {
 	handlerM := that.handlerM
 	client := handlerM.New(conn)
 	clientM := that.ClientM(client)

@@ -14,7 +14,7 @@ func New(values ...interface{}) *ArrayList {
 	return list
 }
 
-func (that ArrayList) Add(values ...interface{}) {
+func (that *ArrayList) Add(values ...interface{}) {
 	if that.size+len(values) >= len(that.elements)-1 {
 		newElements := make([]interface{}, that.size+len(values)+1)
 		copy(newElements, that.elements)
@@ -28,7 +28,7 @@ func (that ArrayList) Add(values ...interface{}) {
 
 }
 
-func (that ArrayList) Remove(index int) interface{} {
+func (that *ArrayList) Remove(index int) interface{} {
 	if index < 0 || index >= that.size {
 		return nil
 	}
@@ -40,22 +40,22 @@ func (that ArrayList) Remove(index int) interface{} {
 	return curEle
 }
 
-func (that ArrayList) Get(index int) interface{} {
+func (that *ArrayList) Get(index int) interface{} {
 	if index < 0 || index >= that.size {
 		return nil
 	}
 	return that.elements[index]
 }
 
-func (that ArrayList) IsEmpty() bool {
+func (that *ArrayList) IsEmpty() bool {
 	return that.size == 0
 }
 
-func (that ArrayList) Size() int {
+func (that *ArrayList) Size() int {
 	return that.size
 }
 
-func (that ArrayList) Contains(value interface{}) bool {
+func (that *ArrayList) Contains(value interface{}) bool {
 	for _, curValue := range that.elements {
 		if curValue == value {
 			return true

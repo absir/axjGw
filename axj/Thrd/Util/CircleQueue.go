@@ -16,7 +16,7 @@ func NewCircleQueue(max int) *CircleQueue {
 	return array
 }
 
-func (that CircleQueue) mod(i int) int {
+func (that *CircleQueue) mod(i int) int {
 	if i < that.max {
 		return i
 	}
@@ -24,19 +24,19 @@ func (that CircleQueue) mod(i int) int {
 	return i - that.max
 }
 
-func (that CircleQueue) Size() int {
+func (that *CircleQueue) Size() int {
 	return that.mod(that.max + that.tail - that.head)
 }
 
-func (that CircleQueue) IsEmpty() bool {
+func (that *CircleQueue) IsEmpty() bool {
 	return that.tail == that.head
 }
 
-func (that CircleQueue) IsFull() bool {
+func (that *CircleQueue) IsFull() bool {
 	return that.mod(that.tail+1) == that.head
 }
 
-func (that CircleQueue) Push(val interface{}, cover bool) bool {
+func (that *CircleQueue) Push(val interface{}, cover bool) bool {
 	if that.IsFull() {
 		if cover {
 			that.head = that.mod(that.head + 1)
@@ -52,7 +52,7 @@ func (that CircleQueue) Push(val interface{}, cover bool) bool {
 	return true
 }
 
-func (that CircleQueue) Pop() (interface{}, bool) {
+func (that *CircleQueue) Pop() (interface{}, bool) {
 	if that.IsEmpty() {
 		return nil, false
 	}
@@ -64,7 +64,7 @@ func (that CircleQueue) Pop() (interface{}, bool) {
 	return v, true
 }
 
-func (that CircleQueue) Get(idx int) (interface{}, bool) {
+func (that *CircleQueue) Get(idx int) (interface{}, bool) {
 	if idx < 0 || idx >= that.Size() {
 		return nil, false
 	}
@@ -73,7 +73,7 @@ func (that CircleQueue) Get(idx int) (interface{}, bool) {
 	return that.array[idx], true
 }
 
-func (that CircleQueue) Set(idx int, val interface{}) bool {
+func (that *CircleQueue) Set(idx int, val interface{}) bool {
 	if idx < 0 || idx >= that.Size() {
 		return false
 	}
@@ -83,7 +83,7 @@ func (that CircleQueue) Set(idx int, val interface{}) bool {
 	return true
 }
 
-func (that CircleQueue) Clear() {
+func (that *CircleQueue) Clear() {
 	that.head = 0
 	that.tail = 0
 	for i := that.max - 1; i >= 0; i-- {
@@ -91,7 +91,7 @@ func (that CircleQueue) Clear() {
 	}
 }
 
-func (that CircleQueue) Remove(val interface{}) bool {
+func (that *CircleQueue) Remove(val interface{}) bool {
 	if that.IsEmpty() {
 		return false
 	}

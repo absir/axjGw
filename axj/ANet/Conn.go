@@ -40,15 +40,15 @@ func NewConnSocket(conn *net.TCPConn) *ConnSocket {
 	return that
 }
 
-func (that ConnSocket) Conn() *net.TCPConn {
+func (that *ConnSocket) Conn() *net.TCPConn {
 	return that.conn
 }
 
-func (that ConnSocket) Read(b []byte) (int, error) {
+func (that *ConnSocket) Read(b []byte) (int, error) {
 	return that.conn.Read(b)
 }
 
-func (that ConnSocket) ReadByte() (byte, error) {
+func (that *ConnSocket) ReadByte() (byte, error) {
 	buff := that.rBuff
 	if buff == nil {
 		buff = make([]byte, 1)
@@ -67,15 +67,15 @@ func (that *ConnSocket) ReadA() (error, []byte, Reader) {
 	return nil, nil, that
 }
 
-func (that ConnSocket) Sticky() bool {
+func (that *ConnSocket) Sticky() bool {
 	return true
 }
 
-func (that ConnSocket) Out() *[]byte {
+func (that *ConnSocket) Out() *[]byte {
 	return &that.wBuff
 }
 
-func (that ConnSocket) Write(bs []byte) error {
+func (that *ConnSocket) Write(bs []byte) error {
 	_, err := that.Conn().Write(bs)
 	return err
 }
@@ -95,12 +95,12 @@ func NewConnWebsocket(conn *websocket.Conn) *ConnWebsocket {
 	return &that
 }
 
-func (that ConnWebsocket) Conn() *websocket.Conn {
-	conn := websocket.Conn(that)
+func (that *ConnWebsocket) Conn() *websocket.Conn {
+	conn := websocket.Conn(*that)
 	return &conn
 }
 
-func (that ConnWebsocket) ReadA() (error, []byte, Reader) {
+func (that *ConnWebsocket) ReadA() (error, []byte, Reader) {
 	var bs []byte
 	err := websocket.Message.Receive(that.Conn(), &bs)
 	if err != nil {
@@ -110,18 +110,18 @@ func (that ConnWebsocket) ReadA() (error, []byte, Reader) {
 	return nil, bs, nil
 }
 
-func (that ConnWebsocket) Sticky() bool {
+func (that *ConnWebsocket) Sticky() bool {
 	return false
 }
 
-func (that ConnWebsocket) Out() *[]byte {
+func (that *ConnWebsocket) Out() *[]byte {
 	return nil
 }
 
-func (that ConnWebsocket) Write(bs []byte) error {
+func (that *ConnWebsocket) Write(bs []byte) error {
 	return websocket.Message.Send(that.Conn(), bs)
 }
 
-func (that ConnWebsocket) Close() {
+func (that *ConnWebsocket) Close() {
 	that.Conn().Close()
 }

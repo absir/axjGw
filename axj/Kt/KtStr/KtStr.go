@@ -437,7 +437,6 @@ func SplitByteType(str string, chr byte, trim bool, start int, max int, typ refl
 
 	last := CountByte(str, chr, start, max)
 	strs := is.New(last + 1)
-	last--
 	for i := 0; i < last; i++ {
 		end := IndexByte(str, chr, start)
 		s := str[start:end]

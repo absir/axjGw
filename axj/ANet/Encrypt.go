@@ -19,17 +19,17 @@ type Encrypt interface {
 type EncryptSr struct {
 }
 
-func (that EncryptSr) NewKeys() ([]byte, []byte) {
+func (that *EncryptSr) NewKeys() ([]byte, []byte) {
 	bs := KtRand.RandBytes(8)
 	return bs, bs
 }
 
-func (that EncryptSr) Decrypt(data []byte, key []byte) ([]byte, error) {
+func (that *EncryptSr) Decrypt(data []byte, key []byte) ([]byte, error) {
 	KtEncry.SrDecry(data, key)
 	return data, nil
 }
 
-func (that EncryptSr) Encrypt(data []byte, key []byte, isolate bool) ([]byte, error) {
+func (that *EncryptSr) Encrypt(data []byte, key []byte, isolate bool) ([]byte, error) {
 	if isolate {
 		data = KtBytes.Copy(data)
 	}

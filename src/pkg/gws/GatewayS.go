@@ -1,9 +1,9 @@
 package gws
 
 import (
+	"axjGW/gen/gw"
 	"axjGW/pkg/gateway"
 	"context"
-	"gw"
 )
 
 type GatewayS struct {

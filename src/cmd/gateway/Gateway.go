@@ -8,6 +8,7 @@ import (
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
 	"axjGW/pkg/gateway"
+	"axjGW/pkg/gws"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 	"net"
@@ -39,8 +40,8 @@ func main() {
 	// 初始化配置
 	APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 		return runtime.Caller(0)
-	}, "../resources")
-	APro.Load(nil, "config.yaml")
+	}, "../../resources")
+	APro.Load(nil, "config.yml")
 
 	// 默认配置
 	{
@@ -49,11 +50,11 @@ func main() {
 	}
 
 	// Gw服务初始化
-	gateway.Server.Init(APro.WorkId())
+	gateway.Server.Init(APro.WorkId(), APro.Cfg, new(gws.GatewayIS))
 	// Gw服务开启
 	gateway.Server.StartGw()
 	// thrift服务开启
-	gateway.Server.StartThrift(GCfg.ThriftAddr, GCfg.ThriftIps)
+	gateway.Server.StartThrift(GCfg.ThriftAddr, GCfg.ThriftIps, new(gws.GatewayS))
 
 	// socket连接
 	if GCfg.SocketAddr != "" && !strings.HasPrefix(GCfg.SocketAddr, "!") {

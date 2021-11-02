@@ -154,7 +154,7 @@ func GetInt64(bs []byte, off int32, offP *int32) int64 {
 	for i := 0; i < 8; i++ {
 		b := bs[off]
 		off++
-		val += b << vf
+		val += int64(b) << vf
 		vf += 8
 	}
 

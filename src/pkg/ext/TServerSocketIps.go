@@ -17,8 +17,8 @@ func NewTServerSocketIps(socket *thrift.TServerSocket, ips func(ip string) bool)
 	return socketIps
 }
 
-func (p *TServerSocketIps) Accept() (thrift.TTransport, error) {
-	t, err := p.TServerSocket.Accept()
+func (that *TServerSocketIps) Accept() (thrift.TTransport, error) {
+	t, err := that.TServerSocket.Accept()
 	if t != nil {
 		socket := t.(*thrift.TSocket)
 		ip := socket.Conn().RemoteAddr().String()
@@ -27,7 +27,7 @@ func (p *TServerSocketIps) Accept() (thrift.TTransport, error) {
 			ip = ip[0:i]
 		}
 
-		if p.Ips == nil || !p.Ips(ip) {
+		if that.Ips == nil || !that.Ips(ip) {
 			socket.Close()
 			return nil, thrift.NewTTransportException(thrift.NOT_OPEN, "No Allow ip "+ip)
 		}

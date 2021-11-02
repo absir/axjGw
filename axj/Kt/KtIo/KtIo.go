@@ -50,7 +50,7 @@ func GetInt64Reader(reader io.ByteReader) int64 {
 			return val
 		}
 
-		val += b << vf
+		val += int64(b) << vf
 		vf += 8
 	}
 

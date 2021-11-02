@@ -28,7 +28,7 @@ func NewAllocPool(pool bool, alloc func() Pool) *AllocPool {
 	return that
 }
 
-func (that AllocPool) SetPool(pool bool) {
+func (that *AllocPool) SetPool(pool bool) {
 	if pool {
 		that.pool = new(sync.Pool)
 		that.pool.New = that.new
@@ -38,7 +38,7 @@ func (that AllocPool) SetPool(pool bool) {
 	}
 }
 
-func (that AllocPool) Get() interface{} {
+func (that *AllocPool) Get() interface{} {
 	if that.pool == nil {
 		return that.new()
 	}
@@ -46,7 +46,7 @@ func (that AllocPool) Get() interface{} {
 	return that.pool.Get()
 }
 
-func (that AllocPool) Put(p Pool, recover bool) {
+func (that *AllocPool) Put(p Pool, recover bool) {
 	if that.pool != nil {
 		if recover {
 			defer that.recover()
@@ -58,7 +58,7 @@ func (that AllocPool) Put(p Pool, recover bool) {
 	}
 }
 
-func (that AllocPool) recover() {
+func (that *AllocPool) recover() {
 	if reason := recover(); reason != nil {
 		AZap.Logger.Warn("AllocPool recover", zap.Reflect("reason", reason))
 	}

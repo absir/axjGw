@@ -44,22 +44,22 @@ type ClientCnn struct {
 	limiter  Util.Limiter
 }
 
-func (that ClientCnn) Locker() sync.Locker {
+func (that *ClientCnn) Locker() sync.Locker {
 	return that.locker
 }
 
-func (that ClientCnn) IsClosed() bool {
+func (that *ClientCnn) IsClosed() bool {
 	return that.closed != 0
 }
 
-func (that ClientCnn) Open(conn Conn, handler Handler, encryKey []byte) {
+func (that *ClientCnn) Open(conn Conn, handler Handler, encryKey []byte) {
 	that.conn = conn
 	that.handler = handler
 	that.encryKey = encryKey
 	that.locker = new(sync.Mutex)
 }
 
-func (that ClientCnn) SetLimiter(limit int) {
+func (that *ClientCnn) SetLimiter(limit int) {
 	if limit == 0 {
 		that.limiter = Util.LimiterOne
 
@@ -71,7 +71,7 @@ func (that ClientCnn) SetLimiter(limit int) {
 	}
 }
 
-func (that ClientCnn) Close(err error, reason interface{}) {
+func (that *ClientCnn) Close(err error, reason interface{}) {
 	that.close(err, reason, false)
 }
 
@@ -121,14 +121,14 @@ func (that *ClientCnn) close(err error, reason interface{}, inner bool) {
 	that.closed = CONN_CLOSED
 }
 
-func (that ClientCnn) closeLog(err error, reason interface{}) {
+func (that *ClientCnn) closeLog(err error, reason interface{}) {
 	if err == nil && reason == nil {
 		return
 	}
 	AZap.Logger.Info("Conn close", zap.Error(err), zap.Reflect("reason", reason))
 }
 
-func (that ClientCnn) closeRcvr() error {
+func (that *ClientCnn) closeRcvr() error {
 	if reason := recover(); reason != nil {
 		err, ok := reason.(error)
 		if ok {

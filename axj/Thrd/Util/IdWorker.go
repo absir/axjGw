@@ -61,7 +61,7 @@ func NewIdWorkerPanic(workerId int32) *IdWorker {
 }
 
 // Generate creates and returns a unique snowflake ID
-func (that IdWorker) Generate() int64 {
+func (that *IdWorker) Generate() int64 {
 	that.Lock()
 	defer that.Unlock()
 
@@ -82,11 +82,11 @@ func (that IdWorker) Generate() int64 {
 	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | (that.sequence)
 }
 
-func (that IdWorker) Timestamp(nanoTime int64) int64 {
+func (that *IdWorker) Timestamp(nanoTime int64) int64 {
 	now := nanoTime / 1000000
 	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | (that.sequence)
 }
 
-func (that IdWorker) GetWorkerId(id int64) int32 {
+func (that *IdWorker) GetWorkerId(id int64) int32 {
 	return (int32)(id>>workerIdShift) & worderIdMask
 }

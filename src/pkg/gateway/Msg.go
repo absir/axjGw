@@ -1,8 +1,8 @@
 package gateway
 
 import (
+	"axjGW/gen/gw"
 	"gorm.io/gorm"
-	"gw"
 )
 
 type Msg interface {
@@ -22,7 +22,7 @@ func (that *MsgD) Get() *MsgD {
 	return that
 }
 
-func (that MsgD) Unique() string {
+func (that *MsgD) Unique() string {
 	return ""
 }
 
@@ -31,7 +31,7 @@ type MsgU struct {
 	unique string
 }
 
-func (m MsgU) Unique() string {
+func (m *MsgU) Unique() string {
 	return m.unique
 }
 
@@ -83,7 +83,7 @@ type MsgGorm struct {
 	db *gorm.DB
 }
 
-func (that MsgGorm) AutoMigrate() {
+func (that *MsgGorm) AutoMigrate() {
 	migrator := that.db.Migrator()
 	if (!migrator.HasTable(&MsgD{})) {
 		migrator.AutoMigrate(&MsgD{})
@@ -94,23 +94,23 @@ func (that MsgGorm) AutoMigrate() {
 	}
 }
 
-func (that MsgGorm) Insert(msg *MsgD) error {
+func (that *MsgGorm) Insert(msg *MsgD) error {
 	return that.db.Create(msg).Error
 }
 
-func (that MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
+func (that *MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
 	var msgDS []MsgD = nil
 	that.db.Where("Gid = ? AND Id > ?", gid, lastId).Order("Id").Limit(limit).Find(&msgDS)
 	return msgDS
 }
 
-func (that MsgGorm) LastId(gid string, limit int) int64 {
+func (that *MsgGorm) LastId(gid string, limit int) int64 {
 	var id int64 = 0
 	that.db.Exec("SELECT Id FROM MsgD WHERE gid = ? ORDER BY Id DESC LIMIT ?, 1", gid, limit).First(&id)
 	return id
 }
 
-func (that MsgGorm) Last(gid string, limit int) []MsgD {
+func (that *MsgGorm) Last(gid string, limit int) []MsgD {
 	var msgDS []MsgD = nil
 	that.db.Where("Gid = ?", gid).Order("Id DESC").Limit(limit).Find(&msgDS)
 	if msgDS != nil {
@@ -129,29 +129,29 @@ func (that MsgGorm) Last(gid string, limit int) []MsgD {
 	return msgDS
 }
 
-func (that MsgGorm) Delete(id int64) error {
+func (that *MsgGorm) Delete(id int64) error {
 	return that.db.Exec("DELETE FROM MsgD WHERE id = ?", id).Error
 }
 
-func (that MsgGorm) DeleteF(fid int64) error {
+func (that *MsgGorm) DeleteF(fid int64) error {
 	return that.db.Exec("DELETE FROM MsgD WHERE Fid = ?", fid).Error
 }
 
-func (that MsgGorm) Clear(oId int64) error {
+func (that *MsgGorm) Clear(oId int64) error {
 	return that.db.Exec("DELETE FROM MsgD WHERE Id <= ?", oId).Error
 }
 
-func (that MsgGorm) UpdateF(id int64, fid int64) error {
+func (that *MsgGorm) UpdateF(id int64, fid int64) error {
 	return that.db.Exec("UPDATE MsgD SET Fid = ? WHERE Id <= ?", fid, id).Error
 }
 
-func (that MsgGorm) FidGet(fid int64, gid string) int64 {
+func (that *MsgGorm) FidGet(fid int64, gid string) int64 {
 	var id int64 = 0
 	that.db.Exec("SELECT Id FROM MsgD WHERE fid = ? AND gid = ?", fid, gid).First(&id)
 	return id
 }
 
-func (that MsgGorm) FidRange(fid int64, step int, idMax int64, idMin int64, fun func(msgD *MsgD) bool) {
+func (that *MsgGorm) FidRange(fid int64, step int, idMax int64, idMin int64, fun func(msgD *MsgD) bool) {
 	id := int64(0)
 	var msgDS []MsgD = nil
 	var msgD *MsgD
@@ -173,11 +173,11 @@ func (that MsgGorm) FidRange(fid int64, step int, idMax int64, idMin int64, fun 
 	}
 }
 
-func (that MsgGorm) TeamInsert(msgTeam *MsgTeam) error {
+func (that *MsgGorm) TeamInsert(msgTeam *MsgTeam) error {
 	return that.db.Create(msgTeam).Error
 }
 
-func (that MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
+func (that *MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
 	tLen := 0
 	if index < 0 {
 		tLen = index
@@ -200,13 +200,13 @@ func (that MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
 	}
 }
 
-func (that MsgGorm) TeamList(tid string, limit int) []MsgTeam {
+func (that *MsgGorm) TeamList(tid string, limit int) []MsgTeam {
 	var MsgTeams []MsgTeam = nil
 	that.db.Where("Tid = ?", tid).Order("Id").Limit(limit).Find(&MsgTeams)
 	return MsgTeams
 }
 
-func (that MsgGorm) TeamStarts(workId int32, limit int) []string {
+func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 	var tIds []string = nil
 	that.db.Exec("SELECT Tid FROM MsgTeam GROUP BY Tid").Limit(limit).Find(&tIds)
 	return tIds

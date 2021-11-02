@@ -1,4 +1,5 @@
 namespace go gw
+namespace java gen.gw
 
 struct Login {
     // 数字编号

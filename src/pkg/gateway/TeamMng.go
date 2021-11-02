@@ -2,8 +2,8 @@ package gateway
 
 import (
 	"axj/Kt/Kt"
+	"axjGW/gen/gw"
 	lru "github.com/hashicorp/golang-lru"
-	"gw"
 )
 
 type teamMng struct {
@@ -19,11 +19,11 @@ func initTeamMng() {
 	Kt.Panic(err)
 }
 
-func (that teamMng) Dirty(tid string) {
+func (that *teamMng) Dirty(tid string) {
 	that.teamMap.Remove(tid)
 }
 
-func (that teamMng) GetTeam(tid string) *gw.Team {
+func (that *teamMng) GetTeam(tid string) *gw.Team {
 	val, _ := that.teamMap.Get(tid)
 	team := val.(*gw.Team)
 	if team != nil {
