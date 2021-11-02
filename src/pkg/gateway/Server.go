@@ -172,6 +172,7 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 }
 
 func (that *server) StartThrift(addr string, ips []string, gateway gw.Gateway) {
+	AZap.Logger.Info("StartThrift: " + addr)
 	socket, err := thrift.NewTServerSocket(addr)
 	Kt.Panic(err)
 	processor := thrift.NewTMultiplexedProcessor()

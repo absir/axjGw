@@ -20,6 +20,7 @@ import (
 type Config struct {
 	HttpAddr   string   // http服务地址
 	HttpWs     bool     // 启用ws网关
+	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
 	ThriftAddr string   // thrift服务地址
 	ThriftIps  []string // thrfit调用Ip白名单，支持*通配
@@ -29,6 +30,7 @@ type Config struct {
 var GCfg = Config{
 	HttpAddr:   ":8082",
 	HttpWs:     true,
+	HttpWsPath: "ws",
 	SocketAddr: ":8083",
 	ThriftAddr: "127.0.0.1:8082",
 	ThriftIps:  KtStr.SplitByte("*", ',', true, 0, 0),
@@ -59,6 +61,7 @@ func main() {
 	// socket连接
 	if GCfg.SocketAddr != "" && !strings.HasPrefix(GCfg.SocketAddr, "!") {
 		// socket服务
+		AZap.Logger.Info("StartSocket: " + GCfg.SocketAddr)
 		serv, err := net.Listen("tcp", GCfg.SocketAddr)
 		Kt.Panic(err)
 		defer serv.Close()
@@ -75,17 +78,23 @@ func main() {
 	// websocket连接
 	if GCfg.HttpAddr != "" && !strings.HasPrefix(GCfg.SocketAddr, "!") {
 		// http服务
+		AZap.Logger.Info("StartHttp: " + GCfg.HttpAddr)
 		if GCfg.HttpWs {
+			AZap.Logger.Info("StartHttpWs: " + GCfg.HttpWsPath)
 			// websocket连接
-			http.Handle("gw", websocket.Handler(func(conn *websocket.Conn) {
+			http.Handle(GCfg.HttpWsPath, websocket.Handler(func(conn *websocket.Conn) {
 				go gateway.Server.ConnLoop(ANet.NewConnWebsocket(conn))
 			}))
 		}
 
-		err := http.ListenAndServe(GCfg.HttpAddr, nil)
-		Kt.Panic(err)
+		go func() {
+			err := http.ListenAndServe(GCfg.HttpAddr, nil)
+			Kt.Panic(err)
+		}()
 	}
 
+	// 启动完成
+	AZap.Logger.Info("Gateway all started")
 	// 等待关闭
 	APro.Signal()
 }
