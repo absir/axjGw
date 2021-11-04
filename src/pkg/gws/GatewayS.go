@@ -49,8 +49,8 @@ func (g GatewayS) GDisc(ctx context.Context, cid int64, gid string, unique strin
 	return err == nil, err
 }
 
-func (g GatewayS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r bool, _err error) {
-	ret, err := gateway.Server.GetProdCid(cid).GetGWIClient().GLasts(ctx, gid, cid, unique, lastId)
+func (g GatewayS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r bool, _err error) {
+	ret, err := gateway.Server.GetProdCid(cid).GetGWIClient().GLasts(ctx, gid, cid, unique, lastId, continuous)
 	return ret == gw.Result__Succ, err
 }
 
