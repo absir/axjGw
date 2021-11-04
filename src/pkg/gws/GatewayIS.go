@@ -209,6 +209,20 @@ func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique str
 	return gw.Result__Succ, nil
 }
 
+func (g GatewayIS) GLast(ctx context.Context, gid string) (_r gw.Result_, _err error) {
+	if !gateway.Server.IsProdHashS(gid) {
+		return gw.Result__ProdErr, nil
+	}
+
+	grp := gateway.MsgMng.GetMsgGrp(gid)
+	sess := grp.Sess()
+	if sess != nil {
+		sess.LastsStart()
+	}
+
+	return gw.Result__Succ, nil
+}
+
 func (g GatewayIS) GPush(ctx context.Context, gid string, uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (_r int64, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return int64(gw.Result__ProdErr), nil

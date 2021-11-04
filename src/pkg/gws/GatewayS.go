@@ -34,6 +34,11 @@ func (g GatewayS) Push(ctx context.Context, cid int64, uri string, bytes []byte)
 	return ret == gw.Result__Succ, err
 }
 
+func (g GatewayS) GLast(ctx context.Context, gid string) (_r bool, _err error) {
+	ret, err := gateway.Server.GetProdGid(gid).GetGWIClient().GLast(ctx, gid)
+	return ret == gw.Result__Succ, err
+}
+
 func (g GatewayS) GPush(ctx context.Context, gid string, uri string, bytes []byte, qs int32, unique string, queue bool) (_r bool, _err error) {
 	ret, err := gateway.Server.GetProdGid(gid).GetGWIClient().GPush(ctx, gid, uri, bytes, false, qs, queue, unique, 0)
 	return ret > gateway.R_SUCC_MIN, err

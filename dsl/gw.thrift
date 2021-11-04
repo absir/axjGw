@@ -68,6 +68,8 @@ service Gateway {
     bool rids(1: i64 cid, 2: map<string, i32> rids)
     // 简单推送
     bool push(1: i64 cid, 2: string uri, 3: binary bytes)
+    // 组通知
+    bool gLast(1: string gid)
     // 组推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
     bool gPush(1: string gid, 2: string uri, 3: binary bytes, 4: i32 qs, 5: string unique, 6: bool queue)
     // 注册监听gid
