@@ -23,10 +23,11 @@ const (
 	REQ_PUSHI  int32 = 1  // 推送+id
 	REQ_KICK   int32 = 2  // 软关闭
 	REQ_LAST   int32 = 3  // 消息推送检查+
-	REQ_KEY    int32 = 4  // 秘钥
-	REQ_ACL    int32 = 5  // 请求开启
-	REQ_BEAT   int32 = 6  // 心跳
-	REQ_ROUTE  int32 = 7  // 路由字典
+	REQ_LASTC  int32 = 4  // 消息推送检查+连续
+	REQ_KEY    int32 = 5  // 秘钥
+	REQ_ACL    int32 = 6  // 请求开启
+	REQ_BEAT   int32 = 7  // 心跳
+	REQ_ROUTE  int32 = 8  // 路由字典
 	REQ_LOOP   int32 = 15 // 连接接受
 	REQ_ONEWAY int32 = 16 // 路由处理
 )

@@ -103,7 +103,7 @@ func (g GatewayIS) Rids(ctx context.Context, cid int64, rids map[string]int32) (
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIS) Last(ctx context.Context, cid int64, gid string, connVer int32) (_r gw.Result_, _err error) {
+func (g GatewayIS) Last(ctx context.Context, cid int64, gid string, connVer int32, continuous bool) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdCid(cid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -117,7 +117,14 @@ func (g GatewayIS) Last(ctx context.Context, cid int64, gid string, connVer int3
 		gid = ""
 	}
 
-	err := client.Get().Rep(true, ANet.REQ_LAST, gid, connVer, nil, false, false, 0)
+	var err error
+	if continuous {
+		err = client.Get().Rep(true, ANet.REQ_LASTC, gid, connVer, nil, false, false, 0)
+
+	} else {
+		err = client.Get().Rep(true, ANet.REQ_LAST, gid, connVer, nil, false, false, 0)
+	}
+
 	if err != nil {
 		return gw.Result__Fail, err
 	}
@@ -186,7 +193,7 @@ func (g GatewayIS) GClear(ctx context.Context, gid string, queue bool, last bool
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r gw.Result_, _err error) {
+func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
@@ -198,7 +205,7 @@ func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique str
 	}
 
 	// 开始拉取
-	go grp.Sess().Lasts(lastId, client, unique)
+	grp.Sess().Lasts(lastId, client, unique, continuous)
 	return gw.Result__Succ, nil
 }
 

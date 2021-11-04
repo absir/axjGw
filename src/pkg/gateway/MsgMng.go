@@ -21,6 +21,7 @@ type msgMng struct {
 	LastMax   int           // last消息队列大小
 	LastLoad  bool          // 是否执行 last消息队类，初始化载入列表数
 	LastUrl   string        // 消息持久化，数据库连接
+	LastCNum  int           // 发送连续消息数量后，连续通知
 	CheckDrt  time.Duration // 执行检查逻辑，间隔
 	LiveDrt   int64         // 连接断开，存活时间
 	IdleDrt   int64         // 连接检查，间隔
@@ -46,6 +47,7 @@ func initMsgMng() {
 		LastMax:   20,
 		LastLoad:  false,
 		LastUrl:   "",
+		LastCNum:  10,
 		CheckDrt:  5000,
 		LiveDrt:   15000,
 		IdleDrt:   30000,
@@ -105,6 +107,7 @@ type MsgClient struct {
 	idleTime int64
 	lasting  int64
 	lastLoop int64
+	lastId   int64
 }
 
 // 空闲检测
@@ -707,8 +710,14 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 		if client.lastLoop <= 0 {
 			// 不执行lastLoop才通知
 			lasting := client.lasting
-			ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid, client.connVer)
-			that.OnResult(ret, err, ER_LAST, client, unique)
+			if client.lastId > 0 {
+				that.Lasts(client.lastId, client, unique, true)
+
+			} else {
+				ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid, client.connVer, false)
+				that.OnResult(ret, err, ER_LAST, client, unique)
+			}
+
 			if that.lastDone(client, lasting) {
 				break
 			}
@@ -719,15 +728,15 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 	}
 }
 
-func (that *MsgSess) Lasts(lastId int64, client *MsgClient, unique string) {
+func (that *MsgSess) Lasts(lastId int64, client *MsgClient, unique string, continuous bool) {
 	if client == nil {
 		return
 	}
 
-	go that.lastLoop(lastId, client, unique)
+	go that.lastLoop(lastId, client, unique, continuous)
 }
 
-func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
+func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, continuous bool) {
 	if client == nil {
 		return
 	}
@@ -739,6 +748,11 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
 		lastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
 	}
 
+	if !continuous {
+		client.lastId = 0
+	}
+
+	pushI := 0
 	for lastLoop == client.lastLoop {
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
 		if msg == nil {
@@ -754,37 +768,48 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string) {
 					return
 				}
 
-				var msgD MsgD
 				for j := 0; j < mLen; j++ {
-					msgD = msgDs[j]
-					if lastLoop != client.lastLoop {
-						return
-					}
-
-					if !that.Push(msg.Get(), client, "") {
+					if !that.lastMsg(lastLoop, client, &msgDs[j], &lastId, unique, continuous, &pushI) {
 						return
 					}
 				}
-
-				// 遍历Next
-				lastId = msgD.Id
-				break
 			}
 
 		} else {
-			msgD := msg.Get()
-			if lastLoop != client.lastLoop {
+			if !that.lastMsg(lastLoop, client, msg, &lastId, unique, continuous, &pushI) {
 				return
 			}
-
-			if !that.Push(msg.Get(), client, "") {
-				return
-			}
-
-			// 遍历Next
-			lastId = msgD.Id
 		}
 	}
+}
+
+func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId *int64, unique string, continuous bool, pushI *int) bool {
+	if lastLoop != client.lastLoop {
+		return false
+	}
+
+	msgD := msg.Get()
+	if !that.Push(msg.Get(), client, "") {
+		return false
+	}
+
+	// 遍历Next
+	lastId = &msgD.Id
+	if continuous {
+		client.lastId = *lastId
+	}
+
+	num := *pushI + 1
+	if num > MsgMng.LastCNum {
+		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, client.cid, that.grp.gid, client.connVer, true)
+		if that.OnResult(ret, err, ER_LAST, client, unique) {
+			return false
+		}
+
+		num = 0
+	}
+
+	return true
 }
 
 func (that *MsgSess) inLastLoop(client *MsgClient) int64 {

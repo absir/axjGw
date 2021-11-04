@@ -75,7 +75,7 @@ service Gateway {
     // 断开监听gid
     bool gDisc(1: i64 cid, 2: string gid, 3: string unique, 4: i32 connVer)
     // 获取更新消息
-    bool gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId);
+    bool gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId, 5: bool continuous);
     // 点对点聊天
     bool send(1: string fromId, 2: string toId, 3: string uri, 4: binary bytes, 5: bool db)
     // readfeed读扩散，常用于聊天室

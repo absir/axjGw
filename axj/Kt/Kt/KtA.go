@@ -144,6 +144,6 @@ func HashCode(bs []byte) int {
 	if -v >= 0 {
 		return -v
 	}
-	
+
 	return 0
 }

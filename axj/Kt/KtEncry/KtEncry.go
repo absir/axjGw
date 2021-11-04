@@ -36,7 +36,6 @@ func SrEncry(bs []byte, keys []byte) {
 		k++
 		if k >= kLen {
 			k = 0
-
 		}
 	}
 }

@@ -30,7 +30,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "  bool gPush(string gid, string uri, string bytes, i32 qs, string unique, bool queue)")
   fmt.Fprintln(os.Stderr, "  bool gConn(i64 cid, string gid, string unique)")
   fmt.Fprintln(os.Stderr, "  bool gDisc(i64 cid, string gid, string unique, i32 connVer)")
-  fmt.Fprintln(os.Stderr, "  bool gLasts(string gid, i64 cid, string unique, i64 lastId)")
+  fmt.Fprintln(os.Stderr, "  bool gLasts(string gid, i64 cid, string unique, i64 lastId, bool continuous)")
   fmt.Fprintln(os.Stderr, "  bool send(string fromId, string toId, string uri, string bytes, bool db)")
   fmt.Fprintln(os.Stderr, "  bool tPush(string fromId, string tid, bool readfeed, string uri, string bytes, bool db, bool queue)")
   fmt.Fprintln(os.Stderr, "  bool tDirty(string tid)")
@@ -330,8 +330,8 @@ func main() {
     fmt.Print("\n")
     break
   case "gLasts":
-    if flag.NArg() - 1 != 4 {
-      fmt.Fprintln(os.Stderr, "GLasts requires 4 args")
+    if flag.NArg() - 1 != 5 {
+      fmt.Fprintln(os.Stderr, "GLasts requires 5 args")
       flag.Usage()
     }
     argvalue0 := flag.Arg(1)
@@ -350,7 +350,9 @@ func main() {
       return
     }
     value3 := argvalue3
-    fmt.Print(client.GLasts(context.Background(), value0, value1, value2, value3))
+    argvalue4 := flag.Arg(5) == "true"
+    value4 := argvalue4
+    fmt.Print(client.GLasts(context.Background(), value0, value1, value2, value3, value4))
     fmt.Print("\n")
     break
   case "send":

@@ -2665,7 +2665,8 @@ type Gateway interface {
   //  - Cid
   //  - Unique
   //  - LastId
-  GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r bool, _err error)
+  //  - Continuous
+  GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r bool, _err error)
   // Parameters:
   //  - FromId
   //  - ToId
@@ -2881,12 +2882,14 @@ func (p *GatewayClient) GDisc(ctx context.Context, cid int64, gid string, unique
 //  - Cid
 //  - Unique
 //  - LastId
-func (p *GatewayClient) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64) (_r bool, _err error) {
+//  - Continuous
+func (p *GatewayClient) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r bool, _err error) {
   var _args64 GatewayGLastsArgs
   _args64.Gid = gid
   _args64.Cid = cid
   _args64.Unique = unique
   _args64.LastId = lastId
+  _args64.Continuous = continuous
   var _result66 GatewayGLastsResult
   var _meta65 thrift.ResponseMeta
   _meta65, _err = p.Client_().Call(ctx, "gLasts", &_args64, &_result66)
@@ -3693,7 +3696,7 @@ func (p *gatewayProcessorGLasts) Process(ctx context.Context, seqId int32, iprot
 
   result := GatewayGLastsResult{}
   var retval bool
-  if retval, err2 = p.handler.GLasts(ctx, args.Gid, args.Cid, args.Unique, args.LastId); err2 != nil {
+  if retval, err2 = p.handler.GLasts(ctx, args.Gid, args.Cid, args.Unique, args.LastId, args.Continuous); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
@@ -6140,11 +6143,13 @@ func (p *GatewayGDiscResult) String() string {
 //  - Cid
 //  - Unique
 //  - LastId
+//  - Continuous
 type GatewayGLastsArgs struct {
   Gid string `thrift:"gid,1" db:"gid" json:"gid"`
   Cid int64 `thrift:"cid,2" db:"cid" json:"cid"`
   Unique string `thrift:"unique,3" db:"unique" json:"unique"`
   LastId int64 `thrift:"lastId,4" db:"lastId" json:"lastId"`
+  Continuous bool `thrift:"continuous,5" db:"continuous" json:"continuous"`
 }
 
 func NewGatewayGLastsArgs() *GatewayGLastsArgs {
@@ -6166,6 +6171,10 @@ func (p *GatewayGLastsArgs) GetUnique() string {
 
 func (p *GatewayGLastsArgs) GetLastId() int64 {
   return p.LastId
+}
+
+func (p *GatewayGLastsArgs) GetContinuous() bool {
+  return p.Continuous
 }
 func (p *GatewayGLastsArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(ctx); err != nil {
@@ -6213,6 +6222,16 @@ func (p *GatewayGLastsArgs) Read(ctx context.Context, iprot thrift.TProtocol) er
     case 4:
       if fieldTypeId == thrift.I64 {
         if err := p.ReadField4(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 5:
+      if fieldTypeId == thrift.BOOL {
+        if err := p.ReadField5(ctx, iprot); err != nil {
           return err
         }
       } else {
@@ -6271,6 +6290,15 @@ func (p *GatewayGLastsArgs)  ReadField4(ctx context.Context, iprot thrift.TProto
   return nil
 }
 
+func (p *GatewayGLastsArgs)  ReadField5(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(ctx); err != nil {
+  return thrift.PrependError("error reading field 5: ", err)
+} else {
+  p.Continuous = v
+}
+  return nil
+}
+
 func (p *GatewayGLastsArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "gLasts_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -6279,6 +6307,7 @@ func (p *GatewayGLastsArgs) Write(ctx context.Context, oprot thrift.TProtocol) e
     if err := p.writeField2(ctx, oprot); err != nil { return err }
     if err := p.writeField3(ctx, oprot); err != nil { return err }
     if err := p.writeField4(ctx, oprot); err != nil { return err }
+    if err := p.writeField5(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -6324,6 +6353,16 @@ func (p *GatewayGLastsArgs) writeField4(ctx context.Context, oprot thrift.TProto
   return thrift.PrependError(fmt.Sprintf("%T.lastId (4) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 4:lastId: ", p), err) }
+  return err
+}
+
+func (p *GatewayGLastsArgs) writeField5(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin(ctx, "continuous", thrift.BOOL, 5); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:continuous: ", p), err) }
+  if err := oprot.WriteBool(ctx, bool(p.Continuous)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.continuous (5) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 5:continuous: ", p), err) }
   return err
 }
 
