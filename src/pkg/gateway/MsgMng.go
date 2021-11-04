@@ -105,7 +105,8 @@ type MsgClient struct {
 	gatewayI gw.GatewayI
 	connVer  int32
 	idleTime int64
-	lasting  int64
+	lasting  bool
+	lastTime int64
 	lastLoop int64
 	lastId   int64
 }
@@ -666,37 +667,45 @@ func (that *MsgSess) LastStart(client *MsgClient, unique string) {
 		return
 	}
 
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
-	if client.lasting == 0 {
-		go that.lastRun(client, unique)
+	if client.lastId <= 0 {
+		// 尚未loop监听
 		return
 	}
 
-	client.lasting = time.Now().UnixNano()
+	that.grp.locker.Lock()
+	defer that.grp.locker.Unlock()
+	client.lastTime = time.Now().UnixNano()
+	if client.lastLoop > 0 && client.lastId > 1 {
+		// lastLoop执行中
+		return
+	}
+
+	if !client.lasting {
+		go that.lastRun(client, unique)
+	}
 }
 
 func (that *MsgSess) lastIn(client *MsgClient) bool {
 	that.grp.locker.Lock()
 	defer that.grp.locker.Unlock()
-	if client.lasting != 0 {
+	if client.lasting {
 		return false
 	}
 
-	client.lasting = time.Now().UnixNano()
+	client.lasting = true
 	return true
 }
 
 func (that *MsgSess) lastOut(client *MsgClient) {
 	that.grp.locker.Lock()
 	defer that.grp.locker.Unlock()
-	client.lasting = 0
+	client.lasting = false
 }
 
-func (that *MsgSess) lastDone(client *MsgClient, lasting int64) bool {
+func (that *MsgSess) lastDone(client *MsgClient, lastTime int64) bool {
 	that.grp.locker.Lock()
 	defer that.grp.locker.Unlock()
-	return client.lasting <= lasting
+	return client.lastTime <= lastTime
 }
 
 func (that *MsgSess) lastRun(client *MsgClient, unique string) {
@@ -705,22 +714,23 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 	}
 
 	defer that.lastOut(client)
-
 	for {
-		if client.lastLoop <= 0 {
-			// 不执行lastLoop才通知
-			lasting := client.lasting
-			if client.lastId > 0 {
-				that.Lasts(client.lastId, client, unique, true)
+		if client.lastLoop > 0 {
+			continue
+		}
 
-			} else {
-				ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid, client.connVer, false)
-				that.OnResult(ret, err, ER_LAST, client, unique)
-			}
+		// 不执行lastLoop才通知
+		lastTime := client.lastTime
+		if client.lastId > 0 {
+			that.Lasts(client.lastId, client, unique, true)
 
-			if that.lastDone(client, lasting) {
-				break
-			}
+		} else {
+			ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid, client.connVer, false)
+			that.OnResult(ret, err, ER_LAST, client, unique)
+		}
+
+		if that.lastDone(client, lastTime) {
+			break
 		}
 
 		// 休眠一秒， 防止通知过于频繁|必需
@@ -733,6 +743,12 @@ func (that *MsgSess) Lasts(lastId int64, client *MsgClient, unique string, conti
 		return
 	}
 
+	if !continuous && lastId == 1 {
+		// 光loop监听，last通知
+		client.lastId = 1
+		return
+	}
+
 	go that.lastLoop(lastId, client, unique, continuous)
 }
 
@@ -741,23 +757,30 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 		return
 	}
 
+	lastTime := client.lastTime
 	lastLoop := that.inLastLoop(client)
-	defer that.outLastLoop(client, lastLoop)
+	defer that.outLastLoop(client, unique, lastLoop, lastTime)
 	if lastId < 65535 && MsgMng.Db != nil {
 		// 从最近多少条开始
 		lastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
 	}
 
 	if !continuous {
-		client.lastId = 0
+		// loop监听下不为0
+		client.lastId = 1
 	}
 
 	pushI := 0
 	for lastLoop == client.lastLoop {
+		lastTime = client.lastTime
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
 		if msg == nil {
 			if lastIn {
 				// 消息已读取完毕
+				if that.conLastLoop(client, lastTime) {
+					continue
+				}
+
 				return
 
 			} else {
@@ -765,6 +788,10 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 				msgDs := MsgMng.Db.Next(that.grp.gid, lastId, MsgMng.NextLimit)
 				mLen := len(msgDs)
 				if mLen <= 0 {
+					if that.conLastLoop(client, lastTime) {
+						continue
+					}
+
 					return
 				}
 
@@ -820,12 +847,29 @@ func (that *MsgSess) inLastLoop(client *MsgClient) int64 {
 	return lastLoop
 }
 
-func (that *MsgSess) outLastLoop(client *MsgClient, lastLoop int64) {
+func (that *MsgSess) outLastLoop(client *MsgClient, unique string, lastLoop int64, lastTime int64) {
 	that.grp.locker.Lock()
 	defer that.grp.locker.Unlock()
 	if client.lastLoop == lastLoop {
 		client.lastLoop = 0
 	}
+
+	if lastTime < client.lastTime {
+		if client.lastId > 1 {
+			// 优化，避免lasting->Lasts 挑来挑去
+			that.Lasts(client.lastId, client, unique, true)
+
+		} else {
+			// lasting通知
+			that.LastStart(client, unique)
+		}
+	}
+}
+
+func (that *MsgSess) conLastLoop(client *MsgClient, lastTime int64) bool {
+	that.grp.locker.Lock()
+	defer that.grp.locker.Unlock()
+	return lastTime < client.lastTime
 }
 
 func (that *MsgSess) lastLoad() {
