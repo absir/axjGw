@@ -40,6 +40,7 @@ type ClientCnn struct {
 	conn     Conn
 	handler  Handler
 	encryKey []byte
+	compress bool
 	locker   sync.Locker
 	closed   int8
 	limiter  Util.Limiter
@@ -53,10 +54,11 @@ func (that *ClientCnn) IsClosed() bool {
 	return that.closed != 0
 }
 
-func (that *ClientCnn) Open(conn Conn, handler Handler, encryKey []byte) {
+func (that *ClientCnn) Open(conn Conn, handler Handler, encryKey []byte, compress bool) {
 	that.conn = conn
 	that.handler = handler
 	that.encryKey = encryKey
+	that.compress = compress
 	that.locker = new(sync.Mutex)
 }
 

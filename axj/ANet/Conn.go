@@ -22,6 +22,8 @@ type Conn interface {
 	Write(bs []byte) error
 	// 关闭
 	Close()
+	// 远程地址
+	RemoteAddr() string
 }
 
 type ConnSocket struct {
@@ -84,6 +86,10 @@ func (that *ConnSocket) Close() {
 	that.Conn().Close()
 }
 
+func (that *ConnSocket) RemoteAddr() string {
+	return that.Conn().RemoteAddr().String()
+}
+
 type ConnWebsocket websocket.Conn
 
 func NewConnWebsocket(conn *websocket.Conn) *ConnWebsocket {
@@ -124,4 +130,8 @@ func (that *ConnWebsocket) Write(bs []byte) error {
 
 func (that *ConnWebsocket) Close() {
 	that.Conn().Close()
+}
+
+func (that *ConnWebsocket) RemoteAddr() string {
+	return that.Conn().RemoteAddr().String()
 }

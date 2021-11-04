@@ -41,7 +41,7 @@ struct Member {
 // 访问控制
 service Acl {
     // 登录
-    Login login(1: i64 cid, 2: binary bytes);
+    Login login(1: i64 cid, 2: binary bytes, 3: string addr);
     // 登录回调
     void loginBack(1: i64 cid, 2: i64 uid, 3: string sid);
     // 组查询

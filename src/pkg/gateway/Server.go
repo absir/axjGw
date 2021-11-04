@@ -75,6 +75,10 @@ func (that *server) ConnLoop(conn ANet.Conn) {
 	client := that.connOpen(conn)
 	if client != nil {
 		client.Get().ReqLoop()
+
+	} else {
+		// 连接失败关闭
+		conn.Close()
 	}
 }
 
@@ -111,7 +115,7 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	// 登录Acl处理
 	id := manager.IdWorker().Generate()
 	aclClient := that.GetProds(Config.AclProd).GetProdHash(Config.WorkHash).GetAclClient()
-	login, err := aclClient.Login(that.Context, id, loginData)
+	login, err := aclClient.Login(that.Context, id, loginData, conn.RemoteAddr())
 	if err != nil || login == nil {
 		AZap.Logger.Warn("serv acl Login err", zap.Error(err))
 		return nil

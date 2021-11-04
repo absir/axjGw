@@ -22,7 +22,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes)")
+  fmt.Fprintln(os.Stderr, "  Login login(i64 cid, string bytes, string addr)")
   fmt.Fprintln(os.Stderr, "  void loginBack(i64 cid, i64 uid, string sid)")
   fmt.Fprintln(os.Stderr, "  Team team(string tid)")
   fmt.Fprintln(os.Stderr)
@@ -148,8 +148,8 @@ func main() {
   
   switch cmd {
   case "login":
-    if flag.NArg() - 1 != 2 {
-      fmt.Fprintln(os.Stderr, "Login requires 2 args")
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "Login requires 3 args")
       flag.Usage()
     }
     argvalue0, err18 := (strconv.ParseInt(flag.Arg(1), 10, 64))
@@ -160,7 +160,9 @@ func main() {
     value0 := argvalue0
     argvalue1 := []byte(flag.Arg(2))
     value1 := argvalue1
-    fmt.Print(client.Login(context.Background(), value0, value1))
+    argvalue2 := flag.Arg(3)
+    value2 := argvalue2
+    fmt.Print(client.Login(context.Background(), value0, value1, value2))
     fmt.Print("\n")
     break
   case "loginBack":
@@ -168,14 +170,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "LoginBack requires 3 args")
       flag.Usage()
     }
-    argvalue0, err20 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-    if err20 != nil {
+    argvalue0, err21 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+    if err21 != nil {
       Usage()
       return
     }
     value0 := argvalue0
-    argvalue1, err21 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-    if err21 != nil {
+    argvalue1, err22 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+    if err22 != nil {
       Usage()
       return
     }

@@ -28,10 +28,10 @@ type Config struct {
 }
 
 var GCfg = Config{
-	HttpAddr:   ":8082",
+	HttpAddr:   ":8682",
 	HttpWs:     true,
-	HttpWsPath: "ws",
-	SocketAddr: ":8083",
+	HttpWsPath: "/gw",
+	SocketAddr: ":8683",
 	ThriftAddr: "127.0.0.1:8082",
 	ThriftIps:  KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -83,7 +83,7 @@ func main() {
 			AZap.Logger.Info("StartHttpWs: " + GCfg.HttpWsPath)
 			// websocket连接
 			http.Handle(GCfg.HttpWsPath, websocket.Handler(func(conn *websocket.Conn) {
-				go gateway.Server.ConnLoop(ANet.NewConnWebsocket(conn))
+				gateway.Server.ConnLoop(ANet.NewConnWebsocket(conn))
 			}))
 		}
 
