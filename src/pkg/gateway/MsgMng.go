@@ -47,7 +47,7 @@ func initMsgMng() {
 		LastMax:   20,
 		LastLoad:  false,
 		LastUrl:   "",
-		LastCNum:  10,
+		LastCNum:  0,
 		CheckDrt:  5000,
 		LiveDrt:   15000,
 		IdleDrt:   30000,
@@ -770,7 +770,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 		client.lastId = 1
 	}
 
-	pushI := 0
+	pushNum := 0
 	for lastLoop == client.lastLoop {
 		lastTime = client.lastTime
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
@@ -796,21 +796,26 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 				}
 
 				for j := 0; j < mLen; j++ {
-					if !that.lastMsg(lastLoop, client, &msgDs[j], &lastId, unique, continuous, &pushI) {
+					if !that.lastMsg(lastLoop, client, &msgDs[j], &lastId, unique, continuous, &pushNum) {
 						return
 					}
 				}
 			}
 
 		} else {
-			if !that.lastMsg(lastLoop, client, msg, &lastId, unique, continuous, &pushI) {
+			if !that.lastMsg(lastLoop, client, msg, &lastId, unique, continuous, &pushNum) {
 				return
 			}
 		}
 	}
+
+	if MsgMng.LastCNum > 0 && pushNum > 0 {
+		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, client.cid, that.grp.gid, client.connVer, true)
+		that.OnResult(ret, err, ER_LAST, client, unique)
+	}
 }
 
-func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId *int64, unique string, continuous bool, pushI *int) bool {
+func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId *int64, unique string, continuous bool, pushNum *int) bool {
 	if lastLoop != client.lastLoop {
 		return false
 	}
@@ -826,14 +831,18 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 		client.lastId = *lastId
 	}
 
-	num := *pushI + 1
-	if num > MsgMng.LastCNum {
-		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, client.cid, that.grp.gid, client.connVer, true)
-		if that.OnResult(ret, err, ER_LAST, client, unique) {
-			return false
+	if MsgMng.LastCNum > 0 {
+		num := *pushNum + 1
+		if num >= MsgMng.LastCNum {
+			ret, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, client.cid, that.grp.gid, client.connVer, true)
+			if that.OnResult(ret, err, ER_LAST, client, unique) {
+				return false
+			}
+
+			num = 0
 		}
 
-		num = 0
+		pushNum = &num
 	}
 
 	return true
