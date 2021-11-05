@@ -6,12 +6,11 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
-	"axjGW/pkg/ext"
 	"github.com/apache/thrift/lib/go/thrift"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"math/rand"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -23,11 +22,9 @@ type Prod struct {
 	// 锁
 	locker sync.Locker
 	// 客户端
-	trans thrift.TTransport
-	// 客户协议
-	proto thrift.TProtocol
+	client *grpc.ClientConn
 	// 网关客户端
-	gwIClient gw.GatewayI
+	gwIClient gw.GatewayIClient
 	// 控制客户端
 	aclClient *gw.AclClient
 	// 转发客户端
@@ -52,7 +49,7 @@ func (that *Prod) initClient(locker bool) error {
 		return nil
 	}
 
-	if that.proto != nil && that.trans.IsOpen() {
+	if that.client != nil {
 		return nil
 	}
 
@@ -61,53 +58,23 @@ func (that *Prod) initClient(locker bool) error {
 		defer that.locker.Unlock()
 	}
 
-	if that.proto != nil && that.trans.IsOpen() {
+	if that.client != nil {
 		return nil
 	}
 
 	that.gwIClient = nil
 	that.aclClient = nil
 	that.passClient = nil
-	var mName = ""
-	var url = that.url
-	if url != "" {
-		mNameI := strings.Index(url, "//")
-		if mNameI > 0 {
-			mName = url[mNameI+2:]
-			url = url[0:mNameI]
-		}
-
-		var err error = nil
-		var trans thrift.TTransport
-		if strings.HasPrefix(url, "http") {
-			trans, err = thrift.NewTHttpClient(url)
-
-		} else {
-			trans = ext.NewTSocketAlive(thrift.NewTSocketConf(url, Config.TConfig))
-		}
-
-		if err != nil {
-			return err
-		}
-
-		err = trans.Open()
-		if err != nil {
-			return err
-		}
-
-		that.trans = trans
+	client, err := grpc.Dial(that.url)
+	if err != nil {
+		return err
 	}
 
-	var proto thrift.TProtocol = thrift.NewTCompactProtocolConf(that.trans, Config.TConfig)
-	if mName != "" {
-		proto = thrift.NewTMultiplexedProtocol(proto, mName)
-	}
-
-	that.proto = proto
+	that.client = client
 	return nil
 }
 
-func (that *Prod) GetGWIClient() gw.GatewayI {
+func (that *Prod) GetGWIClient() gw.GatewayIClient {
 	that.initClient(true)
 	if that.gwIClient == nil {
 		that.locker.Lock()
@@ -120,6 +87,7 @@ func (that *Prod) GetGWIClient() gw.GatewayI {
 			}
 
 			if that.gwIClient == nil {
+				gw.new
 				proto := thrift.NewTMultiplexedProtocol(that.proto, "i")
 				that.gwIClient = gw.NewGatewayIClient(thrift.NewTStandardClient(proto, proto))
 			}

@@ -2,6 +2,37 @@ syntax = "proto3";
 
 package gw;
 
+option go_package = "./gw";
+option java_multiple_files = true;
+option java_package = "gen.gw";
+
+enum Result {
+    // 失败
+    Fail = 0;
+    // ID不存在
+    IdNone = 1;
+    // 分布冲突
+    ProdErr = 2;
+    // 成功
+    Succ = 16;
+}
+
+message GidReq {
+    string gid = 1;
+}
+
+message SuccRep {
+    bool succ = 1;
+}
+
+message DataRep {
+    bytes data = 1;
+}
+
+message Id32Rep {
+    int32 id = 1;
+}
+
 message LoginReq {
     // 客户端唯一编号
     optional int64 cid = 1;
@@ -45,6 +76,10 @@ message Member {
     bool nofeed = 2;
 }
 
+message TeamReq {
+    string tid = 1;
+}
+
 message TeamRep {
     // 版本
     int64 version = 1;
@@ -58,9 +93,9 @@ service Acl {
     // 登录
     rpc login(LoginRep) returns (LoginRep);
     // 登录回调
-    rpc loginBack(LoginBack) returns (bool);
+    rpc loginBack(LoginBack) returns (SuccRep);
     // 组查询 tid
-    rpc team(string) returns (TeamRep);
+    rpc team(TeamReq) returns (TeamRep);
 }
 
 message PassReq {
@@ -73,9 +108,9 @@ message PassReq {
 
 service Pass {
     // 请求
-    rpc req(PassReq) returns (bytes);
+    rpc req(PassReq) returns (DataRep);
     // 发送
-    rpc send(PassReq) returns (bool);
+    rpc send(PassReq) returns (SuccRep);
 }
 
 message CloseReq {
@@ -157,29 +192,29 @@ message TPushReq {
 // 网关
 service Gateway {
     // 关闭连接
-    rpc close(CloseReq) returns (bool);
+    rpc close(CloseReq) returns (SuccRep);
     // 软关闭连接
-    rpc kick(KickReq) returns (bool);
+    rpc kick(KickReq) returns (SuccRep);
     // 服务编号
-    rpc rid(RidReq) returns (bool);
+    rpc rid(RidReq) returns (SuccRep);
     // 服务编号
-    rpc rids(RidsReq) returns (bool);
+    rpc rids(RidsReq) returns (SuccRep);
     // 简单推送
-    rpc push(PushReq) returns (bool);
+    rpc push(PushReq) returns (SuccRep);
     // 组通知 gid
-    rpc gLast(string) returns (bool);
+    rpc gLast(GidReq) returns (SuccRep);
     // 组推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
-    rpc gPush(GPushReq) returns (bool);
+    rpc gPush(GPushReq) returns (SuccRep);
     // 注册监听gid
-    rpc gConn(GConnReq) returns (int32);
+    rpc gConn(GConnReq) returns (Id32Rep);
     // 断开监听gid
-    rpc gDisc(GDiscReq) returns (bool);
+    rpc gDisc(GDiscReq) returns (SuccRep);
     // 获取更新消息
-    rpc gLasts(GLastsReq) returns (bool);
+    rpc gLasts(GLastsReq) returns (SuccRep);
     // 点对点聊天
-    rpc send(SendReq) returns (bool);
+    rpc send(SendReq) returns (SuccRep);
     // readfeed读扩散，常用于聊天室
-    rpc tPush(TPushReq) returns (bool);
+    rpc tPush(TPushReq) returns (SuccRep);
     // 组更新、删除 tid
-    rpc tDirty(string) returns (bool);
+    rpc tDirty(GidReq) returns (SuccRep);
 }

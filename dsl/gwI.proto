@@ -4,15 +4,14 @@ package gw;
 
 import "dsl/gw.proto";
 
-enum Result {
-    // 失败
-    Fail = 0;
-    // ID不存在
-    IdNone = 1;
-    // 分布冲突
-    ProdErr = 2;
-    // 成功
-    Succ = 16;
+option go_package = "./gw";
+
+message CidReq {
+    int64 cid = 1;
+}
+
+message Id64Rep {
+    int64 id = 1;
 }
 
 message Msg {
@@ -20,24 +19,14 @@ message Msg {
     bytes data = 2;
 }
 
-message CloseReq {
-    int64 cid = 1;
-    string reason = 2;
-}
-
-message KickReq {
-    int64 cid = 1;
-    bytes data = 2;
-}
-
-message ConnReq {
+message IConnReq {
     int64 cid = 1;
     string gid = 2;
     string unique = 3;
     bool kick = 4;
 }
 
-message DiscReq {
+message IDiscReq {
     int64 cid = 1;
     string gid = 2;
     string unique = 3;
@@ -45,25 +34,18 @@ message DiscReq {
     bool kick = 5;
 }
 
-message RidReq {
+message IAliveReq {
     int64 cid = 1;
-    string name = 2;
-    int32 rid = 3;
 }
 
-message RidsReq {
-    int64 cid = 1;
-    map<string, int32> rids = 2;
-}
-
-message LastReq {
+message ILastReq {
     int64 cid = 1;
     string gid = 2;
     int32 connVer = 3;
     bool continuous = 4;
 }
 
-message PushReq {
+message IPushReq {
     int64 cid = 1;
     string uri = 2;
     bytes data = 3;
@@ -71,20 +53,20 @@ message PushReq {
     int64 id = 5;
 }
 
-message GQueueReq {
+message IGQueueReq {
     string gid = 1;
     int64 cid = 2;
     string unique = 3;
     bool clear = 4;
 }
 
-message GClearReq {
+message IGClearReq {
     string gid = 1;
     bool queue = 2;
     bool last = 3;
 }
 
-message GLastsReq {
+message IGLastsReq {
     string gid = 1;
     int64 cid = 2;
     string unique = 3;
@@ -92,7 +74,11 @@ message GLastsReq {
     int32 continuous = 5;
 }
 
-message GPushReq {
+message IGLastReq {
+    string gid = 1;
+}
+
+message IGPushReq {
     string gid = 1;
     string uri = 2;
     bytes data = 3;
@@ -103,13 +89,13 @@ message GPushReq {
     int64 fid = 8;
 }
 
-message GPushAReq {
+message IGPushAReq {
     string gid = 1;
     int64 id = 2;
     bool succ = 3;
 }
 
-message GSendReq {
+message ISendReq {
     string fromId = 1;
     string toId = 2;
     string uri = 3;
@@ -117,7 +103,7 @@ message GSendReq {
     bool db = 5;
 }
 
-message TPushReq {
+message ITPushReq {
     string fromId = 1;
     string tid = 2;
     bool readFeed = 3;
@@ -130,41 +116,41 @@ message TPushReq {
 // 网关内部
 service GatewayI {
     // 关闭连接
-    rpc close(CloseReq) returns (int32);
+    rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接
-    rpc kick(KickReq) returns (int32);
+    rpc kick(KickReq) returns (Id32Rep);
     // 连接
-    rpc conn(ConnReq) returns (int32);
+    rpc conn(IConnReq) returns (Id32Rep);
     // 断开
-    rpc disc(DiscReq) returns (int32);
+    rpc disc(IDiscReq) returns (Id32Rep);
     // 存活 cid
-    rpc   alive(int64) returns (int32);
+    rpc alive(CidReq) returns (Id32Rep);
     // 服务编号
-    rpc rid(RidReq) returns (int32);
+    rpc rid(RidReq) returns (Id32Rep);
     // 服务编号
-    rpc rids(RidsReq) returns (int32);
+    rpc rids(RidsReq) returns (Id32Rep);
     // 最新消息通知
-    rpc last(LastReq) returns (int32);
+    rpc last(ILastReq) returns (Id32Rep);
     // 推送
-    rpc push(PushReq) returns (int32);
+    rpc push(IPushReq) returns (Id32Rep);
     // 消息队列初始化
-    rpc gQueue(GQueueReq) returns (int32);
+    rpc gQueue(IGQueueReq) returns (Id32Rep);
     // 消息队列清理
-    rpc gClear(GClearReq) returns (int32);
+    rpc gClear(IGClearReq) returns (Id32Rep);
     // 主动获取消息
-    rpc gLasts(GLastsReq) returns (int32);
+    rpc gLasts(GLastsReq) returns (Id32Rep);
     // 通知 gid
-    rpc gLast(string) returns (int32);
+    rpc gLast(IGLastReq) returns (Id32Rep);
     // 推送
-    rpc gPush(GPushReq) returns (int64);
+    rpc gPush(IGPushReq) returns (Id64Rep);
     // 推送确认
-    rpc gPushA(GPushAReq) returns (int64);
+    rpc gPushA(IGPushAReq) returns (Id32Rep);
     // 点对点聊天
-    rpc send(SendReq) returns (int32);
+    rpc send(ISendReq) returns (Id32Rep);
     // 群消息发送
-    rpc tPush(TPushReq) returns (int32);
+    rpc tPush(ITPushReq) returns (Id32Rep);
     // 组更新、删除 tid
-    rpc tDirty(string) returns (int64);
+    rpc tDirty(GidReq) returns (Id32Rep);
     // 组发送管道启动 tid
-    rpc tStarts(string) returns (int64);
+    rpc tStarts(GidReq) returns (Id32Rep);
 }

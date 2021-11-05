@@ -7,11 +7,11 @@ import (
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
-	"axjGW/pkg/ext"
 	"context"
-	"github.com/apache/thrift/lib/go/thrift"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"io"
+	"net"
 	"sync"
 	"time"
 )
@@ -21,12 +21,12 @@ type server struct {
 	Context  context.Context
 	prodsMap *sync.Map
 	prodsGw  *Prods
-	gatewayI gw.GatewayI
+	gatewayI gw.GatewayIServer
 }
 
 var Server = new(server)
 
-func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayI) {
+func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayIServer) {
 	// 配置初始化
 	initConfig(workId)
 	// 初始化服务
@@ -196,17 +196,22 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	return client
 }
 
-func (that *server) StartThrift(addr string, ips []string, gateway gw.Gateway) {
-	AZap.Logger.Info("StartThrift: " + addr)
-	socket, err := thrift.NewTServerSocket(addr)
+func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServer) {
+	AZap.Logger.Info("StartGrpc: " + addr)
+	lis, err := net.Listen("tcp", addr)
 	Kt.Panic(err)
-	processor := thrift.NewTMultiplexedProcessor()
-	processor.RegisterProcessor("i", gw.NewGatewayIProcessor(that.gatewayI))
-	processor.RegisterProcessor("", gw.NewGatewayProcessor(gateway))
+	serv := grpc.NewServer()
+	gw.RegisterGatewayIServer(serv, that.gatewayI)
+	gw.RegisterGatewayServer(serv, gateway)
 	matchers := KtStr.ForMatchers(ips, false, true)
-	go thrift.NewTSimpleServer4(processor, ext.NewTServerSocketIps(socket, func(ip string) bool {
+	lisIps := ANet.NewListenerIps(lis, func(ip string) bool {
 		return KtStr.Matchers(matchers, ip, true)
-	}), thrift.NewTTransportFactory(), thrift.NewTCompactProtocolFactoryConf(Config.TConfig)).Serve()
+	})
+	go func() {
+		if err := serv.Serve(lisIps); err != nil {
+			AZap.Logger.Error("grpc server err "+addr, zap.Error(err))
+		}
+	}()
 }
 
 func (that *server) IsProdCid(cid int64) bool {
