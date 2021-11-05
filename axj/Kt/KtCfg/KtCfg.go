@@ -203,25 +203,39 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 	var yMap *Kt.LinkedMap
 	var yMaps *Kt.Stack
 	return func(str string) {
-		str = strings.TrimSpace(str)
-		length := len(str)
-		if length < 1 {
+		sLen := len(str)
+		sLast := sLen - 1
+		for ; sLast >= 0; sLast-- {
+			c := str[sLast]
+			if c != '\r' && c != '\n' {
+				break
+			}
+		}
+
+		sLast++
+		if sLast < sLen {
+			str = str[0:sLast]
+		}
+
+		name := strings.TrimSpace(str)
+		sLen = len(name)
+		if sLen < 1 {
 			return
 		}
 
-		chr := str[0]
+		chr := name[0]
 		if bBuilder == nil {
 			if chr == '#' || chr == ';' {
 				return
 
-			} else if chr == '{' && length == 2 && str[1] == '"' {
+			} else if chr == '{' && sLen == 2 && name[1] == '"' {
 				bBuilder = &strings.Builder{}
 				bAppend = 1
 				return
 			}
 
 		} else if bAppend > 0 {
-			if chr == '"' && length == 2 && str[1] == '}' {
+			if chr == '"' && sLen == 2 && name[1] == '}' {
 				bAppend = 0
 
 			} else {
@@ -238,13 +252,13 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			return
 		}
 
-		if length < 3 {
+		if sLen < 3 {
 			return
 		}
 
+		sLen = len(str)
 		index := KtStr.IndexBytes(str, splits, 0)
-		if index > 0 && index < length {
-			var name string
+		if index > 0 && index < sLen {
 			chr = str[index-1]
 			if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' {
 				if index < 1 {
@@ -259,14 +273,14 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			}
 
 			name = strings.TrimSpace(name)
-			length := len(name)
-			if length == 0 {
+			nLen := len(name)
+			if nLen == 0 {
 				return
 			}
 
 			// yml支持
 			if str[index] == ':' && len(strings.TrimSpace(str[index:])) == 1 {
-				b := index - length
+				b := index - nLen
 				if yB < b {
 					if yMap != nil {
 						if yMaps == nil {
@@ -313,7 +327,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			eIndex := index
 			index = strings.IndexByte(name, '|')
 			if index > 0 {
-				if length <= 1 {
+				if nLen <= 1 {
 					return
 				}
 

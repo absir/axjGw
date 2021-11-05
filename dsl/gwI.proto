@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package gw;
+
+import "dsl/gw.proto";
+
+enum Result {
+    // 失败
+    Fail = 0;
+    // ID不存在
+    IdNone = 1;
+    // 分布冲突
+    ProdErr = 2;
+    // 成功
+    Succ = 16;
+}
+
+message Msg {
+    string uri = 1;
+    bytes data = 2;
+}
+
+message CloseReq {
+    int64 cid = 1;
+    string reason = 2;
+}
+
+message KickReq {
+    int64 cid = 1;
+    bytes data = 2;
+}
+
+message ConnReq {
+    int64 cid = 1;
+    string gid = 2;
+    string unique = 3;
+    bool kick = 4;
+}
+
+message DiscReq {
+    int64 cid = 1;
+    string gid = 2;
+    string unique = 3;
+    int32 connVer = 4;
+    bool kick = 5;
+}
+
+message RidReq {
+    int64 cid = 1;
+    string name = 2;
+    int32 rid = 3;
+}
+
+message RidsReq {
+    int64 cid = 1;
+    map<string, int32> rids = 2;
+}
+
+message LastReq {
+    int64 cid = 1;
+    string gid = 2;
+    int32 connVer = 3;
+    bool continuous = 4;
+}
+
+message PushReq {
+    int64 cid = 1;
+    string uri = 2;
+    bytes data = 3;
+    bool isolate = 4;
+    int64 id = 5;
+}
+
+message GQueueReq {
+    string gid = 1;
+    int64 cid = 2;
+    string unique = 3;
+    bool clear = 4;
+}
+
+message GClearReq {
+    string gid = 1;
+    bool queue = 2;
+    bool last = 3;
+}
+
+message GLastsReq {
+    string gid = 1;
+    int64 cid = 2;
+    string unique = 3;
+    int64 lastId = 4;
+    int32 continuous = 5;
+}
+
+message GPushReq {
+    string gid = 1;
+    string uri = 2;
+    bytes data = 3;
+    bool isolate = 4;
+    int32 qs = 5;
+    bool queue = 6;
+    string unique = 7;
+    int64 fid = 8;
+}
+
+message GPushAReq {
+    string gid = 1;
+    int64 id = 2;
+    bool succ = 3;
+}
+
+message GSendReq {
+    string fromId = 1;
+    string toId = 2;
+    string uri = 3;
+    bytes data = 4;
+    bool db = 5;
+}
+
+message TPushReq {
+    string fromId = 1;
+    string tid = 2;
+    bool readFeed = 3;
+    string uri = 4;
+    bytes data = 5;
+    bool db = 6;
+    bool queue = 7;
+}
+
+// 网关内部
+service GatewayI {
+    // 关闭连接
+    rpc close(CloseReq) returns (int32);
+    // 软关闭连接
+    rpc kick(KickReq) returns (int32);
+    // 连接
+    rpc conn(ConnReq) returns (int32);
+    // 断开
+    rpc disc(DiscReq) returns (int32);
+    // 存活 cid
+    rpc   alive(int64) returns (int32);
+    // 服务编号
+    rpc rid(RidReq) returns (int32);
+    // 服务编号
+    rpc rids(RidsReq) returns (int32);
+    // 最新消息通知
+    rpc last(LastReq) returns (int32);
+    // 推送
+    rpc push(PushReq) returns (int32);
+    // 消息队列初始化
+    rpc gQueue(GQueueReq) returns (int32);
+    // 消息队列清理
+    rpc gClear(GClearReq) returns (int32);
+    // 主动获取消息
+    rpc gLasts(GLastsReq) returns (int32);
+    // 通知 gid
+    rpc gLast(string) returns (int32);
+    // 推送
+    rpc gPush(GPushReq) returns (int64);
+    // 推送确认
+    rpc gPushA(GPushAReq) returns (int64);
+    // 点对点聊天
+    rpc send(SendReq) returns (int32);
+    // 群消息发送
+    rpc tPush(TPushReq) returns (int32);
+    // 组更新、删除 tid
+    rpc tDirty(string) returns (int64);
+    // 组发送管道启动 tid
+    rpc tStarts(string) returns (int64);
+}

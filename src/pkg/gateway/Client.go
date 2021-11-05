@@ -4,7 +4,6 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtUnsafe"
-	"axjGW/gen/gw"
 	"strconv"
 	"sync"
 	"time"
@@ -165,8 +164,8 @@ func (that *ClientG) ConnKeep() {
 }
 
 func (that *ClientG) ConnCheck() {
-	result, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.Id(), that.sid, that.unique)
-	if result != gw.Result__Succ {
+	result, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.Id(), that.sid, that.unique, true)
+	if result >= R_SUCC_MIN {
 		// 用户注册失败
 		that.Close(err, result)
 	}

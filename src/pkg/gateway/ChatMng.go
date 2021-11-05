@@ -435,7 +435,7 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 		return false, err
 	}
 
-	if ret <= R_SUCC_MIN {
+	if ret < R_SUCC_MIN {
 		return false, ERR_FAIL
 	}
 

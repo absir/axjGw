@@ -9,6 +9,10 @@ import (
 type GatewayS struct {
 }
 
+func (g GatewayS) B(ctx context.Context) (_r bool, _err error) {
+	return true, nil
+}
+
 func (g GatewayS) Close(ctx context.Context, cid int64, reason string) (_r bool, _err error) {
 	ret, err := gateway.Server.GetProdCid(cid).GetGWIClient().Close(ctx, cid, reason)
 	return ret == gw.Result__Succ, err
@@ -41,20 +45,20 @@ func (g GatewayS) GLast(ctx context.Context, gid string) (_r bool, _err error) {
 
 func (g GatewayS) GPush(ctx context.Context, gid string, uri string, bytes []byte, qs int32, unique string, queue bool) (_r bool, _err error) {
 	ret, err := gateway.Server.GetProdGid(gid).GetGWIClient().GPush(ctx, gid, uri, bytes, false, qs, queue, unique, 0)
-	return ret > gateway.R_SUCC_MIN, err
+	return ret >= gateway.R_SUCC_MIN, err
 }
 
-func (g GatewayS) GConn(ctx context.Context, cid int64, gid string, unique string) (_r bool, _err error) {
-	ret, err := gateway.Server.GetProdCid(cid).GetGWIClient().Conn(ctx, cid, gid, unique)
-	return ret == gw.Result__Succ, err
+func (g GatewayS) GConn(ctx context.Context, cid int64, gid string, unique string) (_r int32, _err error) {
+	ret, err := gateway.Server.GetProdCid(cid).GetGWIClient().Conn(ctx, cid, gid, unique, false)
+	return ret, err
 }
 
 func (g GatewayS) GDisc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_r bool, _err error) {
-	err := gateway.Server.GetProdCid(cid).GetGWIClient().Disc(ctx, cid, gid, unique, connVer)
+	err := gateway.Server.GetProdCid(cid).GetGWIClient().Disc(ctx, cid, gid, unique, connVer, false)
 	return err == nil, err
 }
 
-func (g GatewayS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r bool, _err error) {
+func (g GatewayS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous int32) (_r bool, _err error) {
 	ret, err := gateway.Server.GetProdCid(cid).GetGWIClient().GLasts(ctx, gid, cid, unique, lastId, continuous)
 	return ret == gw.Result__Succ, err
 }

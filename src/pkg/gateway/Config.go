@@ -35,8 +35,9 @@ func initConfig(workId int32) {
 		KickDrt:     6000,
 		GwProd:      "gw",
 		AclProd:     "acl",
-		TConfig:     nil,
-		TeamMax:     65535,
+		// new(thrift.TConfiguration)
+		TConfig: nil,
+		TeamMax: 65535,
 	}
 	APro.SubCfgBind("gateway", Config)
 	Config.WorkId = workId

@@ -11,15 +11,16 @@ import (
 
 const (
 	// 头状态
-	HEAD_COMPRESS  byte = 0x01 << 7          //数据压缩
-	HEAD_ENCRY     byte = 0x01 << 6          //数据加密
-	HEAD_REQ       byte = 0x01 << 5          //请求
-	HEAD_URI       byte = 0x01 << 4          //请求路由字符
-	HEAD_URI_I     byte = 0x01 << 3          //请求路由压缩
-	HEAD_DATA      byte = 0x01 << 2          //请求数据
-	HEAD_CRC_MSK_M byte = 0x01 << 2          //头数据校验MOD
-	HEAD_CRC_MSK        = HEAD_CRC_MSK_M - 1 //头数据校验
-	HEAD_CRC_MSK_N      = ^HEAD_CRC_MSK      //头数据校验取反
+	HEAD_COMPRESS  byte = 0x01 << 7              //数据压缩
+	HEAD_ENCRY     byte = 0x01 << 6              //数据加密
+	HEAD_REQ       byte = 0x01 << 5              //请求
+	HEAD_URI       byte = 0x01 << 4              //请求路由字符
+	HEAD_URI_I     byte = 0x01 << 3              //请求路由压缩
+	HEAD_DATA      byte = 0x01 << 2              //请求数据
+	HEAD_CRC_MSK_N      = 2                      //头数据校验位数
+	HEAD_CRC_MSK_M byte = 0x01 << HEAD_CRC_MSK_N //头数据校验MOD
+	HEAD_CRC_MSK        = HEAD_CRC_MSK_M - 1     //头数据校验
+
 )
 
 // CRC错误
@@ -46,13 +47,18 @@ type ProtocolV struct {
 }
 
 func (that *ProtocolV) crc(head byte) byte {
-	return (head & HEAD_CRC_MSK_N) % HEAD_CRC_MSK_M
+	h := head >> HEAD_CRC_MSK_N
+	return (h << HEAD_CRC_MSK_N) | (h % HEAD_CRC_MSK_M)
+}
+
+func (that *ProtocolV) isCrc(head byte) bool {
+	return ((head >> HEAD_CRC_MSK_N) % HEAD_CRC_MSK_M) == (head & HEAD_CRC_MSK)
 }
 
 func (that *ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head = bs[0]
 	// 头部校验
-	if that.crc(head) != (head & HEAD_CRC_MSK) {
+	if !that.isCrc(head) {
 		err = ERR_CRC
 		return
 	}
@@ -97,7 +103,7 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err
 	}
 
 	// 头部校验
-	if that.crc(head) != (head & HEAD_CRC_MSK) {
+	if !that.isCrc(head) {
 		err = ERR_CRC
 		return
 	}
@@ -214,7 +220,7 @@ func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, stick
 	if uLen > 0 {
 		// 路由
 		KtBytes.SetVInt(bs, off, uLen, &off)
-		copy(KtUnsafe.StringToBytes(uri), bs[off:])
+		copy(bs[off:], KtUnsafe.StringToBytes(uri))
 		off += uLen
 	}
 
@@ -234,12 +240,12 @@ func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, stick
 			KtBytes.SetVInt(bs, off, dLen, &off)
 		}
 
-		copy(data, bs[off:])
+		copy(bs[off:], data)
 	}
 
 	// 最后设置头
-	bs[0] = head
 	head |= that.crc(head)
+	bs[0] = head
 	return bs
 }
 
@@ -391,7 +397,7 @@ func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []by
 		// 新数据包
 		bs := make([]byte, bLen)
 		// 头数据
-		copy(bh, bs)
+		copy(bs, bh)
 
 		// 粘包
 		if sticky {
@@ -399,14 +405,13 @@ func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []by
 		}
 
 		// 数据
-		copy(data, bs[dLen:])
+		copy(bs[dLen:], data)
 
 		// 头处理
 		head |= bs[0]
 		head |= HEAD_DATA
 		if head != bs[0] {
-			head &= HEAD_CRC_MSK_N
-			head |= that.crc(head)
+			head = that.crc(head)
 			bs[0] = head
 		}
 
@@ -430,8 +435,7 @@ func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh 
 	}
 
 	if head != bh[0] {
-		head &= HEAD_CRC_MSK_N
-		head |= that.crc(head)
+		head = that.crc(head)
 	}
 
 	// 写入锁

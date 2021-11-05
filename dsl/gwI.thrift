@@ -25,9 +25,9 @@ service GatewayI {
     // 软关闭连接
     Result kick(1: i64 cid, 2: binary bytes)
     // 连接
-    Result conn(1: i64 cid, 2: string gid, 3: string unique)
+    i32 conn(1: i64 cid, 2: string gid, 3: string unique, 4: bool kick)
     // 断开
-    oneway void disc(1: i64 cid, 2: string gid, 3: string unique, 4: i32 connVer)
+    oneway void disc(1: i64 cid, 2: string gid, 3: string unique, 4: i32 connVer, 5: bool kick)
     // 存活
     Result alive(1: i64 cid)
     // 服务编号
@@ -43,7 +43,7 @@ service GatewayI {
     // 消息队列清理
     Result gClear(1: string gid, 2: bool queue, 3: bool last)
     // 主动获取消息
-    Result gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId, 5: bool continuous);
+    Result gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId, 5: i32 continuous);
     // 通知
     Result gLast(1: string gid)
     // 推送

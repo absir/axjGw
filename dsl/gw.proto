@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package gw;
+
+message LoginReq {
+    // 客户端唯一编号
+    optional int64 cid = 1;
+    // 登录数据
+    bytes data = 2;
+    // 客户端地址
+    string addr = 3;
+}
+
+message LoginRep {
+    // 数字编号
+    int64 uid = 1;
+    // 字符编号
+    string sid = 2;
+    // 唯一标识(一个标识，只允许一个Conn)
+    string unique = 3;
+    // 最大请求数
+    int32 limit = 4;
+    // 路由服务编号
+    int32 rid = 5;
+    // 路由服务映射
+    map<string, int32> rids = 6;
+    // 登录返回
+    bytes data = 7;
+    // 清理队列
+    bool clear = 8;
+    // 登录回调
+    bool back = 9;
+}
+
+message LoginBack {
+    int64 cid = 1;
+    int64 uid = 2;
+    string sid = 3;
+}
+
+message Member {
+    // 用户编号
+    string gid = 1;
+    // 写扩散时，不推送，需要点击查看
+    bool nofeed = 2;
+}
+
+message TeamRep {
+    // 版本
+    int64 version = 1;
+    // 用户列表
+    repeated Member members = 2;
+    // 读扩散、写扩散
+    bool readFeed = 3;
+}
+
+service Acl {
+    // 登录
+    rpc login(LoginRep) returns (LoginRep);
+    // 登录回调
+    rpc loginBack(LoginBack) returns (bool);
+    // 组查询 tid
+    rpc team(string) returns (TeamRep);
+}
+
+message PassReq {
+    int64 cid = 1;
+    int64 uid = 2;
+    string sid = 3;
+    string uri = 4;
+    bytes data = 5;
+}
+
+service Pass {
+    // 请求
+    rpc req(PassReq) returns (bytes);
+    // 发送
+    rpc send(PassReq) returns (bool);
+}
+
+message CloseReq {
+    int64 cid = 1;
+    string reason = 2;
+}
+
+message KickReq {
+    int64 cid = 1;
+    bytes data = 2;
+}
+
+message RidReq {
+    int64 cid = 1;
+    string name = 2;
+    int32 rid = 3;
+}
+
+message RidsReq {
+    int64 cid = 1;
+    map<string, int32> rids = 2;
+}
+
+message PushReq {
+    int64 cid = 1;
+    string uri = 2;
+    bytes data = 3;
+}
+
+message GPushReq {
+    string gid = 1;
+    string uri = 2;
+    bytes data = 3;
+    int32 qs = 4;
+    string unique = 5;
+    bool queue = 6;
+}
+
+message GConnReq {
+    int64 cid = 1;
+    string gid = 2;
+    string unique = 3;
+}
+
+message GDiscReq {
+    int64 cid = 1;
+    string gid = 2;
+    string unique = 3;
+    int32 connVer = 4;
+}
+
+message GLastsReq {
+    string gid = 1;
+    int64 cid = 2;
+    string unique = 3;
+    int64 lastId = 4;
+    int32 continuous = 5;
+}
+
+message SendReq {
+    string fromId = 1;
+    string toId = 2;
+    string uri = 3;
+    bytes data = 4;
+    bool db = 5;
+}
+
+message TPushReq {
+    string fromId = 1;
+    string tid = 2;
+    // 读扩散
+    bool readFeed = 3;
+    string uri = 4;
+    bytes data = 5;
+    bool db = 6;
+    bool queue = 7;
+}
+
+// 网关
+service Gateway {
+    // 关闭连接
+    rpc close(CloseReq) returns (bool);
+    // 软关闭连接
+    rpc kick(KickReq) returns (bool);
+    // 服务编号
+    rpc rid(RidReq) returns (bool);
+    // 服务编号
+    rpc rids(RidsReq) returns (bool);
+    // 简单推送
+    rpc push(PushReq) returns (bool);
+    // 组通知 gid
+    rpc gLast(string) returns (bool);
+    // 组推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
+    rpc gPush(GPushReq) returns (bool);
+    // 注册监听gid
+    rpc gConn(GConnReq) returns (int32);
+    // 断开监听gid
+    rpc gDisc(GDiscReq) returns (bool);
+    // 获取更新消息
+    rpc gLasts(GLastsReq) returns (bool);
+    // 点对点聊天
+    rpc send(SendReq) returns (bool);
+    // readfeed读扩散，常用于聊天室
+    rpc tPush(TPushReq) returns (bool);
+    // 组更新、删除 tid
+    rpc tDirty(string) returns (bool);
+}

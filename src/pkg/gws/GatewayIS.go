@@ -38,24 +38,25 @@ func (g GatewayIS) Kick(ctx context.Context, cid int64, bytes []byte) (_r gw.Res
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIS) Conn(ctx context.Context, cid int64, gid string, unique string) (_r gw.Result_, _err error) {
+func (g GatewayIS) Conn(ctx context.Context, cid int64, gid string, unique string, kick bool) (_r int32, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
-		return gw.Result__ProdErr, nil
+		return int32(gw.Result__ProdErr), nil
 	}
 
-	if gateway.MsgMng.GetMsgGrp(gid).Conn(cid, unique) != nil {
-		return gw.Result__Succ, nil
+	client := gateway.MsgMng.GetMsgGrp(gid).Conn(cid, unique, kick)
+	if client != nil {
+		return client.ConnVer(), nil
 	}
 
-	return gw.Result__Fail, nil
+	return int32(gw.Result__Fail), nil
 }
 
-func (g GatewayIS) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_err error) {
+func (g GatewayIS) Disc(ctx context.Context, cid int64, gid string, unique string, connVer int32, kick bool) (_err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return nil
 	}
 
-	if gateway.MsgMng.GetMsgGrp(gid).Close(cid, unique, connVer) {
+	if gateway.MsgMng.GetMsgGrp(gid).Close(cid, unique, connVer, kick) {
 		return nil
 	}
 
@@ -165,7 +166,7 @@ func (g GatewayIS) GQueue(ctx context.Context, gid string, cid int64, unique str
 	}
 
 	grp := gateway.MsgMng.GetMsgGrp(gid)
-	client := grp.Conn(cid, unique)
+	client := grp.Conn(cid, unique, false)
 	if client == nil {
 		return gw.Result__IdNone, nil
 	}
@@ -193,13 +194,13 @@ func (g GatewayIS) GClear(ctx context.Context, gid string, queue bool, last bool
 	return gw.Result__Succ, nil
 }
 
-func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r gw.Result_, _err error) {
+func (g GatewayIS) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous int32) (_r gw.Result_, _err error) {
 	if !gateway.Server.IsProdHashS(gid) {
 		return gw.Result__ProdErr, nil
 	}
 
 	grp := gateway.MsgMng.GetMsgGrp(gid)
-	client := grp.Conn(cid, unique)
+	client := grp.Conn(cid, unique, false)
 	if client == nil {
 		return gw.Result__IdNone, nil
 	}

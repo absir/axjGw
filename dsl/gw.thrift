@@ -58,6 +58,8 @@ service Pass {
 
 // 网关
 service Gateway {
+    // 心跳
+    bool b();
     // 关闭连接
     bool close(1: i64 cid, 2: string reason)
     // 软关闭连接
@@ -73,11 +75,11 @@ service Gateway {
     // 组推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
     bool gPush(1: string gid, 2: string uri, 3: binary bytes, 4: i32 qs, 5: string unique, 6: bool queue)
     // 注册监听gid
-    bool gConn(1: i64 cid, 2: string gid, 3: string unique)
+    i32 gConn(1: i64 cid, 2: string gid, 3: string unique)
     // 断开监听gid
     bool gDisc(1: i64 cid, 2: string gid, 3: string unique, 4: i32 connVer)
     // 获取更新消息
-    bool gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId, 5: bool continuous);
+    bool gLasts(1: string gid, 2: i64 cid, 3: string unique, 4: i64 lastId, 5: i32 continuous);
     // 点对点聊天
     bool send(1: string fromId, 2: string toId, 3: string uri, 4: binary bytes, 5: bool db)
     // readfeed读扩散，常用于聊天室

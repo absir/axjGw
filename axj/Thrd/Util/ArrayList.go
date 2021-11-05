@@ -5,7 +5,7 @@ type ArrayList struct {
 	size     int
 }
 
-func New(values ...interface{}) *ArrayList {
+func NewArrayList(values ...interface{}) *ArrayList {
 	list := &ArrayList{}
 	list.elements = make([]interface{}, 10)
 	if len(values) > 0 {

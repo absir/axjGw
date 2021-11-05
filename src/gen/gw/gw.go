@@ -2658,6 +2658,7 @@ func (p *PassSendArgs) String() string {
 
 
 type Gateway interface {
+  B(ctx context.Context) (_r bool, _err error)
   // Parameters:
   //  - Cid
   //  - Reason
@@ -2695,7 +2696,7 @@ type Gateway interface {
   //  - Cid
   //  - Gid
   //  - Unique
-  GConn(ctx context.Context, cid int64, gid string, unique string) (_r bool, _err error)
+  GConn(ctx context.Context, cid int64, gid string, unique string) (_r int32, _err error)
   // Parameters:
   //  - Cid
   //  - Gid
@@ -2708,7 +2709,7 @@ type Gateway interface {
   //  - Unique
   //  - LastId
   //  - Continuous
-  GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r bool, _err error)
+  GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous int32) (_r bool, _err error)
   // Parameters:
   //  - FromId
   //  - ToId
@@ -2765,16 +2766,11 @@ func (p *GatewayClient) SetLastResponseMeta_(meta thrift.ResponseMeta) {
   p.meta = meta
 }
 
-// Parameters:
-//  - Cid
-//  - Reason
-func (p *GatewayClient) Close(ctx context.Context, cid int64, reason string) (_r bool, _err error) {
-  var _args41 GatewayCloseArgs
-  _args41.Cid = cid
-  _args41.Reason = reason
-  var _result43 GatewayCloseResult
+func (p *GatewayClient) B(ctx context.Context) (_r bool, _err error) {
+  var _args41 GatewayBArgs
+  var _result43 GatewayBResult
   var _meta42 thrift.ResponseMeta
-  _meta42, _err = p.Client_().Call(ctx, "close", &_args41, &_result43)
+  _meta42, _err = p.Client_().Call(ctx, "b", &_args41, &_result43)
   p.SetLastResponseMeta_(_meta42)
   if _err != nil {
     return
@@ -2784,14 +2780,14 @@ func (p *GatewayClient) Close(ctx context.Context, cid int64, reason string) (_r
 
 // Parameters:
 //  - Cid
-//  - Bytes
-func (p *GatewayClient) Kick(ctx context.Context, cid int64, bytes []byte) (_r bool, _err error) {
-  var _args44 GatewayKickArgs
+//  - Reason
+func (p *GatewayClient) Close(ctx context.Context, cid int64, reason string) (_r bool, _err error) {
+  var _args44 GatewayCloseArgs
   _args44.Cid = cid
-  _args44.Bytes = bytes
-  var _result46 GatewayKickResult
+  _args44.Reason = reason
+  var _result46 GatewayCloseResult
   var _meta45 thrift.ResponseMeta
-  _meta45, _err = p.Client_().Call(ctx, "kick", &_args44, &_result46)
+  _meta45, _err = p.Client_().Call(ctx, "close", &_args44, &_result46)
   p.SetLastResponseMeta_(_meta45)
   if _err != nil {
     return
@@ -2801,16 +2797,14 @@ func (p *GatewayClient) Kick(ctx context.Context, cid int64, bytes []byte) (_r b
 
 // Parameters:
 //  - Cid
-//  - Name
-//  - Rid
-func (p *GatewayClient) Rid(ctx context.Context, cid int64, name string, rid int32) (_r bool, _err error) {
-  var _args47 GatewayRidArgs
+//  - Bytes
+func (p *GatewayClient) Kick(ctx context.Context, cid int64, bytes []byte) (_r bool, _err error) {
+  var _args47 GatewayKickArgs
   _args47.Cid = cid
-  _args47.Name = name
-  _args47.Rid = rid
-  var _result49 GatewayRidResult
+  _args47.Bytes = bytes
+  var _result49 GatewayKickResult
   var _meta48 thrift.ResponseMeta
-  _meta48, _err = p.Client_().Call(ctx, "rid", &_args47, &_result49)
+  _meta48, _err = p.Client_().Call(ctx, "kick", &_args47, &_result49)
   p.SetLastResponseMeta_(_meta48)
   if _err != nil {
     return
@@ -2820,14 +2814,16 @@ func (p *GatewayClient) Rid(ctx context.Context, cid int64, name string, rid int
 
 // Parameters:
 //  - Cid
-//  - Rids
-func (p *GatewayClient) Rids(ctx context.Context, cid int64, rids map[string]int32) (_r bool, _err error) {
-  var _args50 GatewayRidsArgs
+//  - Name
+//  - Rid
+func (p *GatewayClient) Rid(ctx context.Context, cid int64, name string, rid int32) (_r bool, _err error) {
+  var _args50 GatewayRidArgs
   _args50.Cid = cid
-  _args50.Rids = rids
-  var _result52 GatewayRidsResult
+  _args50.Name = name
+  _args50.Rid = rid
+  var _result52 GatewayRidResult
   var _meta51 thrift.ResponseMeta
-  _meta51, _err = p.Client_().Call(ctx, "rids", &_args50, &_result52)
+  _meta51, _err = p.Client_().Call(ctx, "rid", &_args50, &_result52)
   p.SetLastResponseMeta_(_meta51)
   if _err != nil {
     return
@@ -2837,16 +2833,14 @@ func (p *GatewayClient) Rids(ctx context.Context, cid int64, rids map[string]int
 
 // Parameters:
 //  - Cid
-//  - URI
-//  - Bytes
-func (p *GatewayClient) Push(ctx context.Context, cid int64, uri string, bytes []byte) (_r bool, _err error) {
-  var _args53 GatewayPushArgs
+//  - Rids
+func (p *GatewayClient) Rids(ctx context.Context, cid int64, rids map[string]int32) (_r bool, _err error) {
+  var _args53 GatewayRidsArgs
   _args53.Cid = cid
-  _args53.URI = uri
-  _args53.Bytes = bytes
-  var _result55 GatewayPushResult
+  _args53.Rids = rids
+  var _result55 GatewayRidsResult
   var _meta54 thrift.ResponseMeta
-  _meta54, _err = p.Client_().Call(ctx, "push", &_args53, &_result55)
+  _meta54, _err = p.Client_().Call(ctx, "rids", &_args53, &_result55)
   p.SetLastResponseMeta_(_meta54)
   if _err != nil {
     return
@@ -2855,18 +2849,37 @@ func (p *GatewayClient) Push(ctx context.Context, cid int64, uri string, bytes [
 }
 
 // Parameters:
-//  - Gid
-func (p *GatewayClient) GLast(ctx context.Context, gid string) (_r bool, _err error) {
-  var _args56 GatewayGLastArgs
-  _args56.Gid = gid
-  var _result58 GatewayGLastResult
+//  - Cid
+//  - URI
+//  - Bytes
+func (p *GatewayClient) Push(ctx context.Context, cid int64, uri string, bytes []byte) (_r bool, _err error) {
+  var _args56 GatewayPushArgs
+  _args56.Cid = cid
+  _args56.URI = uri
+  _args56.Bytes = bytes
+  var _result58 GatewayPushResult
   var _meta57 thrift.ResponseMeta
-  _meta57, _err = p.Client_().Call(ctx, "gLast", &_args56, &_result58)
+  _meta57, _err = p.Client_().Call(ctx, "push", &_args56, &_result58)
   p.SetLastResponseMeta_(_meta57)
   if _err != nil {
     return
   }
   return _result58.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Gid
+func (p *GatewayClient) GLast(ctx context.Context, gid string) (_r bool, _err error) {
+  var _args59 GatewayGLastArgs
+  _args59.Gid = gid
+  var _result61 GatewayGLastResult
+  var _meta60 thrift.ResponseMeta
+  _meta60, _err = p.Client_().Call(ctx, "gLast", &_args59, &_result61)
+  p.SetLastResponseMeta_(_meta60)
+  if _err != nil {
+    return
+  }
+  return _result61.GetSuccess(), nil
 }
 
 // Parameters:
@@ -2877,35 +2890,16 @@ func (p *GatewayClient) GLast(ctx context.Context, gid string) (_r bool, _err er
 //  - Unique
 //  - Queue
 func (p *GatewayClient) GPush(ctx context.Context, gid string, uri string, bytes []byte, qs int32, unique string, queue bool) (_r bool, _err error) {
-  var _args59 GatewayGPushArgs
-  _args59.Gid = gid
-  _args59.URI = uri
-  _args59.Bytes = bytes
-  _args59.Qs = qs
-  _args59.Unique = unique
-  _args59.Queue = queue
-  var _result61 GatewayGPushResult
-  var _meta60 thrift.ResponseMeta
-  _meta60, _err = p.Client_().Call(ctx, "gPush", &_args59, &_result61)
-  p.SetLastResponseMeta_(_meta60)
-  if _err != nil {
-    return
-  }
-  return _result61.GetSuccess(), nil
-}
-
-// Parameters:
-//  - Cid
-//  - Gid
-//  - Unique
-func (p *GatewayClient) GConn(ctx context.Context, cid int64, gid string, unique string) (_r bool, _err error) {
-  var _args62 GatewayGConnArgs
-  _args62.Cid = cid
+  var _args62 GatewayGPushArgs
   _args62.Gid = gid
+  _args62.URI = uri
+  _args62.Bytes = bytes
+  _args62.Qs = qs
   _args62.Unique = unique
-  var _result64 GatewayGConnResult
+  _args62.Queue = queue
+  var _result64 GatewayGPushResult
   var _meta63 thrift.ResponseMeta
-  _meta63, _err = p.Client_().Call(ctx, "gConn", &_args62, &_result64)
+  _meta63, _err = p.Client_().Call(ctx, "gPush", &_args62, &_result64)
   p.SetLastResponseMeta_(_meta63)
   if _err != nil {
     return
@@ -2917,16 +2911,14 @@ func (p *GatewayClient) GConn(ctx context.Context, cid int64, gid string, unique
 //  - Cid
 //  - Gid
 //  - Unique
-//  - ConnVer
-func (p *GatewayClient) GDisc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_r bool, _err error) {
-  var _args65 GatewayGDiscArgs
+func (p *GatewayClient) GConn(ctx context.Context, cid int64, gid string, unique string) (_r int32, _err error) {
+  var _args65 GatewayGConnArgs
   _args65.Cid = cid
   _args65.Gid = gid
   _args65.Unique = unique
-  _args65.ConnVer = connVer
-  var _result67 GatewayGDiscResult
+  var _result67 GatewayGConnResult
   var _meta66 thrift.ResponseMeta
-  _meta66, _err = p.Client_().Call(ctx, "gDisc", &_args65, &_result67)
+  _meta66, _err = p.Client_().Call(ctx, "gConn", &_args65, &_result67)
   p.SetLastResponseMeta_(_meta66)
   if _err != nil {
     return
@@ -2935,26 +2927,47 @@ func (p *GatewayClient) GDisc(ctx context.Context, cid int64, gid string, unique
 }
 
 // Parameters:
-//  - Gid
 //  - Cid
+//  - Gid
 //  - Unique
-//  - LastId
-//  - Continuous
-func (p *GatewayClient) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous bool) (_r bool, _err error) {
-  var _args68 GatewayGLastsArgs
-  _args68.Gid = gid
+//  - ConnVer
+func (p *GatewayClient) GDisc(ctx context.Context, cid int64, gid string, unique string, connVer int32) (_r bool, _err error) {
+  var _args68 GatewayGDiscArgs
   _args68.Cid = cid
+  _args68.Gid = gid
   _args68.Unique = unique
-  _args68.LastId = lastId
-  _args68.Continuous = continuous
-  var _result70 GatewayGLastsResult
+  _args68.ConnVer = connVer
+  var _result70 GatewayGDiscResult
   var _meta69 thrift.ResponseMeta
-  _meta69, _err = p.Client_().Call(ctx, "gLasts", &_args68, &_result70)
+  _meta69, _err = p.Client_().Call(ctx, "gDisc", &_args68, &_result70)
   p.SetLastResponseMeta_(_meta69)
   if _err != nil {
     return
   }
   return _result70.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Gid
+//  - Cid
+//  - Unique
+//  - LastId
+//  - Continuous
+func (p *GatewayClient) GLasts(ctx context.Context, gid string, cid int64, unique string, lastId int64, continuous int32) (_r bool, _err error) {
+  var _args71 GatewayGLastsArgs
+  _args71.Gid = gid
+  _args71.Cid = cid
+  _args71.Unique = unique
+  _args71.LastId = lastId
+  _args71.Continuous = continuous
+  var _result73 GatewayGLastsResult
+  var _meta72 thrift.ResponseMeta
+  _meta72, _err = p.Client_().Call(ctx, "gLasts", &_args71, &_result73)
+  p.SetLastResponseMeta_(_meta72)
+  if _err != nil {
+    return
+  }
+  return _result73.GetSuccess(), nil
 }
 
 // Parameters:
@@ -2964,20 +2977,20 @@ func (p *GatewayClient) GLasts(ctx context.Context, gid string, cid int64, uniqu
 //  - Bytes
 //  - Db
 func (p *GatewayClient) Send(ctx context.Context, fromId string, toId string, uri string, bytes []byte, db bool) (_r bool, _err error) {
-  var _args71 GatewaySendArgs
-  _args71.FromId = fromId
-  _args71.ToId = toId
-  _args71.URI = uri
-  _args71.Bytes = bytes
-  _args71.Db = db
-  var _result73 GatewaySendResult
-  var _meta72 thrift.ResponseMeta
-  _meta72, _err = p.Client_().Call(ctx, "send", &_args71, &_result73)
-  p.SetLastResponseMeta_(_meta72)
+  var _args74 GatewaySendArgs
+  _args74.FromId = fromId
+  _args74.ToId = toId
+  _args74.URI = uri
+  _args74.Bytes = bytes
+  _args74.Db = db
+  var _result76 GatewaySendResult
+  var _meta75 thrift.ResponseMeta
+  _meta75, _err = p.Client_().Call(ctx, "send", &_args74, &_result76)
+  p.SetLastResponseMeta_(_meta75)
   if _err != nil {
     return
   }
-  return _result73.GetSuccess(), nil
+  return _result76.GetSuccess(), nil
 }
 
 // Parameters:
@@ -2989,37 +3002,37 @@ func (p *GatewayClient) Send(ctx context.Context, fromId string, toId string, ur
 //  - Db
 //  - Queue
 func (p *GatewayClient) TPush(ctx context.Context, fromId string, tid string, readfeed bool, uri string, bytes []byte, db bool, queue bool) (_r bool, _err error) {
-  var _args74 GatewayTPushArgs
-  _args74.FromId = fromId
-  _args74.Tid = tid
-  _args74.Readfeed = readfeed
-  _args74.URI = uri
-  _args74.Bytes = bytes
-  _args74.Db = db
-  _args74.Queue = queue
-  var _result76 GatewayTPushResult
-  var _meta75 thrift.ResponseMeta
-  _meta75, _err = p.Client_().Call(ctx, "tPush", &_args74, &_result76)
-  p.SetLastResponseMeta_(_meta75)
-  if _err != nil {
-    return
-  }
-  return _result76.GetSuccess(), nil
-}
-
-// Parameters:
-//  - Tid
-func (p *GatewayClient) TDirty(ctx context.Context, tid string) (_r bool, _err error) {
-  var _args77 GatewayTDirtyArgs
+  var _args77 GatewayTPushArgs
+  _args77.FromId = fromId
   _args77.Tid = tid
-  var _result79 GatewayTDirtyResult
+  _args77.Readfeed = readfeed
+  _args77.URI = uri
+  _args77.Bytes = bytes
+  _args77.Db = db
+  _args77.Queue = queue
+  var _result79 GatewayTPushResult
   var _meta78 thrift.ResponseMeta
-  _meta78, _err = p.Client_().Call(ctx, "tDirty", &_args77, &_result79)
+  _meta78, _err = p.Client_().Call(ctx, "tPush", &_args77, &_result79)
   p.SetLastResponseMeta_(_meta78)
   if _err != nil {
     return
   }
   return _result79.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Tid
+func (p *GatewayClient) TDirty(ctx context.Context, tid string) (_r bool, _err error) {
+  var _args80 GatewayTDirtyArgs
+  _args80.Tid = tid
+  var _result82 GatewayTDirtyResult
+  var _meta81 thrift.ResponseMeta
+  _meta81, _err = p.Client_().Call(ctx, "tDirty", &_args80, &_result82)
+  p.SetLastResponseMeta_(_meta81)
+  if _err != nil {
+    return
+  }
+  return _result82.GetSuccess(), nil
 }
 
 type GatewayProcessor struct {
@@ -3042,21 +3055,22 @@ func (p *GatewayProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewGatewayProcessor(handler Gateway) *GatewayProcessor {
 
-  self80 := &GatewayProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
-  self80.processorMap["close"] = &gatewayProcessorClose{handler:handler}
-  self80.processorMap["kick"] = &gatewayProcessorKick{handler:handler}
-  self80.processorMap["rid"] = &gatewayProcessorRid{handler:handler}
-  self80.processorMap["rids"] = &gatewayProcessorRids{handler:handler}
-  self80.processorMap["push"] = &gatewayProcessorPush{handler:handler}
-  self80.processorMap["gLast"] = &gatewayProcessorGLast{handler:handler}
-  self80.processorMap["gPush"] = &gatewayProcessorGPush{handler:handler}
-  self80.processorMap["gConn"] = &gatewayProcessorGConn{handler:handler}
-  self80.processorMap["gDisc"] = &gatewayProcessorGDisc{handler:handler}
-  self80.processorMap["gLasts"] = &gatewayProcessorGLasts{handler:handler}
-  self80.processorMap["send"] = &gatewayProcessorSend{handler:handler}
-  self80.processorMap["tPush"] = &gatewayProcessorTPush{handler:handler}
-  self80.processorMap["tDirty"] = &gatewayProcessorTDirty{handler:handler}
-return self80
+  self83 := &GatewayProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
+  self83.processorMap["b"] = &gatewayProcessorB{handler:handler}
+  self83.processorMap["close"] = &gatewayProcessorClose{handler:handler}
+  self83.processorMap["kick"] = &gatewayProcessorKick{handler:handler}
+  self83.processorMap["rid"] = &gatewayProcessorRid{handler:handler}
+  self83.processorMap["rids"] = &gatewayProcessorRids{handler:handler}
+  self83.processorMap["push"] = &gatewayProcessorPush{handler:handler}
+  self83.processorMap["gLast"] = &gatewayProcessorGLast{handler:handler}
+  self83.processorMap["gPush"] = &gatewayProcessorGPush{handler:handler}
+  self83.processorMap["gConn"] = &gatewayProcessorGConn{handler:handler}
+  self83.processorMap["gDisc"] = &gatewayProcessorGDisc{handler:handler}
+  self83.processorMap["gLasts"] = &gatewayProcessorGLasts{handler:handler}
+  self83.processorMap["send"] = &gatewayProcessorSend{handler:handler}
+  self83.processorMap["tPush"] = &gatewayProcessorTPush{handler:handler}
+  self83.processorMap["tDirty"] = &gatewayProcessorTDirty{handler:handler}
+return self83
 }
 
 func (p *GatewayProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -3067,13 +3081,92 @@ func (p *GatewayProcessor) Process(ctx context.Context, iprot, oprot thrift.TPro
   }
   iprot.Skip(ctx, thrift.STRUCT)
   iprot.ReadMessageEnd(ctx)
-  x81 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
+  x84 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
   oprot.WriteMessageBegin(ctx, name, thrift.EXCEPTION, seqId)
-  x81.Write(ctx, oprot)
+  x84.Write(ctx, oprot)
   oprot.WriteMessageEnd(ctx)
   oprot.Flush(ctx)
-  return false, x81
+  return false, x84
 
+}
+
+type gatewayProcessorB struct {
+  handler Gateway
+}
+
+func (p *gatewayProcessorB) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := GatewayBArgs{}
+  var err2 error
+  if err2 = args.Read(ctx, iprot); err2 != nil {
+    iprot.ReadMessageEnd(ctx)
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+    oprot.WriteMessageBegin(ctx, "b", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return false, thrift.WrapTException(err2)
+  }
+  iprot.ReadMessageEnd(ctx)
+
+  tickerCancel := func() {}
+  // Start a goroutine to do server side connectivity check.
+  if thrift.ServerConnectivityCheckInterval > 0 {
+    var cancel context.CancelFunc
+    ctx, cancel = context.WithCancel(ctx)
+    defer cancel()
+    var tickerCtx context.Context
+    tickerCtx, tickerCancel = context.WithCancel(context.Background())
+    defer tickerCancel()
+    go func(ctx context.Context, cancel context.CancelFunc) {
+      ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+      defer ticker.Stop()
+      for {
+        select {
+        case <-ctx.Done():
+          return
+        case <-ticker.C:
+          if !iprot.Transport().IsOpen() {
+            cancel()
+            return
+          }
+        }
+      }
+    }(tickerCtx, cancel)
+  }
+
+  result := GatewayBResult{}
+  var retval bool
+  if retval, err2 = p.handler.B(ctx); err2 != nil {
+    tickerCancel()
+    if err2 == thrift.ErrAbandonRequest {
+      return false, thrift.WrapTException(err2)
+    }
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing b: " + err2.Error())
+    oprot.WriteMessageBegin(ctx, "b", thrift.EXCEPTION, seqId)
+    x.Write(ctx, oprot)
+    oprot.WriteMessageEnd(ctx)
+    oprot.Flush(ctx)
+    return true, thrift.WrapTException(err2)
+  } else {
+    result.Success = &retval
+  }
+  tickerCancel()
+  if err2 = oprot.WriteMessageBegin(ctx, "b", thrift.REPLY, seqId); err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.WriteMessageEnd(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+    err = thrift.WrapTException(err2)
+  }
+  if err != nil {
+    return
+  }
+  return true, err
 }
 
 type gatewayProcessorClose struct {
@@ -3674,7 +3767,7 @@ func (p *gatewayProcessorGConn) Process(ctx context.Context, seqId int32, iprot,
   }
 
   result := GatewayGConnResult{}
-  var retval bool
+  var retval int32
   if retval, err2 = p.handler.GConn(ctx, args.Cid, args.Gid, args.Unique); err2 != nil {
     tickerCancel()
     if err2 == thrift.ErrAbandonRequest {
@@ -4105,6 +4198,157 @@ func (p *gatewayProcessorTDirty) Process(ctx context.Context, seqId int32, iprot
 
 
 // HELPER FUNCTIONS AND STRUCTURES
+
+type GatewayBArgs struct {
+}
+
+func NewGatewayBArgs() *GatewayBArgs {
+  return &GatewayBArgs{}
+}
+
+func (p *GatewayBArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+      return err
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayBArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "b_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayBArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayBArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type GatewayBResult struct {
+  Success *bool `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewGatewayBResult() *GatewayBResult {
+  return &GatewayBResult{}
+}
+
+var GatewayBResult_Success_DEFAULT bool
+func (p *GatewayBResult) GetSuccess() bool {
+  if !p.IsSetSuccess() {
+    return GatewayBResult_Success_DEFAULT
+  }
+return *p.Success
+}
+func (p *GatewayBResult) IsSetSuccess() bool {
+  return p.Success != nil
+}
+
+func (p *GatewayBResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 0:
+      if fieldTypeId == thrift.BOOL {
+        if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    default:
+      if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(ctx); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(ctx); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GatewayBResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(ctx); err != nil {
+  return thrift.PrependError("error reading field 0: ", err)
+} else {
+  p.Success = &v
+}
+  return nil
+}
+
+func (p *GatewayBResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin(ctx, "b_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField0(ctx, oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(ctx); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(ctx); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GatewayBResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.BOOL, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := oprot.WriteBool(ctx, bool(*p.Success)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *GatewayBResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GatewayBResult(%+v)", *p)
+}
 
 // Attributes:
 //  - Cid
@@ -4908,19 +5152,19 @@ func (p *GatewayRidsArgs)  ReadField2(ctx context.Context, iprot thrift.TProtoco
   tMap := make(map[string]int32, size)
   p.Rids =  tMap
   for i := 0; i < size; i ++ {
-var _key82 string
+var _key85 string
     if v, err := iprot.ReadString(ctx); err != nil {
     return thrift.PrependError("error reading field 0: ", err)
 } else {
-    _key82 = v
+    _key85 = v
 }
-var _val83 int32
+var _val86 int32
     if v, err := iprot.ReadI32(ctx); err != nil {
     return thrift.PrependError("error reading field 0: ", err)
 } else {
-    _val83 = v
+    _val86 = v
 }
-    p.Rids[_key82] = _val83
+    p.Rids[_key85] = _val86
   }
   if err := iprot.ReadMapEnd(ctx); err != nil {
     return thrift.PrependError("error reading map end: ", err)
@@ -6070,15 +6314,15 @@ func (p *GatewayGConnArgs) String() string {
 // Attributes:
 //  - Success
 type GatewayGConnResult struct {
-  Success *bool `thrift:"success,0" db:"success" json:"success,omitempty"`
+  Success *int32 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
 
 func NewGatewayGConnResult() *GatewayGConnResult {
   return &GatewayGConnResult{}
 }
 
-var GatewayGConnResult_Success_DEFAULT bool
-func (p *GatewayGConnResult) GetSuccess() bool {
+var GatewayGConnResult_Success_DEFAULT int32
+func (p *GatewayGConnResult) GetSuccess() int32 {
   if !p.IsSetSuccess() {
     return GatewayGConnResult_Success_DEFAULT
   }
@@ -6102,7 +6346,7 @@ func (p *GatewayGConnResult) Read(ctx context.Context, iprot thrift.TProtocol) e
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
     case 0:
-      if fieldTypeId == thrift.BOOL {
+      if fieldTypeId == thrift.I32 {
         if err := p.ReadField0(ctx, iprot); err != nil {
           return err
         }
@@ -6127,7 +6371,7 @@ func (p *GatewayGConnResult) Read(ctx context.Context, iprot thrift.TProtocol) e
 }
 
 func (p *GatewayGConnResult)  ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadBool(ctx); err != nil {
+  if v, err := iprot.ReadI32(ctx); err != nil {
   return thrift.PrependError("error reading field 0: ", err)
 } else {
   p.Success = &v
@@ -6150,9 +6394,9 @@ func (p *GatewayGConnResult) Write(ctx context.Context, oprot thrift.TProtocol) 
 
 func (p *GatewayGConnResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
   if p.IsSetSuccess() {
-    if err := oprot.WriteFieldBegin(ctx, "success", thrift.BOOL, 0); err != nil {
+    if err := oprot.WriteFieldBegin(ctx, "success", thrift.I32, 0); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
-    if err := oprot.WriteBool(ctx, bool(*p.Success)); err != nil {
+    if err := oprot.WriteI32(ctx, int32(*p.Success)); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(ctx); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
@@ -6477,7 +6721,7 @@ type GatewayGLastsArgs struct {
   Cid int64 `thrift:"cid,2" db:"cid" json:"cid"`
   Unique string `thrift:"unique,3" db:"unique" json:"unique"`
   LastId int64 `thrift:"lastId,4" db:"lastId" json:"lastId"`
-  Continuous bool `thrift:"continuous,5" db:"continuous" json:"continuous"`
+  Continuous int32 `thrift:"continuous,5" db:"continuous" json:"continuous"`
 }
 
 func NewGatewayGLastsArgs() *GatewayGLastsArgs {
@@ -6501,7 +6745,7 @@ func (p *GatewayGLastsArgs) GetLastId() int64 {
   return p.LastId
 }
 
-func (p *GatewayGLastsArgs) GetContinuous() bool {
+func (p *GatewayGLastsArgs) GetContinuous() int32 {
   return p.Continuous
 }
 func (p *GatewayGLastsArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
@@ -6558,7 +6802,7 @@ func (p *GatewayGLastsArgs) Read(ctx context.Context, iprot thrift.TProtocol) er
         }
       }
     case 5:
-      if fieldTypeId == thrift.BOOL {
+      if fieldTypeId == thrift.I32 {
         if err := p.ReadField5(ctx, iprot); err != nil {
           return err
         }
@@ -6619,7 +6863,7 @@ func (p *GatewayGLastsArgs)  ReadField4(ctx context.Context, iprot thrift.TProto
 }
 
 func (p *GatewayGLastsArgs)  ReadField5(ctx context.Context, iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadBool(ctx); err != nil {
+  if v, err := iprot.ReadI32(ctx); err != nil {
   return thrift.PrependError("error reading field 5: ", err)
 } else {
   p.Continuous = v
@@ -6685,9 +6929,9 @@ func (p *GatewayGLastsArgs) writeField4(ctx context.Context, oprot thrift.TProto
 }
 
 func (p *GatewayGLastsArgs) writeField5(ctx context.Context, oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin(ctx, "continuous", thrift.BOOL, 5); err != nil {
+  if err := oprot.WriteFieldBegin(ctx, "continuous", thrift.I32, 5); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:continuous: ", p), err) }
-  if err := oprot.WriteBool(ctx, bool(p.Continuous)); err != nil {
+  if err := oprot.WriteI32(ctx, int32(p.Continuous)); err != nil {
   return thrift.PrependError(fmt.Sprintf("%T.continuous (5) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(ctx); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 5:continuous: ", p), err) }

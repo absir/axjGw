@@ -34,8 +34,9 @@ func SetInt(bs []byte, off int, val int32, offP *int) {
 	bs[off] = byte(val >> 8)
 	off++
 	bs[off] = byte(val)
+	off++
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 }
 
@@ -47,6 +48,7 @@ func GetInt(bs []byte, off int, offP *int) int32 {
 	val += int32(bs[off]&0xFF) << 8
 	off++
 	val += int32(bs[off] & 0xFF)
+	off++
 	if offP != nil {
 		offP = &off
 	}
@@ -57,7 +59,7 @@ func GetInt(bs []byte, off int, offP *int) int32 {
 const (
 	VINT_NB    byte = 0x80
 	VINT_B          = VINT_NB - 1
-	VINT            = int32(VINT_NB)
+	VINT            = int32(VINT_B)
 	VINT_1_MAX      = VINT
 	VINT_2_MAX      = VINT_1_MAX + (VINT << 7)
 	VINT_3_MAX      = VINT_2_MAX + (VINT << 14)
@@ -89,60 +91,63 @@ func GetVIntBytes(val int32) []byte {
 func SetVInt(bs []byte, off int32, val int32, offP *int32) {
 	if val > VINT_1_MAX {
 		bs[off] = byte(val)&VINT_B | VINT_NB
+		off++
 		if val > VINT_2_MAX {
-			off++
 			bs[off] = (byte(val>>7)&VINT_B | VINT_NB)
+			off++
 			if val > VINT_3_MAX {
 				if val > VINT_4_MAX {
 					panic(fmt.Sprint("vInt err max %d, %d", VINT_4_MAX, val))
 
 				} else {
-					off++
 					bs[off] = byte(val>>14)&VINT_B | VINT_NB
 					off++
 					bs[off] = byte(val >> 21)
+					off++
 				}
 
 			} else {
-				off++
 				bs[off] = byte(val>>14) & VINT_B
+				off++
 			}
 
 		} else {
-			off++
 			bs[off] = byte(val>>7) & VINT_B
+			off++
 		}
 
 	} else {
 		bs[off] = byte(val) & VINT_B
+		off++
 	}
 
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 }
 
 func GetVInt(bs []byte, off int32, offP *int32) int32 {
 	b := bs[off]
+	off++
 	val := int32(b) & VINT
 	if (b & VINT_NB) != 0 {
-		off++
 		b = bs[off]
+		off++
 		val += int32(b&VINT_B) << 7
 		if (b & VINT_NB) != 0 {
-			off++
 			b = bs[off]
+			off++
 			val += int32(b&VINT_B) << 14
 			if (b & VINT_NB) != 0 {
-				off++
 				b = bs[off]
+				off++
 				val += int32(b) << 21
 			}
 		}
 	}
 
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 
 	return val
@@ -159,7 +164,7 @@ func GetInt64(bs []byte, off int32, offP *int32) int64 {
 	}
 
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 
 	return val
@@ -173,7 +178,7 @@ func SetInt32(bs []byte, off int32, val int32, offP *int32) {
 	}
 
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 }
 
@@ -185,7 +190,7 @@ func SetInt64(bs []byte, off int32, val int64, offP *int32) {
 	}
 
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 }
 

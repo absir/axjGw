@@ -5,6 +5,7 @@ import (
 	"axj/Thrd/Util"
 	"errors"
 	"go.uber.org/zap"
+	"io"
 	"sync"
 	"time"
 )
@@ -30,6 +31,11 @@ const (
 	REQ_ROUTE  int32 = 8  // 路由字典
 	REQ_LOOP   int32 = 15 // 连接接受
 	REQ_ONEWAY int32 = 16 // 路由处理
+)
+
+const (
+	FLG_ENCRYPT  int32 = 1      // 加密
+	FLG_COMPRESS int32 = 1 << 2 // 压缩
 )
 
 type Client interface {
@@ -128,7 +134,16 @@ func (that *ClientCnn) closeLog(err error, reason interface{}) {
 	if err == nil && reason == nil {
 		return
 	}
-	AZap.Logger.Info("Conn close", zap.Error(err), zap.Reflect("reason", reason))
+
+	if err == nil {
+		AZap.Logger.Debug("Conn close", zap.Reflect("reason", reason))
+
+	} else if err == io.EOF {
+		AZap.Logger.Debug("Conn close EOF", zap.Reflect("reason", reason))
+
+	} else {
+		AZap.Logger.Warn("Conn close ERR", zap.Error(err), zap.Reflect("reason", reason))
+	}
 }
 
 func (that *ClientCnn) closeRcvr() error {
@@ -210,7 +225,7 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 		return ERR_CLOSED
 	}
 
-	err := handler.Processor().Rep(nil, out, that.conn, encryKey, req, uri, uriI, data, isolate, id)
+	err := handler.Processor().Rep(nil, out, that.conn, encryKey, that.compress, req, uri, uriI, data, isolate, id)
 	if err != nil {
 		that.Close(err, nil)
 	}
@@ -236,7 +251,7 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 	if conn != nil {
 		go closeDelay(conn, drt)
 		that.conn = nil
-		that.handler.Processor().Rep(nil, true, conn, that.encryKey, REQ_KICK, "", 0, data, isolate, 0)
+		that.handler.Processor().Rep(nil, true, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
 	}
 
 	that.Close(nil, nil)

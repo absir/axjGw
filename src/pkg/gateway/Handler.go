@@ -47,7 +47,7 @@ func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) 
 	clientG := new(ClientG)
 	if clientG.gid != "" {
 		// 断开连接通知
-		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, clientG.Id(), clientG.gid, clientG.unique, 0)
+		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, clientG.Id(), clientG.gid, clientG.unique, 0, false)
 	}
 }
 

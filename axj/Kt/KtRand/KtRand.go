@@ -8,7 +8,7 @@ import (
 func RandBytes(bLen int) []byte {
 	bs := make([]byte, bLen)
 	sLen := 0
-	if sLen > 4 {
+	if bLen > 4 {
 		// 最小4个倍数
 		sLen = (bLen >> 2) << 2
 	}

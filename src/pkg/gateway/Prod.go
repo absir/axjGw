@@ -6,34 +6,70 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
+	"axjGW/pkg/ext"
 	"github.com/apache/thrift/lib/go/thrift"
 	"go.uber.org/zap"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 )
-
-var locker = new(sync.Mutex)
 
 type Prod struct {
 	// 编号
 	id int32
 	// 服务地址
 	url string
+	// 锁
+	locker sync.Locker
 	// 客户端
+	trans thrift.TTransport
+	// 客户协议
 	proto thrift.TProtocol
+	// 网关客户端
+	gwIClient gw.GatewayI
 	// 控制客户端
 	aclClient *gw.AclClient
 	// 转发客户端
 	passClient *gw.PassClient
-	// 网关客户端
-	gwIClient gw.GatewayI
 }
 
 func NewProd(id int32, url string) (*Prod, error) {
-	thrift.NewTTransportFactory()
-	var transport thrift.TTransport = nil
+	prod := new(Prod)
+	prod.id = id
+	prod.url = url
+	err := prod.initClient(false)
+	prod.locker = new(sync.Mutex)
+	if err != nil {
+		AZap.Logger.Debug("NewProd init err " + strconv.Itoa(int(id)) + ", " + url + " : " + err.Error())
+	}
+
+	return prod, nil
+}
+
+func (that *Prod) initClient(locker bool) error {
+	if that.url == "" {
+		return nil
+	}
+
+	if that.proto != nil && that.trans.IsOpen() {
+		return nil
+	}
+
+	if locker {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+	}
+
+	if that.proto != nil && that.trans.IsOpen() {
+		return nil
+	}
+
+	that.gwIClient = nil
+	that.aclClient = nil
+	that.passClient = nil
 	var mName = ""
+	var url = that.url
 	if url != "" {
 		mNameI := strings.Index(url, "//")
 		if mNameI > 0 {
@@ -42,61 +78,40 @@ func NewProd(id int32, url string) (*Prod, error) {
 		}
 
 		var err error = nil
+		var trans thrift.TTransport
 		if strings.HasPrefix(url, "http") {
-			transport, err = thrift.NewTHttpClient(url)
+			trans, err = thrift.NewTHttpClient(url)
 
 		} else {
-			transport = thrift.NewTSocketConf(url, Config.TConfig)
+			trans = ext.NewTSocketAlive(thrift.NewTSocketConf(url, Config.TConfig))
 		}
 
 		if err != nil {
-			return nil, err
-		}
-	}
-
-	prod := new(Prod)
-	prod.id = id
-	prod.url = url
-	if transport != nil {
-		var proto thrift.TProtocol = thrift.NewTCompactProtocolConf(transport, Config.TConfig)
-		if mName != "" {
-			proto = thrift.NewTMultiplexedProtocol(proto, mName)
+			return err
 		}
 
-		prod.proto = proto
-	}
-
-	return prod, nil
-}
-
-func (that *Prod) GetAclClient() *gw.AclClient {
-	if that.aclClient == nil {
-		locker.Lock()
-		defer locker.Unlock()
-		if that.aclClient == nil {
-			that.aclClient = gw.NewAclClient(thrift.NewTStandardClient(that.proto, that.proto))
+		err = trans.Open()
+		if err != nil {
+			return err
 		}
+
+		that.trans = trans
 	}
 
-	return that.aclClient
-}
-
-func (that *Prod) GetPassClient() *gw.PassClient {
-	if that.passClient == nil {
-		locker.Lock()
-		defer locker.Unlock()
-		if that.passClient == nil {
-			that.passClient = gw.NewPassClient(thrift.NewTStandardClient(that.proto, that.proto))
-		}
+	var proto thrift.TProtocol = thrift.NewTCompactProtocolConf(that.trans, Config.TConfig)
+	if mName != "" {
+		proto = thrift.NewTMultiplexedProtocol(proto, mName)
 	}
 
-	return that.passClient
+	that.proto = proto
+	return nil
 }
 
 func (that *Prod) GetGWIClient() gw.GatewayI {
+	that.initClient(true)
 	if that.gwIClient == nil {
-		locker.Lock()
-		defer locker.Unlock()
+		that.locker.Lock()
+		defer that.locker.Unlock()
 		if that.gwIClient == nil {
 			if Server.gatewayI != nil {
 				if that.id == Config.WorkId || that.url == "" {
@@ -114,6 +129,32 @@ func (that *Prod) GetGWIClient() gw.GatewayI {
 	return that.gwIClient
 }
 
+func (that *Prod) GetAclClient() *gw.AclClient {
+	that.initClient(true)
+	if that.aclClient == nil {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+		if that.aclClient == nil {
+			that.aclClient = gw.NewAclClient(thrift.NewTStandardClient(that.proto, that.proto))
+		}
+	}
+
+	return that.aclClient
+}
+
+func (that *Prod) GetPassClient() *gw.PassClient {
+	that.initClient(true)
+	if that.passClient == nil {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+		if that.passClient == nil {
+			that.passClient = gw.NewPassClient(thrift.NewTStandardClient(that.proto, that.proto))
+		}
+	}
+
+	return that.passClient
+}
+
 type Prods struct {
 	// 服务列表
 	prods map[int32]*Prod
@@ -124,8 +165,11 @@ func (that *Prods) Add(id int32, url string) *Prods {
 	prods := that
 	if prods == nil {
 		prods = new(Prods)
+	}
+
+	if prods.ids == nil {
 		prods.prods = map[int32]*Prod{}
-		prods.ids = new(Util.ArrayList)
+		prods.ids = Util.NewArrayList()
 	}
 
 	prod, err := NewProd(id, url)

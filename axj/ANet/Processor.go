@@ -17,8 +17,13 @@ func (that *Processor) Req(conn Conn, decryKey []byte) (error, int32, string, in
 	return req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, that.DataMax)
 }
 
-func (that *Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
-	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate, id)
+func (that *Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
+	compr := that.Compress
+	if !compress {
+		compr = nil
+	}
+
+	return rep(locker, out, conn, that.Protocol, compr, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate, id)
 }
 
 func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {

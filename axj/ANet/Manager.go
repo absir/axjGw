@@ -167,14 +167,14 @@ func (that *Manager) checkClient(key interface{}, val interface{}) {
 	that.handlerM.Check(that.checkTime, client)
 }
 
-func (that *Manager) Open(conn Conn, encryKey []byte, id int64) Client {
+func (that *Manager) Open(conn Conn, encryKey []byte, compress bool, id int64) Client {
 	handlerM := that.handlerM
 	client := handlerM.New(conn)
 	clientM := that.ClientM(client)
 	clientM.id = id
 	clientM.initTime = time.Now().UnixNano()
 	clientM.idleTime = clientM.initTime + that.idleDrt
-	client.Get().Open(conn, that, encryKey)
+	client.Get().Open(conn, that, encryKey, compress)
 	handlerM.OnOpen(client)
 	return client
 }

@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/apache/thrift/lib/go/thrift"
 	"go.uber.org/zap"
+	"io"
 	"sync"
 	"time"
 )
@@ -26,9 +27,10 @@ type server struct {
 var Server = new(server)
 
 func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayI) {
-	that.initProds(cfg)
 	// 配置初始化
 	initConfig(workId)
+	// 初始化服务
+	that.initProds(cfg)
 	// Handler初始化
 	initHandler()
 	// 路由字典初始化
@@ -53,7 +55,7 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 				if key, ok := el.Value.(string); ok {
 					if pMp, _ := mp.Get(key).(*Kt.LinkedMap); pMp != nil {
 						pProds := new(Prods)
-						for pEl := mp.Front(); pEl != nil; pEl = pEl.Next() {
+						for pEl := pMp.Front(); pEl != nil; pEl = pEl.Next() {
 							pProds.Add(KtCvt.ToType(pEl.Value, KtCvt.Int32).(int32), KtCvt.ToType(pMp.Get(pEl.Value), KtCvt.String).(string))
 						}
 
@@ -87,12 +89,14 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	// 交换密钥
 	var encryptKey []byte = nil
 	processor := manager.Processor()
-	if processor.Encrypt != nil {
+	_, _, _, flag, _ := processor.Req(conn, encryptKey)
+	compress := (flag & ANet.FLG_COMPRESS) != 0
+	if (flag&ANet.FLG_ENCRYPT) != 0 && processor.Encrypt != nil {
 		sKey, cKey := processor.Encrypt.NewKeys()
 		if sKey != nil && cKey != nil {
 			encryptKey = sKey
 			// 连接秘钥
-			err := processor.Rep(nil, true, conn, nil, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
+			err := processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
 			if err != nil {
 				return nil
 			}
@@ -100,15 +104,21 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	}
 
 	// Acl准备
-	err := processor.Rep(nil, true, conn, nil, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
+	err := processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
 	if err != nil {
 		return nil
 	}
 
 	// 登录请求
 	err, _, uriHash, uriRoute, loginData := processor.Req(conn, encryptKey)
-	if err != nil || loginData == nil {
-		AZap.Logger.Warn("serv acl Req err", zap.Error(err))
+	if err != nil {
+		if err == io.EOF {
+			AZap.Logger.Debug("serv acl Req EOF")
+
+		} else {
+			AZap.Logger.Warn("serv acl Req ERR", zap.Error(err))
+		}
+
 		return nil
 	}
 
@@ -117,12 +127,23 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	aclClient := that.GetProds(Config.AclProd).GetProdHash(Config.WorkHash).GetAclClient()
 	login, err := aclClient.Login(that.Context, id, loginData, conn.RemoteAddr())
 	if err != nil || login == nil {
-		AZap.Logger.Warn("serv acl Login err", zap.Error(err))
+		if err == io.EOF {
+			AZap.Logger.Debug("serv acl Login EOF")
+
+		} else {
+			if err == nil {
+				AZap.Logger.Debug("serv acl Login Fail nil")
+
+			} else {
+				AZap.Logger.Debug("serv acl Login Fail " + err.Error())
+			}
+		}
+
 		return nil
 	}
 
 	// 客户端注册
-	client := manager.Open(conn, encryptKey, id)
+	client := manager.Open(conn, encryptKey, compress, id)
 	clientG := Handler.ClientG(client)
 	// 用户状态设置
 	clientG.SetId(login.UID, login.Sid, login.Unique)
@@ -142,7 +163,7 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	if uriRoute > 0 {
 		if uriHash != UriDict.UriMapHash {
 			// 路由缓存
-			processor.Rep(nil, true, conn, nil, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
+			processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
 		}
 	}
 
@@ -210,7 +231,7 @@ func (that *server) IsProdHashS(hash string) bool {
 func (that *server) GetProds(name string) *Prods {
 	val, _ := that.prodsMap.Load(name)
 	if val == nil {
-		if val == Config.GwProd {
+		if name == Config.GwProd {
 			if that.prodsGw == nil {
 				prods := new(Prods)
 				prods.Add(Config.WorkId, "")
