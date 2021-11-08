@@ -34,5 +34,6 @@ func (that *EncryptSr) Encrypt(data []byte, key []byte, isolate bool) ([]byte, e
 		data = KtBytes.Copy(data)
 	}
 
+	KtEncry.SrEncry(data, key)
 	return data, nil
 }
