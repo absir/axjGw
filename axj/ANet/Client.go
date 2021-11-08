@@ -115,6 +115,8 @@ func (that *ClientCnn) close(err error, reason interface{}, inner bool) {
 	if that.closed <= 3 {
 		// logger before
 		that.closeLog(err, reason)
+		err = nil
+		reason = nil
 	}
 
 	// 关闭连接
