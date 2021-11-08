@@ -4,6 +4,7 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtUnsafe"
+	"axjGW/gen/gw"
 	"strconv"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ type ClientG struct {
 	rid      int32     // 请求编号
 	ridMap   *sync.Map // 请求字典
 	connTime int64     // 最后连接时间
+	connReq  *gw.GConnReq
 }
 
 func (that *ClientG) Uid() int64 {
@@ -164,10 +166,20 @@ func (that *ClientG) ConnKeep() {
 }
 
 func (that *ClientG) ConnCheck() {
-	result, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.Id(), that.sid, that.unique, true)
-	if result >= R_SUCC_MIN {
+	if that.connReq == nil {
+		that.connReq = &gw.GConnReq{
+			Cid:    that.Id(),
+			Gid:    that.Gid(),
+			Unique: that.Unique(),
+			Kick:   true,
+		}
+	}
+
+	rep, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.connReq)
+	ret := Server.Id32(rep)
+	if ret < R_SUCC_MIN {
 		// 用户注册失败
-		that.Close(err, result)
+		that.Close(err, ret)
 	}
 }
 

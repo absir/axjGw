@@ -22,8 +22,8 @@ type Config struct {
 	HttpWs     bool     // 启用ws网关
 	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
-	ThriftAddr string   // thrift服务地址
-	ThriftIps  []string // thrfit调用Ip白名单，支持*通配
+	GrpcAddr   string   // grpc服务地址
+	GrpcIps    []string // grpc调用Ip白名单，支持*通配
 	LastUrl    string   // 消息持久化，数据库连接
 }
 
@@ -32,8 +32,8 @@ var GCfg = Config{
 	HttpWs:     true,
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
-	ThriftAddr: "127.0.0.1:8082",
-	ThriftIps:  KtStr.SplitByte("*", ',', true, 0, 0),
+	GrpcAddr:   "127.0.0.1:8082",
+	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
 
 var GwWorkHash int
@@ -52,11 +52,11 @@ func main() {
 	}
 
 	// Gw服务初始化
-	gateway.Server.Init(APro.WorkId(), APro.Cfg, new(gws.GatewayIS))
+	gateway.Server.Init(APro.WorkId(), APro.Cfg, new(gws.GatewayIs))
 	// Gw服务开启
 	gateway.Server.StartGw()
-	// thrift服务开启
-	gateway.Server.StartThrift(GCfg.ThriftAddr, GCfg.ThriftIps, new(gws.GatewayS))
+	// Grpc服务开启
+	gateway.Server.StartGrpc(GCfg.GrpcAddr, GCfg.GrpcIps, new(gws.GatewayS))
 
 	// socket连接
 	if GCfg.SocketAddr != "" && !strings.HasPrefix(GCfg.SocketAddr, "!") {

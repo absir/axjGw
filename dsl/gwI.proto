@@ -6,36 +6,9 @@ import "dsl/gw.proto";
 
 option go_package = "./gw";
 
-message CidReq {
-    int64 cid = 1;
-}
-
-message Id64Rep {
-    int64 id = 1;
-}
-
 message Msg {
     string uri = 1;
     bytes data = 2;
-}
-
-message IConnReq {
-    int64 cid = 1;
-    string gid = 2;
-    string unique = 3;
-    bool kick = 4;
-}
-
-message IDiscReq {
-    int64 cid = 1;
-    string gid = 2;
-    string unique = 3;
-    int32 connVer = 4;
-    bool kick = 5;
-}
-
-message IAliveReq {
-    int64 cid = 1;
 }
 
 message ILastReq {
@@ -43,14 +16,6 @@ message ILastReq {
     string gid = 2;
     int32 connVer = 3;
     bool continuous = 4;
-}
-
-message IPushReq {
-    int64 cid = 1;
-    string uri = 2;
-    bytes data = 3;
-    bool isolate = 4;
-    int64 id = 5;
 }
 
 message IGQueueReq {
@@ -66,51 +31,10 @@ message IGClearReq {
     bool last = 3;
 }
 
-message IGLastsReq {
-    string gid = 1;
-    int64 cid = 2;
-    string unique = 3;
-    int64 lastId = 4;
-    int32 continuous = 5;
-}
-
-message IGLastReq {
-    string gid = 1;
-}
-
-message IGPushReq {
-    string gid = 1;
-    string uri = 2;
-    bytes data = 3;
-    bool isolate = 4;
-    int32 qs = 5;
-    bool queue = 6;
-    string unique = 7;
-    int64 fid = 8;
-}
-
 message IGPushAReq {
     string gid = 1;
     int64 id = 2;
     bool succ = 3;
-}
-
-message ISendReq {
-    string fromId = 1;
-    string toId = 2;
-    string uri = 3;
-    bytes data = 4;
-    bool db = 5;
-}
-
-message ITPushReq {
-    string fromId = 1;
-    string tid = 2;
-    bool readFeed = 3;
-    string uri = 4;
-    bytes data = 5;
-    bool db = 6;
-    bool queue = 7;
 }
 
 // 网关内部
@@ -119,20 +43,20 @@ service GatewayI {
     rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接
     rpc kick(KickReq) returns (Id32Rep);
-    // 连接
-    rpc conn(IConnReq) returns (Id32Rep);
-    // 断开
-    rpc disc(IDiscReq) returns (Id32Rep);
     // 存活 cid
     rpc alive(CidReq) returns (Id32Rep);
     // 服务编号
     rpc rid(RidReq) returns (Id32Rep);
     // 服务编号
     rpc rids(RidsReq) returns (Id32Rep);
+    // 连接
+    rpc conn(GConnReq) returns (Id32Rep);
+    // 断开
+    rpc disc(GDiscReq) returns (Id32Rep);
     // 最新消息通知
     rpc last(ILastReq) returns (Id32Rep);
     // 推送
-    rpc push(IPushReq) returns (Id32Rep);
+    rpc push(PushReq) returns (Id32Rep);
     // 消息队列初始化
     rpc gQueue(IGQueueReq) returns (Id32Rep);
     // 消息队列清理
@@ -140,15 +64,15 @@ service GatewayI {
     // 主动获取消息
     rpc gLasts(GLastsReq) returns (Id32Rep);
     // 通知 gid
-    rpc gLast(IGLastReq) returns (Id32Rep);
+    rpc gLast(GidReq) returns (Id32Rep);
     // 推送
-    rpc gPush(IGPushReq) returns (Id64Rep);
+    rpc gPush(GPushReq) returns (Id64Rep);
     // 推送确认
     rpc gPushA(IGPushAReq) returns (Id32Rep);
     // 点对点聊天
-    rpc send(ISendReq) returns (Id32Rep);
+    rpc send(SendReq) returns (Id32Rep);
     // 群消息发送
-    rpc tPush(ITPushReq) returns (Id32Rep);
+    rpc tPush(TPushReq) returns (Id32Rep);
     // 组更新、删除 tid
     rpc tDirty(GidReq) returns (Id32Rep);
     // 组发送管道启动 tid

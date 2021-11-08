@@ -6,7 +6,6 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
-	"github.com/apache/thrift/lib/go/thrift"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"math/rand"
@@ -26,9 +25,9 @@ type Prod struct {
 	// 网关客户端
 	gwIClient gw.GatewayIClient
 	// 控制客户端
-	aclClient *gw.AclClient
+	aclClient gw.AclClient
 	// 转发客户端
-	passClient *gw.PassClient
+	passClient gw.PassClient
 }
 
 func NewProd(id int32, url string) (*Prod, error) {
@@ -80,16 +79,14 @@ func (that *Prod) GetGWIClient() gw.GatewayIClient {
 		that.locker.Lock()
 		defer that.locker.Unlock()
 		if that.gwIClient == nil {
-			if Server.gatewayI != nil {
+			if Server.gatewayISC != nil {
 				if that.id == Config.WorkId || that.url == "" {
-					that.gwIClient = Server.gatewayI
+					that.gwIClient = Server.gatewayISC
 				}
 			}
 
 			if that.gwIClient == nil {
-				gw.new
-				proto := thrift.NewTMultiplexedProtocol(that.proto, "i")
-				that.gwIClient = gw.NewGatewayIClient(thrift.NewTStandardClient(proto, proto))
+				that.gwIClient = gw.NewGatewayIClient(that.client)
 			}
 		}
 	}
@@ -97,26 +94,26 @@ func (that *Prod) GetGWIClient() gw.GatewayIClient {
 	return that.gwIClient
 }
 
-func (that *Prod) GetAclClient() *gw.AclClient {
+func (that *Prod) GetAclClient() gw.AclClient {
 	that.initClient(true)
 	if that.aclClient == nil {
 		that.locker.Lock()
 		defer that.locker.Unlock()
 		if that.aclClient == nil {
-			that.aclClient = gw.NewAclClient(thrift.NewTStandardClient(that.proto, that.proto))
+			that.aclClient = gw.NewAclClient(that.client)
 		}
 	}
 
 	return that.aclClient
 }
 
-func (that *Prod) GetPassClient() *gw.PassClient {
+func (that *Prod) GetPassClient() gw.PassClient {
 	that.initClient(true)
 	if that.passClient == nil {
 		that.locker.Lock()
 		defer that.locker.Unlock()
 		if that.passClient == nil {
-			that.passClient = gw.NewPassClient(thrift.NewTStandardClient(that.proto, that.proto))
+			that.passClient = gw.NewPassClient(that.client)
 		}
 	}
 

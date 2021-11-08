@@ -23,14 +23,14 @@ func (that *teamMng) Dirty(tid string) {
 	that.teamMap.Remove(tid)
 }
 
-func (that *teamMng) GetTeam(tid string) *gw.Team {
+func (that *teamMng) GetTeam(tid string) *gw.TeamRep {
 	val, _ := that.teamMap.Get(tid)
-	team := val.(*gw.Team)
+	team := val.(*gw.TeamRep)
 	if team != nil {
 		return team
 	}
 
-	team, _ = Server.GetProds(Config.AclProd).GetProdHashS(tid).GetAclClient().Team(Server.Context, tid)
+	team, _ = Server.GetProds(Config.AclProd).GetProdHashS(tid).GetAclClient().Team(Server.Context, &gw.GidReq{Gid: tid})
 	if team != nil {
 		that.teamMap.Add(tid, team)
 	}

@@ -17,14 +17,30 @@ import (
 )
 
 type server struct {
-	Manager  *ANet.Manager
-	Context  context.Context
-	prodsMap *sync.Map
-	prodsGw  *Prods
-	gatewayI gw.GatewayIServer
+	Manager    *ANet.Manager
+	Context    context.Context
+	prodsMap   *sync.Map
+	prodsGw    *Prods
+	gatewayISC *gatewayISC
 }
 
 var Server = new(server)
+
+func (that *server) Id32(rep *gw.Id32Rep) int32 {
+	if rep == nil {
+		return 0
+	}
+
+	return rep.Id
+}
+
+func (that *server) Id64(rep *gw.Id64Rep) int64 {
+	if rep == nil {
+		return 0
+	}
+
+	return rep.Id
+}
 
 func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayIServer) {
 	// 配置初始化
@@ -43,7 +59,7 @@ func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI
 	initChatMng()
 	that.Manager = ANet.NewManager(Handler, workId, time.Duration(Config.IdleDrt)*time.Millisecond, time.Duration(Config.CheckDrt)*time.Millisecond)
 	that.Context = context.Background()
-	that.gatewayI = gatewayI
+	that.gatewayISC = &gatewayISC{Server: gatewayI}
 }
 
 func (that *server) initProds(cfg map[interface{}]interface{}) {
@@ -123,9 +139,13 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	}
 
 	// 登录Acl处理
-	id := manager.IdWorker().Generate()
+	cid := manager.IdWorker().Generate()
 	aclClient := that.GetProds(Config.AclProd).GetProdHash(Config.WorkHash).GetAclClient()
-	login, err := aclClient.Login(that.Context, id, loginData, conn.RemoteAddr())
+	login, err := aclClient.Login(that.Context, &gw.LoginReq{
+		Cid:  cid,
+		Data: loginData,
+		Addr: conn.RemoteAddr(),
+	})
 	if err != nil || login == nil {
 		if err == io.EOF {
 			AZap.Logger.Debug("serv acl Login EOF")
@@ -143,10 +163,10 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	}
 
 	// 客户端注册
-	client := manager.Open(conn, encryptKey, compress, id)
+	client := manager.Open(conn, encryptKey, compress, cid)
 	clientG := Handler.ClientG(client)
 	// 用户状态设置
-	clientG.SetId(login.UID, login.Sid, login.Unique)
+	clientG.SetId(login.Uid, login.Sid, login.Unique)
 	if clientG.Gid() != "" {
 		// 用户连接保持
 		clientG.ConnKeep()
@@ -170,8 +190,13 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	// 消息处理
 	if clientG.Gid() != "" {
 		// 清理消息队列配置
-		result, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, clientG.gid, clientG.Id(), clientG.Unique(), login.Clear)
-		if result != gw.Result__Succ {
+		result, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
+			Gid:    clientG.gid,
+			Cid:    clientG.Id(),
+			Unique: clientG.Unique(),
+			Clear:  login.Clear,
+		})
+		if result == nil || result.Id < R_SUCC_MIN {
 			clientG.Close(err, nil)
 			return nil
 		}
@@ -179,7 +204,16 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 
 	// 注册成功回调
 	if login.Back {
-		aclClient.LoginBack(that.Context, clientG.Id(), clientG.uid, clientG.sid)
+		rep, err := aclClient.LoginBack(that.Context, &gw.LoginBack{
+			Cid: clientG.Id(),
+			Uid: clientG.uid,
+			Sid: clientG.sid,
+		})
+
+		if Server.Id32(rep) < R_SUCC_MIN {
+			clientG.Close(err, nil)
+			return nil
+		}
 	}
 
 	// 登录成功
@@ -201,7 +235,7 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 	lis, err := net.Listen("tcp", addr)
 	Kt.Panic(err)
 	serv := grpc.NewServer()
-	gw.RegisterGatewayIServer(serv, that.gatewayI)
+	gw.RegisterGatewayIServer(serv, that.gatewayISC.Server)
 	gw.RegisterGatewayServer(serv, gateway)
 	matchers := KtStr.ForMatchers(ips, false, true)
 	lisIps := ANet.NewListenerIps(lis, func(ip string) bool {

@@ -17,25 +17,29 @@ enum Result {
     Succ = 16;
 }
 
+message CidReq {
+    int64 cid = 1;
+}
+
 message GidReq {
     string gid = 1;
 }
 
-message SuccRep {
-    bool succ = 1;
-}
-
-message DataRep {
-    bytes data = 1;
+message Id64Rep {
+    int64 id = 1;
 }
 
 message Id32Rep {
     int32 id = 1;
 }
 
+message DataRep {
+    bytes data = 1;
+}
+
 message LoginReq {
     // 客户端唯一编号
-    optional int64 cid = 1;
+    int64 cid = 1;
     // 登录数据
     bytes data = 2;
     // 客户端地址
@@ -76,10 +80,6 @@ message Member {
     bool nofeed = 2;
 }
 
-message TeamReq {
-    string tid = 1;
-}
-
 message TeamRep {
     // 版本
     int64 version = 1;
@@ -91,11 +91,11 @@ message TeamRep {
 
 service Acl {
     // 登录
-    rpc login(LoginRep) returns (LoginRep);
+    rpc login(LoginReq) returns (LoginRep);
     // 登录回调
-    rpc loginBack(LoginBack) returns (SuccRep);
+    rpc loginBack(LoginBack) returns (Id32Rep);
     // 组查询 tid
-    rpc team(TeamReq) returns (TeamRep);
+    rpc team(GidReq) returns (TeamRep);
 }
 
 message PassReq {
@@ -110,7 +110,7 @@ service Pass {
     // 请求
     rpc req(PassReq) returns (DataRep);
     // 发送
-    rpc send(PassReq) returns (SuccRep);
+    rpc send(PassReq) returns (Id32Rep);
 }
 
 message CloseReq {
@@ -138,6 +138,8 @@ message PushReq {
     int64 cid = 1;
     string uri = 2;
     bytes data = 3;
+    bool isolate = 4;
+    int64 id = 5;
 }
 
 message GPushReq {
@@ -147,12 +149,15 @@ message GPushReq {
     int32 qs = 4;
     string unique = 5;
     bool queue = 6;
+    int64 fid = 7;
+    bool isolate = 8;
 }
 
 message GConnReq {
     int64 cid = 1;
     string gid = 2;
     string unique = 3;
+    bool kick = 4;
 }
 
 message GDiscReq {
@@ -160,6 +165,7 @@ message GDiscReq {
     string gid = 2;
     string unique = 3;
     int32 connVer = 4;
+    bool kick = 5;
 }
 
 message GLastsReq {
@@ -192,29 +198,29 @@ message TPushReq {
 // 网关
 service Gateway {
     // 关闭连接
-    rpc close(CloseReq) returns (SuccRep);
+    rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接
-    rpc kick(KickReq) returns (SuccRep);
+    rpc kick(KickReq) returns (Id32Rep);
     // 服务编号
-    rpc rid(RidReq) returns (SuccRep);
+    rpc rid(RidReq) returns (Id32Rep);
     // 服务编号
-    rpc rids(RidsReq) returns (SuccRep);
+    rpc rids(RidsReq) returns (Id32Rep);
     // 简单推送
-    rpc push(PushReq) returns (SuccRep);
-    // 组通知 gid
-    rpc gLast(GidReq) returns (SuccRep);
-    // 组推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
-    rpc gPush(GPushReq) returns (SuccRep);
+    rpc push(PushReq) returns (Id32Rep);
     // 注册监听gid
     rpc gConn(GConnReq) returns (Id32Rep);
     // 断开监听gid
-    rpc gDisc(GDiscReq) returns (SuccRep);
-    // 获取更新消息
-    rpc gLasts(GLastsReq) returns (SuccRep);
+    rpc gDisc(GDiscReq) returns (Id32Rep);
+    // 组通知 gid
+    rpc gLast(GidReq) returns (Id32Rep);
+    // 组推送 // uri 主题 // binary 消息体 // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
+    rpc gPush(GPushReq) returns (Id64Rep);
+    // 获取组更新消息
+    rpc gLasts(GLastsReq) returns (Id32Rep);
     // 点对点聊天
-    rpc send(SendReq) returns (SuccRep);
+    rpc send(SendReq) returns (Id32Rep);
     // readfeed读扩散，常用于聊天室
-    rpc tPush(TPushReq) returns (SuccRep);
+    rpc tPush(TPushReq) returns (Id32Rep);
     // 组更新、删除 tid
-    rpc tDirty(GidReq) returns (SuccRep);
+    rpc tDirty(GidReq) returns (Id32Rep);
 }

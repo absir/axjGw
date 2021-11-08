@@ -3,6 +3,7 @@ package gateway
 import (
 	"axj/ANet"
 	"axj/Thrd/AZap"
+	"axjGW/gen/gw"
 	"context"
 	"go.uber.org/zap"
 	"strings"
@@ -13,11 +14,11 @@ const (
 	ERR_PORD_ERR = 2 // 服务错误
 )
 
-var processor *ANet.Processor
+var Processor *ANet.Processor
 var Handler *handler
 
 func initHandler() {
-	processor = &ANet.Processor{
+	Processor = &ANet.Processor{
 		Protocol:    &ANet.ProtocolV{},
 		Compress:    &ANet.CompressZip{},
 		CompressMin: Config.CompressMin,
@@ -25,7 +26,7 @@ func initHandler() {
 	}
 
 	if Config.Encrypt {
-		processor.Encrypt = &ANet.EncryptSr{}
+		Processor.Encrypt = &ANet.EncryptSr{}
 	}
 
 	Handler = new(handler)
@@ -47,7 +48,12 @@ func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) 
 	clientG := new(ClientG)
 	if clientG.gid != "" {
 		// 断开连接通知
-		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, clientG.Id(), clientG.gid, clientG.unique, 0, false)
+		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, &gw.GDiscReq{
+			Cid:    clientG.Id(),
+			Gid:    clientG.gid,
+			Unique: clientG.unique,
+			//Kick:   true,
+		})
 	}
 }
 
@@ -88,18 +94,35 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 
 	if req > ANet.REQ_ONEWAY {
 		// 请求返回
-		bs, err := prod.GetPassClient().Req(context.Background(), clientG.Id(), clientG.uid, clientG.sid, uri, data)
-		if err != nil {
-			panic(err)
+		result, err := prod.GetPassClient().Req(context.Background(), &gw.PassReq{
+			Cid:  clientG.Id(),
+			Uid:  clientG.uid,
+			Sid:  clientG.sid,
+			Uri:  uri,
+			Data: data,
+		})
+		if err != nil || result == nil {
+			if err == nil {
+				AZap.Logger.Warn("Req err " + uri + " nil")
+
+			} else {
+				AZap.Logger.Warn("Req err " + uri + " " + err.Error())
+			}
 
 		} else {
 			reped = true
-			clientG.Get().Rep(true, req, "", ERR_PROD_NO, bs, false, false, 0)
+			clientG.Get().Rep(true, req, "", ERR_PROD_NO, result.Data, false, false, 0)
 		}
 
 	} else {
 		// 单向发送
-		prod.GetPassClient().Send(context.Background(), clientG.Id(), clientG.uid, clientG.sid, uri, data)
+		prod.GetPassClient().Send(context.Background(), &gw.PassReq{
+			Cid:  clientG.Id(),
+			Uid:  clientG.uid,
+			Sid:  clientG.sid,
+			Uri:  uri,
+			Data: data,
+		})
 	}
 }
 
@@ -114,7 +137,7 @@ func (that *handler) reqRcvr(client ANet.Client, req int32, reped bool) {
 }
 
 func (that *handler) Processor() *ANet.Processor {
-	return processor
+	return Processor
 }
 
 func (that *handler) UriDict() ANet.UriDict {

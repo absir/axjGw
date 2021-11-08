@@ -24,100 +24,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type CidReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Cid int64 `protobuf:"varint,1,opt,name=cid,proto3" json:"cid,omitempty"`
-}
-
-func (x *CidReq) Reset() {
-	*x = CidReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[0]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *CidReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CidReq) ProtoMessage() {}
-
-func (x *CidReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[0]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CidReq.ProtoReflect.Descriptor instead.
-func (*CidReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *CidReq) GetCid() int64 {
-	if x != nil {
-		return x.Cid
-	}
-	return 0
-}
-
-type Id64Rep struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Id int64 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-}
-
-func (x *Id64Rep) Reset() {
-	*x = Id64Rep{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[1]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Id64Rep) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Id64Rep) ProtoMessage() {}
-
-func (x *Id64Rep) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[1]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Id64Rep.ProtoReflect.Descriptor instead.
-func (*Id64Rep) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *Id64Rep) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
 type Msg struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -130,7 +36,7 @@ type Msg struct {
 func (x *Msg) Reset() {
 	*x = Msg{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[2]
+		mi := &file_dsl_gwI_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -143,7 +49,7 @@ func (x *Msg) String() string {
 func (*Msg) ProtoMessage() {}
 
 func (x *Msg) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[2]
+	mi := &file_dsl_gwI_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -156,7 +62,7 @@ func (x *Msg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Msg.ProtoReflect.Descriptor instead.
 func (*Msg) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{2}
+	return file_dsl_gwI_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Msg) GetUri() string {
@@ -173,203 +79,6 @@ func (x *Msg) GetData() []byte {
 	return nil
 }
 
-type IConnReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Cid    int64  `protobuf:"varint,1,opt,name=cid,proto3" json:"cid,omitempty"`
-	Gid    string `protobuf:"bytes,2,opt,name=gid,proto3" json:"gid,omitempty"`
-	Unique string `protobuf:"bytes,3,opt,name=unique,proto3" json:"unique,omitempty"`
-	Kick   bool   `protobuf:"varint,4,opt,name=kick,proto3" json:"kick,omitempty"`
-}
-
-func (x *IConnReq) Reset() {
-	*x = IConnReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IConnReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IConnReq) ProtoMessage() {}
-
-func (x *IConnReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IConnReq.ProtoReflect.Descriptor instead.
-func (*IConnReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *IConnReq) GetCid() int64 {
-	if x != nil {
-		return x.Cid
-	}
-	return 0
-}
-
-func (x *IConnReq) GetGid() string {
-	if x != nil {
-		return x.Gid
-	}
-	return ""
-}
-
-func (x *IConnReq) GetUnique() string {
-	if x != nil {
-		return x.Unique
-	}
-	return ""
-}
-
-func (x *IConnReq) GetKick() bool {
-	if x != nil {
-		return x.Kick
-	}
-	return false
-}
-
-type IDiscReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Cid     int64  `protobuf:"varint,1,opt,name=cid,proto3" json:"cid,omitempty"`
-	Gid     string `protobuf:"bytes,2,opt,name=gid,proto3" json:"gid,omitempty"`
-	Unique  string `protobuf:"bytes,3,opt,name=unique,proto3" json:"unique,omitempty"`
-	ConnVer int32  `protobuf:"varint,4,opt,name=connVer,proto3" json:"connVer,omitempty"`
-	Kick    bool   `protobuf:"varint,5,opt,name=kick,proto3" json:"kick,omitempty"`
-}
-
-func (x *IDiscReq) Reset() {
-	*x = IDiscReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[4]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IDiscReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IDiscReq) ProtoMessage() {}
-
-func (x *IDiscReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[4]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IDiscReq.ProtoReflect.Descriptor instead.
-func (*IDiscReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *IDiscReq) GetCid() int64 {
-	if x != nil {
-		return x.Cid
-	}
-	return 0
-}
-
-func (x *IDiscReq) GetGid() string {
-	if x != nil {
-		return x.Gid
-	}
-	return ""
-}
-
-func (x *IDiscReq) GetUnique() string {
-	if x != nil {
-		return x.Unique
-	}
-	return ""
-}
-
-func (x *IDiscReq) GetConnVer() int32 {
-	if x != nil {
-		return x.ConnVer
-	}
-	return 0
-}
-
-func (x *IDiscReq) GetKick() bool {
-	if x != nil {
-		return x.Kick
-	}
-	return false
-}
-
-type IAliveReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Cid int64 `protobuf:"varint,1,opt,name=cid,proto3" json:"cid,omitempty"`
-}
-
-func (x *IAliveReq) Reset() {
-	*x = IAliveReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[5]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IAliveReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IAliveReq) ProtoMessage() {}
-
-func (x *IAliveReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[5]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IAliveReq.ProtoReflect.Descriptor instead.
-func (*IAliveReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *IAliveReq) GetCid() int64 {
-	if x != nil {
-		return x.Cid
-	}
-	return 0
-}
-
 type ILastReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -384,7 +93,7 @@ type ILastReq struct {
 func (x *ILastReq) Reset() {
 	*x = ILastReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[6]
+		mi := &file_dsl_gwI_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -397,7 +106,7 @@ func (x *ILastReq) String() string {
 func (*ILastReq) ProtoMessage() {}
 
 func (x *ILastReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[6]
+	mi := &file_dsl_gwI_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -410,7 +119,7 @@ func (x *ILastReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ILastReq.ProtoReflect.Descriptor instead.
 func (*ILastReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{6}
+	return file_dsl_gwI_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ILastReq) GetCid() int64 {
@@ -441,85 +150,6 @@ func (x *ILastReq) GetContinuous() bool {
 	return false
 }
 
-type IPushReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Cid     int64  `protobuf:"varint,1,opt,name=cid,proto3" json:"cid,omitempty"`
-	Uri     string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	Data    []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	Isolate bool   `protobuf:"varint,4,opt,name=isolate,proto3" json:"isolate,omitempty"`
-	Id      int64  `protobuf:"varint,5,opt,name=id,proto3" json:"id,omitempty"`
-}
-
-func (x *IPushReq) Reset() {
-	*x = IPushReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IPushReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IPushReq) ProtoMessage() {}
-
-func (x *IPushReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IPushReq.ProtoReflect.Descriptor instead.
-func (*IPushReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *IPushReq) GetCid() int64 {
-	if x != nil {
-		return x.Cid
-	}
-	return 0
-}
-
-func (x *IPushReq) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *IPushReq) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *IPushReq) GetIsolate() bool {
-	if x != nil {
-		return x.Isolate
-	}
-	return false
-}
-
-func (x *IPushReq) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
 type IGQueueReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -534,7 +164,7 @@ type IGQueueReq struct {
 func (x *IGQueueReq) Reset() {
 	*x = IGQueueReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[8]
+		mi := &file_dsl_gwI_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -547,7 +177,7 @@ func (x *IGQueueReq) String() string {
 func (*IGQueueReq) ProtoMessage() {}
 
 func (x *IGQueueReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[8]
+	mi := &file_dsl_gwI_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +190,7 @@ func (x *IGQueueReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IGQueueReq.ProtoReflect.Descriptor instead.
 func (*IGQueueReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{8}
+	return file_dsl_gwI_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *IGQueueReq) GetGid() string {
@@ -604,7 +234,7 @@ type IGClearReq struct {
 func (x *IGClearReq) Reset() {
 	*x = IGClearReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[9]
+		mi := &file_dsl_gwI_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -617,7 +247,7 @@ func (x *IGClearReq) String() string {
 func (*IGClearReq) ProtoMessage() {}
 
 func (x *IGClearReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[9]
+	mi := &file_dsl_gwI_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -630,7 +260,7 @@ func (x *IGClearReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IGClearReq.ProtoReflect.Descriptor instead.
 func (*IGClearReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{9}
+	return file_dsl_gwI_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *IGClearReq) GetGid() string {
@@ -654,235 +284,6 @@ func (x *IGClearReq) GetLast() bool {
 	return false
 }
 
-type IGLastsReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Gid        string `protobuf:"bytes,1,opt,name=gid,proto3" json:"gid,omitempty"`
-	Cid        int64  `protobuf:"varint,2,opt,name=cid,proto3" json:"cid,omitempty"`
-	Unique     string `protobuf:"bytes,3,opt,name=unique,proto3" json:"unique,omitempty"`
-	LastId     int64  `protobuf:"varint,4,opt,name=lastId,proto3" json:"lastId,omitempty"`
-	Continuous int32  `protobuf:"varint,5,opt,name=continuous,proto3" json:"continuous,omitempty"`
-}
-
-func (x *IGLastsReq) Reset() {
-	*x = IGLastsReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[10]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IGLastsReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IGLastsReq) ProtoMessage() {}
-
-func (x *IGLastsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[10]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IGLastsReq.ProtoReflect.Descriptor instead.
-func (*IGLastsReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *IGLastsReq) GetGid() string {
-	if x != nil {
-		return x.Gid
-	}
-	return ""
-}
-
-func (x *IGLastsReq) GetCid() int64 {
-	if x != nil {
-		return x.Cid
-	}
-	return 0
-}
-
-func (x *IGLastsReq) GetUnique() string {
-	if x != nil {
-		return x.Unique
-	}
-	return ""
-}
-
-func (x *IGLastsReq) GetLastId() int64 {
-	if x != nil {
-		return x.LastId
-	}
-	return 0
-}
-
-func (x *IGLastsReq) GetContinuous() int32 {
-	if x != nil {
-		return x.Continuous
-	}
-	return 0
-}
-
-type IGLastReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Gid string `protobuf:"bytes,1,opt,name=gid,proto3" json:"gid,omitempty"`
-}
-
-func (x *IGLastReq) Reset() {
-	*x = IGLastReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[11]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IGLastReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IGLastReq) ProtoMessage() {}
-
-func (x *IGLastReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[11]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IGLastReq.ProtoReflect.Descriptor instead.
-func (*IGLastReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *IGLastReq) GetGid() string {
-	if x != nil {
-		return x.Gid
-	}
-	return ""
-}
-
-type IGPushReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Gid     string `protobuf:"bytes,1,opt,name=gid,proto3" json:"gid,omitempty"`
-	Uri     string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	Data    []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	Isolate bool   `protobuf:"varint,4,opt,name=isolate,proto3" json:"isolate,omitempty"`
-	Qs      int32  `protobuf:"varint,5,opt,name=qs,proto3" json:"qs,omitempty"`
-	Queue   bool   `protobuf:"varint,6,opt,name=queue,proto3" json:"queue,omitempty"`
-	Unique  string `protobuf:"bytes,7,opt,name=unique,proto3" json:"unique,omitempty"`
-	Fid     int64  `protobuf:"varint,8,opt,name=fid,proto3" json:"fid,omitempty"`
-}
-
-func (x *IGPushReq) Reset() {
-	*x = IGPushReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[12]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *IGPushReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IGPushReq) ProtoMessage() {}
-
-func (x *IGPushReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[12]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IGPushReq.ProtoReflect.Descriptor instead.
-func (*IGPushReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *IGPushReq) GetGid() string {
-	if x != nil {
-		return x.Gid
-	}
-	return ""
-}
-
-func (x *IGPushReq) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *IGPushReq) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *IGPushReq) GetIsolate() bool {
-	if x != nil {
-		return x.Isolate
-	}
-	return false
-}
-
-func (x *IGPushReq) GetQs() int32 {
-	if x != nil {
-		return x.Qs
-	}
-	return 0
-}
-
-func (x *IGPushReq) GetQueue() bool {
-	if x != nil {
-		return x.Queue
-	}
-	return false
-}
-
-func (x *IGPushReq) GetUnique() string {
-	if x != nil {
-		return x.Unique
-	}
-	return ""
-}
-
-func (x *IGPushReq) GetFid() int64 {
-	if x != nil {
-		return x.Fid
-	}
-	return 0
-}
-
 type IGPushAReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -896,7 +297,7 @@ type IGPushAReq struct {
 func (x *IGPushAReq) Reset() {
 	*x = IGPushAReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[13]
+		mi := &file_dsl_gwI_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -909,7 +310,7 @@ func (x *IGPushAReq) String() string {
 func (*IGPushAReq) ProtoMessage() {}
 
 func (x *IGPushAReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[13]
+	mi := &file_dsl_gwI_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -922,7 +323,7 @@ func (x *IGPushAReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IGPushAReq.ProtoReflect.Descriptor instead.
 func (*IGPushAReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{13}
+	return file_dsl_gwI_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *IGPushAReq) GetGid() string {
@@ -946,318 +347,80 @@ func (x *IGPushAReq) GetSucc() bool {
 	return false
 }
 
-type ISendReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	FromId string `protobuf:"bytes,1,opt,name=fromId,proto3" json:"fromId,omitempty"`
-	ToId   string `protobuf:"bytes,2,opt,name=toId,proto3" json:"toId,omitempty"`
-	Uri    string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	Data   []byte `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
-	Db     bool   `protobuf:"varint,5,opt,name=db,proto3" json:"db,omitempty"`
-}
-
-func (x *ISendReq) Reset() {
-	*x = ISendReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[14]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ISendReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ISendReq) ProtoMessage() {}
-
-func (x *ISendReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[14]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ISendReq.ProtoReflect.Descriptor instead.
-func (*ISendReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *ISendReq) GetFromId() string {
-	if x != nil {
-		return x.FromId
-	}
-	return ""
-}
-
-func (x *ISendReq) GetToId() string {
-	if x != nil {
-		return x.ToId
-	}
-	return ""
-}
-
-func (x *ISendReq) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *ISendReq) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *ISendReq) GetDb() bool {
-	if x != nil {
-		return x.Db
-	}
-	return false
-}
-
-type ITPushReq struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	FromId   string `protobuf:"bytes,1,opt,name=fromId,proto3" json:"fromId,omitempty"`
-	Tid      string `protobuf:"bytes,2,opt,name=tid,proto3" json:"tid,omitempty"`
-	ReadFeed bool   `protobuf:"varint,3,opt,name=readFeed,proto3" json:"readFeed,omitempty"`
-	Uri      string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
-	Data     []byte `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
-	Db       bool   `protobuf:"varint,6,opt,name=db,proto3" json:"db,omitempty"`
-	Queue    bool   `protobuf:"varint,7,opt,name=queue,proto3" json:"queue,omitempty"`
-}
-
-func (x *ITPushReq) Reset() {
-	*x = ITPushReq{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_dsl_gwI_proto_msgTypes[15]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ITPushReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ITPushReq) ProtoMessage() {}
-
-func (x *ITPushReq) ProtoReflect() protoreflect.Message {
-	mi := &file_dsl_gwI_proto_msgTypes[15]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ITPushReq.ProtoReflect.Descriptor instead.
-func (*ITPushReq) Descriptor() ([]byte, []int) {
-	return file_dsl_gwI_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *ITPushReq) GetFromId() string {
-	if x != nil {
-		return x.FromId
-	}
-	return ""
-}
-
-func (x *ITPushReq) GetTid() string {
-	if x != nil {
-		return x.Tid
-	}
-	return ""
-}
-
-func (x *ITPushReq) GetReadFeed() bool {
-	if x != nil {
-		return x.ReadFeed
-	}
-	return false
-}
-
-func (x *ITPushReq) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *ITPushReq) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *ITPushReq) GetDb() bool {
-	if x != nil {
-		return x.Db
-	}
-	return false
-}
-
-func (x *ITPushReq) GetQueue() bool {
-	if x != nil {
-		return x.Queue
-	}
-	return false
-}
-
 var File_dsl_gwI_proto protoreflect.FileDescriptor
 
 var file_dsl_gwI_proto_rawDesc = []byte{
 	0x0a, 0x0d, 0x64, 0x73, 0x6c, 0x2f, 0x67, 0x77, 0x49, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12,
 	0x02, 0x67, 0x77, 0x1a, 0x0c, 0x64, 0x73, 0x6c, 0x2f, 0x67, 0x77, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x22, 0x1a, 0x0a, 0x06, 0x43, 0x69, 0x64, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x63,
-	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x22, 0x19, 0x0a,
-	0x07, 0x49, 0x64, 0x36, 0x34, 0x52, 0x65, 0x70, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x22, 0x2b, 0x0a, 0x03, 0x4d, 0x73, 0x67, 0x12,
-	0x10, 0x0a, 0x03, 0x75, 0x72, 0x69, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72,
-	0x69, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52,
-	0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x5a, 0x0a, 0x08, 0x49, 0x43, 0x6f, 0x6e, 0x6e, 0x52, 0x65,
-	0x71, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03,
-	0x63, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x18,
-	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x12, 0x12, 0x0a,
-	0x04, 0x6b, 0x69, 0x63, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x6b, 0x69, 0x63,
-	0x6b, 0x22, 0x74, 0x0a, 0x08, 0x49, 0x44, 0x69, 0x73, 0x63, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a,
-	0x03, 0x63, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x12,
-	0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69,
-	0x64, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e,
-	0x6e, 0x56, 0x65, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x6e,
-	0x56, 0x65, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x6b, 0x69, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28,
-	0x08, 0x52, 0x04, 0x6b, 0x69, 0x63, 0x6b, 0x22, 0x1d, 0x0a, 0x09, 0x49, 0x41, 0x6c, 0x69, 0x76,
-	0x65, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x22, 0x68, 0x0a, 0x08, 0x49, 0x4c, 0x61, 0x73, 0x74, 0x52,
-	0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52,
-	0x03, 0x63, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x6e, 0x56, 0x65,
-	0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x6e, 0x56, 0x65, 0x72,
-	0x12, 0x1e, 0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x74, 0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73, 0x18, 0x04,
-	0x20, 0x01, 0x28, 0x08, 0x52, 0x0a, 0x63, 0x6f, 0x6e, 0x74, 0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73,
-	0x22, 0x6c, 0x0a, 0x08, 0x49, 0x50, 0x75, 0x73, 0x68, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03,
-	0x63, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x12, 0x10,
-	0x0a, 0x03, 0x75, 0x72, 0x69, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x69,
-	0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x69, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x65, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x65, 0x12, 0x0e,
-	0x0a, 0x02, 0x69, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x22, 0x5e,
-	0x0a, 0x0a, 0x49, 0x47, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03,
-	0x67, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x10,
-	0x0a, 0x03, 0x63, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64,
-	0x12, 0x16, 0x0a, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x6c, 0x65, 0x61,
-	0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x63, 0x6c, 0x65, 0x61, 0x72, 0x22, 0x48,
-	0x0a, 0x0a, 0x49, 0x47, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03,
-	0x67, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x14,
-	0x0a, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x71,
-	0x75, 0x65, 0x75, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x61, 0x73, 0x74, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x08, 0x52, 0x04, 0x6c, 0x61, 0x73, 0x74, 0x22, 0x80, 0x01, 0x0a, 0x0a, 0x49, 0x47, 0x4c,
-	0x61, 0x73, 0x74, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69, 0x64,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x75,
-	0x6e, 0x69, 0x71, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x75, 0x6e, 0x69,
-	0x71, 0x75, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x6c, 0x61, 0x73, 0x74, 0x49, 0x64, 0x18, 0x04, 0x20,
-	0x01, 0x28, 0x03, 0x52, 0x06, 0x6c, 0x61, 0x73, 0x74, 0x49, 0x64, 0x12, 0x1e, 0x0a, 0x0a, 0x63,
-	0x6f, 0x6e, 0x74, 0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x05, 0x52,
-	0x0a, 0x63, 0x6f, 0x6e, 0x74, 0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73, 0x22, 0x1d, 0x0a, 0x09, 0x49,
-	0x47, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x22, 0xad, 0x01, 0x0a, 0x09, 0x49,
-	0x47, 0x50, 0x75, 0x73, 0x68, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72,
-	0x69, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x69, 0x12, 0x12, 0x0a, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x12, 0x18, 0x0a, 0x07, 0x69, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28,
-	0x08, 0x52, 0x07, 0x69, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x71, 0x73,
-	0x18, 0x05, 0x20, 0x01, 0x28, 0x05, 0x52, 0x02, 0x71, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x71, 0x75,
-	0x65, 0x75, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65,
-	0x12, 0x16, 0x0a, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x06, 0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x69, 0x64, 0x18,
-	0x08, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x66, 0x69, 0x64, 0x22, 0x42, 0x0a, 0x0a, 0x49, 0x47,
-	0x50, 0x75, 0x73, 0x68, 0x41, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x75,
-	0x63, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x73, 0x75, 0x63, 0x63, 0x22, 0x6c,
-	0x0a, 0x08, 0x49, 0x53, 0x65, 0x6e, 0x64, 0x52, 0x65, 0x71, 0x12, 0x16, 0x0a, 0x06, 0x66, 0x72,
-	0x6f, 0x6d, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x66, 0x72, 0x6f, 0x6d,
-	0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x6f, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x74, 0x6f, 0x49, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x69, 0x18, 0x03, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x69, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x0e, 0x0a, 0x02,
-	0x64, 0x62, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x64, 0x62, 0x22, 0x9d, 0x01, 0x0a,
-	0x09, 0x49, 0x54, 0x50, 0x75, 0x73, 0x68, 0x52, 0x65, 0x71, 0x12, 0x16, 0x0a, 0x06, 0x66, 0x72,
-	0x6f, 0x6d, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x66, 0x72, 0x6f, 0x6d,
-	0x49, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x03, 0x74, 0x69, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x61, 0x64, 0x46, 0x65, 0x65, 0x64,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x72, 0x65, 0x61, 0x64, 0x46, 0x65, 0x65, 0x64,
-	0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x69, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75,
-	0x72, 0x69, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0c,
-	0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x0e, 0x0a, 0x02, 0x64, 0x62, 0x18, 0x06, 0x20, 0x01,
-	0x28, 0x08, 0x52, 0x02, 0x64, 0x62, 0x12, 0x14, 0x0a, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x18,
-	0x07, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x32, 0xb4, 0x05, 0x0a,
-	0x08, 0x47, 0x61, 0x74, 0x65, 0x77, 0x61, 0x79, 0x49, 0x12, 0x22, 0x0a, 0x05, 0x63, 0x6c, 0x6f,
-	0x73, 0x65, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x52, 0x65, 0x71,
-	0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a,
-	0x04, 0x6b, 0x69, 0x63, 0x6b, 0x12, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x4b, 0x69, 0x63, 0x6b, 0x52,
+	0x6f, 0x22, 0x2b, 0x0a, 0x03, 0x4d, 0x73, 0x67, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x69, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x69, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61,
+	0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x68,
+	0x0a, 0x08, 0x49, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03,
+	0x67, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x18,
+	0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x6e, 0x56, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x07, 0x63, 0x6f, 0x6e, 0x6e, 0x56, 0x65, 0x72, 0x12, 0x1e, 0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x74,
+	0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0a, 0x63, 0x6f,
+	0x6e, 0x74, 0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73, 0x22, 0x5e, 0x0a, 0x0a, 0x49, 0x47, 0x51, 0x75,
+	0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69, 0x64, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x63, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x6e,
+	0x69, 0x71, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x75, 0x6e, 0x69, 0x71,
+	0x75, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x6c, 0x65, 0x61, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x08, 0x52, 0x05, 0x63, 0x6c, 0x65, 0x61, 0x72, 0x22, 0x48, 0x0a, 0x0a, 0x49, 0x47, 0x43, 0x6c,
+	0x65, 0x61, 0x72, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x03, 0x67, 0x69, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x71, 0x75, 0x65, 0x75,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x12, 0x12,
+	0x0a, 0x04, 0x6c, 0x61, 0x73, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x6c, 0x61,
+	0x73, 0x74, 0x22, 0x42, 0x0a, 0x0a, 0x49, 0x47, 0x50, 0x75, 0x73, 0x68, 0x41, 0x52, 0x65, 0x71,
+	0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67,
+	0x69, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02,
+	0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x75, 0x63, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x04, 0x73, 0x75, 0x63, 0x63, 0x32, 0xad, 0x05, 0x0a, 0x08, 0x47, 0x61, 0x74, 0x65, 0x77,
+	0x61, 0x79, 0x49, 0x12, 0x22, 0x0a, 0x05, 0x63, 0x6c, 0x6f, 0x73, 0x65, 0x12, 0x0c, 0x2e, 0x67,
+	0x77, 0x2e, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e,
+	0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x04, 0x6b, 0x69, 0x63, 0x6b, 0x12,
+	0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x4b, 0x69, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67,
+	0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x05, 0x61, 0x6c, 0x69,
+	0x76, 0x65, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x43, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b,
+	0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x1e, 0x0a, 0x03, 0x72,
+	0x69, 0x64, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x52, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b,
+	0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x04, 0x72,
+	0x69, 0x64, 0x73, 0x12, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x52, 0x69, 0x64, 0x73, 0x52, 0x65, 0x71,
+	0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x21, 0x0a,
+	0x04, 0x63, 0x6f, 0x6e, 0x6e, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x43, 0x6f, 0x6e, 0x6e,
+	0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70,
+	0x12, 0x21, 0x0a, 0x04, 0x64, 0x69, 0x73, 0x63, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x44,
+	0x69, 0x73, 0x63, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32,
+	0x52, 0x65, 0x70, 0x12, 0x21, 0x0a, 0x04, 0x6c, 0x61, 0x73, 0x74, 0x12, 0x0c, 0x2e, 0x67, 0x77,
+	0x2e, 0x49, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49,
+	0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x04, 0x70, 0x75, 0x73, 0x68, 0x12, 0x0b,
+	0x2e, 0x67, 0x77, 0x2e, 0x50, 0x75, 0x73, 0x68, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77,
+	0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x25, 0x0a, 0x06, 0x67, 0x51, 0x75, 0x65,
+	0x75, 0x65, 0x12, 0x0e, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x47, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52,
 	0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12,
-	0x21, 0x0a, 0x04, 0x63, 0x6f, 0x6e, 0x6e, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x43, 0x6f,
-	0x6e, 0x6e, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52,
-	0x65, 0x70, 0x12, 0x21, 0x0a, 0x04, 0x64, 0x69, 0x73, 0x63, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e,
-	0x49, 0x44, 0x69, 0x73, 0x63, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64,
-	0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x05, 0x61, 0x6c, 0x69, 0x76, 0x65, 0x12, 0x0a,
-	0x2e, 0x67, 0x77, 0x2e, 0x43, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e,
-	0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x1e, 0x0a, 0x03, 0x72, 0x69, 0x64, 0x12, 0x0a,
-	0x2e, 0x67, 0x77, 0x2e, 0x52, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e,
-	0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x04, 0x72, 0x69, 0x64, 0x73, 0x12,
-	0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x52, 0x69, 0x64, 0x73, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67,
-	0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x21, 0x0a, 0x04, 0x6c, 0x61, 0x73,
-	0x74, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x1a,
-	0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x21, 0x0a, 0x04,
-	0x70, 0x75, 0x73, 0x68, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x50, 0x75, 0x73, 0x68, 0x52,
+	0x25, 0x0a, 0x06, 0x67, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x12, 0x0e, 0x2e, 0x67, 0x77, 0x2e, 0x49,
+	0x47, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49,
+	0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x24, 0x0a, 0x06, 0x67, 0x4c, 0x61, 0x73, 0x74, 0x73,
+	0x12, 0x0d, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x4c, 0x61, 0x73, 0x74, 0x73, 0x52, 0x65, 0x71, 0x1a,
+	0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x05,
+	0x67, 0x4c, 0x61, 0x73, 0x74, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x69, 0x64, 0x52, 0x65,
+	0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x22,
+	0x0a, 0x05, 0x67, 0x50, 0x75, 0x73, 0x68, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x50, 0x75,
+	0x73, 0x68, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x36, 0x34, 0x52,
+	0x65, 0x70, 0x12, 0x25, 0x0a, 0x06, 0x67, 0x50, 0x75, 0x73, 0x68, 0x41, 0x12, 0x0e, 0x2e, 0x67,
+	0x77, 0x2e, 0x49, 0x47, 0x50, 0x75, 0x73, 0x68, 0x41, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67,
+	0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x04, 0x73, 0x65, 0x6e,
+	0x64, 0x12, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x53, 0x65, 0x6e, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b,
+	0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x22, 0x0a, 0x05, 0x74,
+	0x50, 0x75, 0x73, 0x68, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e, 0x54, 0x50, 0x75, 0x73, 0x68, 0x52,
 	0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12,
-	0x25, 0x0a, 0x06, 0x67, 0x51, 0x75, 0x65, 0x75, 0x65, 0x12, 0x0e, 0x2e, 0x67, 0x77, 0x2e, 0x49,
-	0x47, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49,
-	0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x25, 0x0a, 0x06, 0x67, 0x43, 0x6c, 0x65, 0x61, 0x72,
-	0x12, 0x0e, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x47, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x52, 0x65, 0x71,
-	0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x24, 0x0a,
-	0x06, 0x67, 0x4c, 0x61, 0x73, 0x74, 0x73, 0x12, 0x0d, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x4c, 0x61,
-	0x73, 0x74, 0x73, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32,
-	0x52, 0x65, 0x70, 0x12, 0x23, 0x0a, 0x05, 0x67, 0x4c, 0x61, 0x73, 0x74, 0x12, 0x0d, 0x2e, 0x67,
-	0x77, 0x2e, 0x49, 0x47, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77,
-	0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x23, 0x0a, 0x05, 0x67, 0x50, 0x75, 0x73,
-	0x68, 0x12, 0x0d, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x47, 0x50, 0x75, 0x73, 0x68, 0x52, 0x65, 0x71,
-	0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x36, 0x34, 0x52, 0x65, 0x70, 0x12, 0x25, 0x0a,
-	0x06, 0x67, 0x50, 0x75, 0x73, 0x68, 0x41, 0x12, 0x0e, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x47, 0x50,
-	0x75, 0x73, 0x68, 0x41, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33,
-	0x32, 0x52, 0x65, 0x70, 0x12, 0x21, 0x0a, 0x04, 0x73, 0x65, 0x6e, 0x64, 0x12, 0x0c, 0x2e, 0x67,
-	0x77, 0x2e, 0x49, 0x53, 0x65, 0x6e, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e,
-	0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x23, 0x0a, 0x05, 0x74, 0x50, 0x75, 0x73, 0x68,
-	0x12, 0x0d, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x54, 0x50, 0x75, 0x73, 0x68, 0x52, 0x65, 0x71, 0x1a,
-	0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x21, 0x0a, 0x06,
-	0x74, 0x44, 0x69, 0x72, 0x74, 0x79, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x69, 0x64, 0x52,
-	0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12,
-	0x22, 0x0a, 0x07, 0x74, 0x53, 0x74, 0x61, 0x72, 0x74, 0x73, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e,
-	0x47, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32,
-	0x52, 0x65, 0x70, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x67, 0x77, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x21, 0x0a, 0x06, 0x74, 0x44, 0x69, 0x72, 0x74, 0x79, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x47,
+	0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52,
+	0x65, 0x70, 0x12, 0x22, 0x0a, 0x07, 0x74, 0x53, 0x74, 0x61, 0x72, 0x74, 0x73, 0x12, 0x0a, 0x2e,
+	0x67, 0x77, 0x2e, 0x47, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49,
+	0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x67, 0x77, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1272,71 +435,68 @@ func file_dsl_gwI_proto_rawDescGZIP() []byte {
 	return file_dsl_gwI_proto_rawDescData
 }
 
-var file_dsl_gwI_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_dsl_gwI_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_dsl_gwI_proto_goTypes = []interface{}{
-	(*CidReq)(nil),     // 0: gw.CidReq
-	(*Id64Rep)(nil),    // 1: gw.Id64Rep
-	(*Msg)(nil),        // 2: gw.Msg
-	(*IConnReq)(nil),   // 3: gw.IConnReq
-	(*IDiscReq)(nil),   // 4: gw.IDiscReq
-	(*IAliveReq)(nil),  // 5: gw.IAliveReq
-	(*ILastReq)(nil),   // 6: gw.ILastReq
-	(*IPushReq)(nil),   // 7: gw.IPushReq
-	(*IGQueueReq)(nil), // 8: gw.IGQueueReq
-	(*IGClearReq)(nil), // 9: gw.IGClearReq
-	(*IGLastsReq)(nil), // 10: gw.IGLastsReq
-	(*IGLastReq)(nil),  // 11: gw.IGLastReq
-	(*IGPushReq)(nil),  // 12: gw.IGPushReq
-	(*IGPushAReq)(nil), // 13: gw.IGPushAReq
-	(*ISendReq)(nil),   // 14: gw.ISendReq
-	(*ITPushReq)(nil),  // 15: gw.ITPushReq
-	(*CloseReq)(nil),   // 16: gw.CloseReq
-	(*KickReq)(nil),    // 17: gw.KickReq
-	(*RidReq)(nil),     // 18: gw.RidReq
-	(*RidsReq)(nil),    // 19: gw.RidsReq
-	(*GLastsReq)(nil),  // 20: gw.GLastsReq
-	(*GidReq)(nil),     // 21: gw.GidReq
-	(*Id32Rep)(nil),    // 22: gw.Id32Rep
+	(*Msg)(nil),        // 0: gw.Msg
+	(*ILastReq)(nil),   // 1: gw.ILastReq
+	(*IGQueueReq)(nil), // 2: gw.IGQueueReq
+	(*IGClearReq)(nil), // 3: gw.IGClearReq
+	(*IGPushAReq)(nil), // 4: gw.IGPushAReq
+	(*CloseReq)(nil),   // 5: gw.CloseReq
+	(*KickReq)(nil),    // 6: gw.KickReq
+	(*CidReq)(nil),     // 7: gw.CidReq
+	(*RidReq)(nil),     // 8: gw.RidReq
+	(*RidsReq)(nil),    // 9: gw.RidsReq
+	(*GConnReq)(nil),   // 10: gw.GConnReq
+	(*GDiscReq)(nil),   // 11: gw.GDiscReq
+	(*PushReq)(nil),    // 12: gw.PushReq
+	(*GLastsReq)(nil),  // 13: gw.GLastsReq
+	(*GidReq)(nil),     // 14: gw.GidReq
+	(*GPushReq)(nil),   // 15: gw.GPushReq
+	(*SendReq)(nil),    // 16: gw.SendReq
+	(*TPushReq)(nil),   // 17: gw.TPushReq
+	(*Id32Rep)(nil),    // 18: gw.Id32Rep
+	(*Id64Rep)(nil),    // 19: gw.Id64Rep
 }
 var file_dsl_gwI_proto_depIdxs = []int32{
-	16, // 0: gw.GatewayI.close:input_type -> gw.CloseReq
-	17, // 1: gw.GatewayI.kick:input_type -> gw.KickReq
-	3,  // 2: gw.GatewayI.conn:input_type -> gw.IConnReq
-	4,  // 3: gw.GatewayI.disc:input_type -> gw.IDiscReq
-	0,  // 4: gw.GatewayI.alive:input_type -> gw.CidReq
-	18, // 5: gw.GatewayI.rid:input_type -> gw.RidReq
-	19, // 6: gw.GatewayI.rids:input_type -> gw.RidsReq
-	6,  // 7: gw.GatewayI.last:input_type -> gw.ILastReq
-	7,  // 8: gw.GatewayI.push:input_type -> gw.IPushReq
-	8,  // 9: gw.GatewayI.gQueue:input_type -> gw.IGQueueReq
-	9,  // 10: gw.GatewayI.gClear:input_type -> gw.IGClearReq
-	20, // 11: gw.GatewayI.gLasts:input_type -> gw.GLastsReq
-	11, // 12: gw.GatewayI.gLast:input_type -> gw.IGLastReq
-	12, // 13: gw.GatewayI.gPush:input_type -> gw.IGPushReq
-	13, // 14: gw.GatewayI.gPushA:input_type -> gw.IGPushAReq
-	14, // 15: gw.GatewayI.send:input_type -> gw.ISendReq
-	15, // 16: gw.GatewayI.tPush:input_type -> gw.ITPushReq
-	21, // 17: gw.GatewayI.tDirty:input_type -> gw.GidReq
-	21, // 18: gw.GatewayI.tStarts:input_type -> gw.GidReq
-	22, // 19: gw.GatewayI.close:output_type -> gw.Id32Rep
-	22, // 20: gw.GatewayI.kick:output_type -> gw.Id32Rep
-	22, // 21: gw.GatewayI.conn:output_type -> gw.Id32Rep
-	22, // 22: gw.GatewayI.disc:output_type -> gw.Id32Rep
-	22, // 23: gw.GatewayI.alive:output_type -> gw.Id32Rep
-	22, // 24: gw.GatewayI.rid:output_type -> gw.Id32Rep
-	22, // 25: gw.GatewayI.rids:output_type -> gw.Id32Rep
-	22, // 26: gw.GatewayI.last:output_type -> gw.Id32Rep
-	22, // 27: gw.GatewayI.push:output_type -> gw.Id32Rep
-	22, // 28: gw.GatewayI.gQueue:output_type -> gw.Id32Rep
-	22, // 29: gw.GatewayI.gClear:output_type -> gw.Id32Rep
-	22, // 30: gw.GatewayI.gLasts:output_type -> gw.Id32Rep
-	22, // 31: gw.GatewayI.gLast:output_type -> gw.Id32Rep
-	1,  // 32: gw.GatewayI.gPush:output_type -> gw.Id64Rep
-	22, // 33: gw.GatewayI.gPushA:output_type -> gw.Id32Rep
-	22, // 34: gw.GatewayI.send:output_type -> gw.Id32Rep
-	22, // 35: gw.GatewayI.tPush:output_type -> gw.Id32Rep
-	22, // 36: gw.GatewayI.tDirty:output_type -> gw.Id32Rep
-	22, // 37: gw.GatewayI.tStarts:output_type -> gw.Id32Rep
+	5,  // 0: gw.GatewayI.close:input_type -> gw.CloseReq
+	6,  // 1: gw.GatewayI.kick:input_type -> gw.KickReq
+	7,  // 2: gw.GatewayI.alive:input_type -> gw.CidReq
+	8,  // 3: gw.GatewayI.rid:input_type -> gw.RidReq
+	9,  // 4: gw.GatewayI.rids:input_type -> gw.RidsReq
+	10, // 5: gw.GatewayI.conn:input_type -> gw.GConnReq
+	11, // 6: gw.GatewayI.disc:input_type -> gw.GDiscReq
+	1,  // 7: gw.GatewayI.last:input_type -> gw.ILastReq
+	12, // 8: gw.GatewayI.push:input_type -> gw.PushReq
+	2,  // 9: gw.GatewayI.gQueue:input_type -> gw.IGQueueReq
+	3,  // 10: gw.GatewayI.gClear:input_type -> gw.IGClearReq
+	13, // 11: gw.GatewayI.gLasts:input_type -> gw.GLastsReq
+	14, // 12: gw.GatewayI.gLast:input_type -> gw.GidReq
+	15, // 13: gw.GatewayI.gPush:input_type -> gw.GPushReq
+	4,  // 14: gw.GatewayI.gPushA:input_type -> gw.IGPushAReq
+	16, // 15: gw.GatewayI.send:input_type -> gw.SendReq
+	17, // 16: gw.GatewayI.tPush:input_type -> gw.TPushReq
+	14, // 17: gw.GatewayI.tDirty:input_type -> gw.GidReq
+	14, // 18: gw.GatewayI.tStarts:input_type -> gw.GidReq
+	18, // 19: gw.GatewayI.close:output_type -> gw.Id32Rep
+	18, // 20: gw.GatewayI.kick:output_type -> gw.Id32Rep
+	18, // 21: gw.GatewayI.alive:output_type -> gw.Id32Rep
+	18, // 22: gw.GatewayI.rid:output_type -> gw.Id32Rep
+	18, // 23: gw.GatewayI.rids:output_type -> gw.Id32Rep
+	18, // 24: gw.GatewayI.conn:output_type -> gw.Id32Rep
+	18, // 25: gw.GatewayI.disc:output_type -> gw.Id32Rep
+	18, // 26: gw.GatewayI.last:output_type -> gw.Id32Rep
+	18, // 27: gw.GatewayI.push:output_type -> gw.Id32Rep
+	18, // 28: gw.GatewayI.gQueue:output_type -> gw.Id32Rep
+	18, // 29: gw.GatewayI.gClear:output_type -> gw.Id32Rep
+	18, // 30: gw.GatewayI.gLasts:output_type -> gw.Id32Rep
+	18, // 31: gw.GatewayI.gLast:output_type -> gw.Id32Rep
+	19, // 32: gw.GatewayI.gPush:output_type -> gw.Id64Rep
+	18, // 33: gw.GatewayI.gPushA:output_type -> gw.Id32Rep
+	18, // 34: gw.GatewayI.send:output_type -> gw.Id32Rep
+	18, // 35: gw.GatewayI.tPush:output_type -> gw.Id32Rep
+	18, // 36: gw.GatewayI.tDirty:output_type -> gw.Id32Rep
+	18, // 37: gw.GatewayI.tStarts:output_type -> gw.Id32Rep
 	19, // [19:38] is the sub-list for method output_type
 	0,  // [0:19] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
@@ -1352,30 +512,6 @@ func file_dsl_gwI_proto_init() {
 	file_dsl_gw_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_dsl_gwI_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CidReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Id64Rep); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Msg); i {
 			case 0:
 				return &v.state
@@ -1387,43 +523,7 @@ func file_dsl_gwI_proto_init() {
 				return nil
 			}
 		}
-		file_dsl_gwI_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IConnReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IDiscReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IAliveReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_dsl_gwI_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ILastReq); i {
 			case 0:
 				return &v.state
@@ -1435,19 +535,7 @@ func file_dsl_gwI_proto_init() {
 				return nil
 			}
 		}
-		file_dsl_gwI_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IPushReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_dsl_gwI_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IGQueueReq); i {
 			case 0:
 				return &v.state
@@ -1459,7 +547,7 @@ func file_dsl_gwI_proto_init() {
 				return nil
 			}
 		}
-		file_dsl_gwI_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_dsl_gwI_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IGClearReq); i {
 			case 0:
 				return &v.state
@@ -1471,68 +559,8 @@ func file_dsl_gwI_proto_init() {
 				return nil
 			}
 		}
-		file_dsl_gwI_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IGLastsReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IGLastReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IGPushReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_dsl_gwI_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IGPushAReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ISendReq); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_dsl_gwI_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ITPushReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1550,7 +578,7 @@ func file_dsl_gwI_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_dsl_gwI_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -1580,20 +608,20 @@ type GatewayIClient interface {
 	Close(ctx context.Context, in *CloseReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 软关闭连接
 	Kick(ctx context.Context, in *KickReq, opts ...grpc.CallOption) (*Id32Rep, error)
-	// 连接
-	Conn(ctx context.Context, in *IConnReq, opts ...grpc.CallOption) (*Id32Rep, error)
-	// 断开
-	Disc(ctx context.Context, in *IDiscReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 存活 cid
 	Alive(ctx context.Context, in *CidReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 服务编号
 	Rid(ctx context.Context, in *RidReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 服务编号
 	Rids(ctx context.Context, in *RidsReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	// 连接
+	Conn(ctx context.Context, in *GConnReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	// 断开
+	Disc(ctx context.Context, in *GDiscReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 最新消息通知
 	Last(ctx context.Context, in *ILastReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 推送
-	Push(ctx context.Context, in *IPushReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	Push(ctx context.Context, in *PushReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 消息队列初始化
 	GQueue(ctx context.Context, in *IGQueueReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 消息队列清理
@@ -1601,15 +629,15 @@ type GatewayIClient interface {
 	// 主动获取消息
 	GLasts(ctx context.Context, in *GLastsReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 通知 gid
-	GLast(ctx context.Context, in *IGLastReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	GLast(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 推送
-	GPush(ctx context.Context, in *IGPushReq, opts ...grpc.CallOption) (*Id64Rep, error)
+	GPush(ctx context.Context, in *GPushReq, opts ...grpc.CallOption) (*Id64Rep, error)
 	// 推送确认
 	GPushA(ctx context.Context, in *IGPushAReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 点对点聊天
-	Send(ctx context.Context, in *ISendReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	Send(ctx context.Context, in *SendReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 群消息发送
-	TPush(ctx context.Context, in *ITPushReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	TPush(ctx context.Context, in *TPushReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 组更新、删除 tid
 	TDirty(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 组发送管道启动 tid
@@ -1636,24 +664,6 @@ func (c *gatewayIClient) Close(ctx context.Context, in *CloseReq, opts ...grpc.C
 func (c *gatewayIClient) Kick(ctx context.Context, in *KickReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/kick", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gatewayIClient) Conn(ctx context.Context, in *IConnReq, opts ...grpc.CallOption) (*Id32Rep, error) {
-	out := new(Id32Rep)
-	err := c.cc.Invoke(ctx, "/gw.GatewayI/conn", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gatewayIClient) Disc(ctx context.Context, in *IDiscReq, opts ...grpc.CallOption) (*Id32Rep, error) {
-	out := new(Id32Rep)
-	err := c.cc.Invoke(ctx, "/gw.GatewayI/disc", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1687,6 +697,24 @@ func (c *gatewayIClient) Rids(ctx context.Context, in *RidsReq, opts ...grpc.Cal
 	return out, nil
 }
 
+func (c *gatewayIClient) Conn(ctx context.Context, in *GConnReq, opts ...grpc.CallOption) (*Id32Rep, error) {
+	out := new(Id32Rep)
+	err := c.cc.Invoke(ctx, "/gw.GatewayI/conn", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayIClient) Disc(ctx context.Context, in *GDiscReq, opts ...grpc.CallOption) (*Id32Rep, error) {
+	out := new(Id32Rep)
+	err := c.cc.Invoke(ctx, "/gw.GatewayI/disc", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *gatewayIClient) Last(ctx context.Context, in *ILastReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/last", in, out, opts...)
@@ -1696,7 +724,7 @@ func (c *gatewayIClient) Last(ctx context.Context, in *ILastReq, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *gatewayIClient) Push(ctx context.Context, in *IPushReq, opts ...grpc.CallOption) (*Id32Rep, error) {
+func (c *gatewayIClient) Push(ctx context.Context, in *PushReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/push", in, out, opts...)
 	if err != nil {
@@ -1732,7 +760,7 @@ func (c *gatewayIClient) GLasts(ctx context.Context, in *GLastsReq, opts ...grpc
 	return out, nil
 }
 
-func (c *gatewayIClient) GLast(ctx context.Context, in *IGLastReq, opts ...grpc.CallOption) (*Id32Rep, error) {
+func (c *gatewayIClient) GLast(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/gLast", in, out, opts...)
 	if err != nil {
@@ -1741,7 +769,7 @@ func (c *gatewayIClient) GLast(ctx context.Context, in *IGLastReq, opts ...grpc.
 	return out, nil
 }
 
-func (c *gatewayIClient) GPush(ctx context.Context, in *IGPushReq, opts ...grpc.CallOption) (*Id64Rep, error) {
+func (c *gatewayIClient) GPush(ctx context.Context, in *GPushReq, opts ...grpc.CallOption) (*Id64Rep, error) {
 	out := new(Id64Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/gPush", in, out, opts...)
 	if err != nil {
@@ -1759,7 +787,7 @@ func (c *gatewayIClient) GPushA(ctx context.Context, in *IGPushAReq, opts ...grp
 	return out, nil
 }
 
-func (c *gatewayIClient) Send(ctx context.Context, in *ISendReq, opts ...grpc.CallOption) (*Id32Rep, error) {
+func (c *gatewayIClient) Send(ctx context.Context, in *SendReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/send", in, out, opts...)
 	if err != nil {
@@ -1768,7 +796,7 @@ func (c *gatewayIClient) Send(ctx context.Context, in *ISendReq, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *gatewayIClient) TPush(ctx context.Context, in *ITPushReq, opts ...grpc.CallOption) (*Id32Rep, error) {
+func (c *gatewayIClient) TPush(ctx context.Context, in *TPushReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, "/gw.GatewayI/tPush", in, out, opts...)
 	if err != nil {
@@ -1801,20 +829,20 @@ type GatewayIServer interface {
 	Close(context.Context, *CloseReq) (*Id32Rep, error)
 	// 软关闭连接
 	Kick(context.Context, *KickReq) (*Id32Rep, error)
-	// 连接
-	Conn(context.Context, *IConnReq) (*Id32Rep, error)
-	// 断开
-	Disc(context.Context, *IDiscReq) (*Id32Rep, error)
 	// 存活 cid
 	Alive(context.Context, *CidReq) (*Id32Rep, error)
 	// 服务编号
 	Rid(context.Context, *RidReq) (*Id32Rep, error)
 	// 服务编号
 	Rids(context.Context, *RidsReq) (*Id32Rep, error)
+	// 连接
+	Conn(context.Context, *GConnReq) (*Id32Rep, error)
+	// 断开
+	Disc(context.Context, *GDiscReq) (*Id32Rep, error)
 	// 最新消息通知
 	Last(context.Context, *ILastReq) (*Id32Rep, error)
 	// 推送
-	Push(context.Context, *IPushReq) (*Id32Rep, error)
+	Push(context.Context, *PushReq) (*Id32Rep, error)
 	// 消息队列初始化
 	GQueue(context.Context, *IGQueueReq) (*Id32Rep, error)
 	// 消息队列清理
@@ -1822,15 +850,15 @@ type GatewayIServer interface {
 	// 主动获取消息
 	GLasts(context.Context, *GLastsReq) (*Id32Rep, error)
 	// 通知 gid
-	GLast(context.Context, *IGLastReq) (*Id32Rep, error)
+	GLast(context.Context, *GidReq) (*Id32Rep, error)
 	// 推送
-	GPush(context.Context, *IGPushReq) (*Id64Rep, error)
+	GPush(context.Context, *GPushReq) (*Id64Rep, error)
 	// 推送确认
 	GPushA(context.Context, *IGPushAReq) (*Id32Rep, error)
 	// 点对点聊天
-	Send(context.Context, *ISendReq) (*Id32Rep, error)
+	Send(context.Context, *SendReq) (*Id32Rep, error)
 	// 群消息发送
-	TPush(context.Context, *ITPushReq) (*Id32Rep, error)
+	TPush(context.Context, *TPushReq) (*Id32Rep, error)
 	// 组更新、删除 tid
 	TDirty(context.Context, *GidReq) (*Id32Rep, error)
 	// 组发送管道启动 tid
@@ -1847,12 +875,6 @@ func (*UnimplementedGatewayIServer) Close(context.Context, *CloseReq) (*Id32Rep,
 func (*UnimplementedGatewayIServer) Kick(context.Context, *KickReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Kick not implemented")
 }
-func (*UnimplementedGatewayIServer) Conn(context.Context, *IConnReq) (*Id32Rep, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Conn not implemented")
-}
-func (*UnimplementedGatewayIServer) Disc(context.Context, *IDiscReq) (*Id32Rep, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Disc not implemented")
-}
 func (*UnimplementedGatewayIServer) Alive(context.Context, *CidReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
 }
@@ -1862,10 +884,16 @@ func (*UnimplementedGatewayIServer) Rid(context.Context, *RidReq) (*Id32Rep, err
 func (*UnimplementedGatewayIServer) Rids(context.Context, *RidsReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Rids not implemented")
 }
+func (*UnimplementedGatewayIServer) Conn(context.Context, *GConnReq) (*Id32Rep, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Conn not implemented")
+}
+func (*UnimplementedGatewayIServer) Disc(context.Context, *GDiscReq) (*Id32Rep, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Disc not implemented")
+}
 func (*UnimplementedGatewayIServer) Last(context.Context, *ILastReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Last not implemented")
 }
-func (*UnimplementedGatewayIServer) Push(context.Context, *IPushReq) (*Id32Rep, error) {
+func (*UnimplementedGatewayIServer) Push(context.Context, *PushReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Push not implemented")
 }
 func (*UnimplementedGatewayIServer) GQueue(context.Context, *IGQueueReq) (*Id32Rep, error) {
@@ -1877,19 +905,19 @@ func (*UnimplementedGatewayIServer) GClear(context.Context, *IGClearReq) (*Id32R
 func (*UnimplementedGatewayIServer) GLasts(context.Context, *GLastsReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GLasts not implemented")
 }
-func (*UnimplementedGatewayIServer) GLast(context.Context, *IGLastReq) (*Id32Rep, error) {
+func (*UnimplementedGatewayIServer) GLast(context.Context, *GidReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GLast not implemented")
 }
-func (*UnimplementedGatewayIServer) GPush(context.Context, *IGPushReq) (*Id64Rep, error) {
+func (*UnimplementedGatewayIServer) GPush(context.Context, *GPushReq) (*Id64Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GPush not implemented")
 }
 func (*UnimplementedGatewayIServer) GPushA(context.Context, *IGPushAReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GPushA not implemented")
 }
-func (*UnimplementedGatewayIServer) Send(context.Context, *ISendReq) (*Id32Rep, error) {
+func (*UnimplementedGatewayIServer) Send(context.Context, *SendReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
-func (*UnimplementedGatewayIServer) TPush(context.Context, *ITPushReq) (*Id32Rep, error) {
+func (*UnimplementedGatewayIServer) TPush(context.Context, *TPushReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TPush not implemented")
 }
 func (*UnimplementedGatewayIServer) TDirty(context.Context, *GidReq) (*Id32Rep, error) {
@@ -1935,42 +963,6 @@ func _GatewayI_Kick_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GatewayIServer).Kick(ctx, req.(*KickReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GatewayI_Conn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IConnReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GatewayIServer).Conn(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/gw.GatewayI/Conn",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).Conn(ctx, req.(*IConnReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GatewayI_Disc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IDiscReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GatewayIServer).Disc(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/gw.GatewayI/Disc",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).Disc(ctx, req.(*IDiscReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2029,6 +1021,42 @@ func _GatewayI_Rids_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayI_Conn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GConnReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayIServer).Conn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gw.GatewayI/Conn",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayIServer).Conn(ctx, req.(*GConnReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayI_Disc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GDiscReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayIServer).Disc(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gw.GatewayI/Disc",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayIServer).Disc(ctx, req.(*GDiscReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _GatewayI_Last_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ILastReq)
 	if err := dec(in); err != nil {
@@ -2048,7 +1076,7 @@ func _GatewayI_Last_Handler(srv interface{}, ctx context.Context, dec func(inter
 }
 
 func _GatewayI_Push_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IPushReq)
+	in := new(PushReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2060,7 +1088,7 @@ func _GatewayI_Push_Handler(srv interface{}, ctx context.Context, dec func(inter
 		FullMethod: "/gw.GatewayI/Push",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).Push(ctx, req.(*IPushReq))
+		return srv.(GatewayIServer).Push(ctx, req.(*PushReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2120,7 +1148,7 @@ func _GatewayI_GLasts_Handler(srv interface{}, ctx context.Context, dec func(int
 }
 
 func _GatewayI_GLast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IGLastReq)
+	in := new(GidReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2132,13 +1160,13 @@ func _GatewayI_GLast_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: "/gw.GatewayI/GLast",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).GLast(ctx, req.(*IGLastReq))
+		return srv.(GatewayIServer).GLast(ctx, req.(*GidReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _GatewayI_GPush_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IGPushReq)
+	in := new(GPushReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2150,7 +1178,7 @@ func _GatewayI_GPush_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: "/gw.GatewayI/GPush",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).GPush(ctx, req.(*IGPushReq))
+		return srv.(GatewayIServer).GPush(ctx, req.(*GPushReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2174,7 +1202,7 @@ func _GatewayI_GPushA_Handler(srv interface{}, ctx context.Context, dec func(int
 }
 
 func _GatewayI_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ISendReq)
+	in := new(SendReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2186,13 +1214,13 @@ func _GatewayI_Send_Handler(srv interface{}, ctx context.Context, dec func(inter
 		FullMethod: "/gw.GatewayI/Send",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).Send(ctx, req.(*ISendReq))
+		return srv.(GatewayIServer).Send(ctx, req.(*SendReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _GatewayI_TPush_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ITPushReq)
+	in := new(TPushReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2204,7 +1232,7 @@ func _GatewayI_TPush_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: "/gw.GatewayI/TPush",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayIServer).TPush(ctx, req.(*ITPushReq))
+		return srv.(GatewayIServer).TPush(ctx, req.(*TPushReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2258,14 +1286,6 @@ var _GatewayI_serviceDesc = grpc.ServiceDesc{
 			Handler:    _GatewayI_Kick_Handler,
 		},
 		{
-			MethodName: "conn",
-			Handler:    _GatewayI_Conn_Handler,
-		},
-		{
-			MethodName: "disc",
-			Handler:    _GatewayI_Disc_Handler,
-		},
-		{
 			MethodName: "alive",
 			Handler:    _GatewayI_Alive_Handler,
 		},
@@ -2276,6 +1296,14 @@ var _GatewayI_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "rids",
 			Handler:    _GatewayI_Rids_Handler,
+		},
+		{
+			MethodName: "conn",
+			Handler:    _GatewayI_Conn_Handler,
+		},
+		{
+			MethodName: "disc",
+			Handler:    _GatewayI_Disc_Handler,
 		},
 		{
 			MethodName: "last",

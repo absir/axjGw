@@ -100,7 +100,7 @@ type MsgSess struct {
 
 type MsgClient struct {
 	cid        int64
-	gatewayI   gw.GatewayI
+	gatewayI   gw.GatewayIClient
 	connVer    int32
 	idleTime   int64
 	lasting    bool
@@ -108,6 +108,7 @@ type MsgClient struct {
 	lastLoop   int64
 	lastId     int64
 	continuous int32
+	cidReq     *gw.CidReq
 }
 
 func (that *MsgClient) ConnVer() int32 {
@@ -300,7 +301,7 @@ func (that *MsgGrp) closeOld(old *MsgClient, cid int64, unique string, kick bool
 	sess.clientNum--
 	if kick {
 		// 关闭通知
-		go old.gatewayI.Kick(Server.Context, old.cid, nil)
+		go old.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: old.cid}, nil)
 	}
 
 	return true
@@ -333,8 +334,9 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 		return
 	}
 
-	result, _ := client.gatewayI.Alive(Server.Context, client.cid)
-	if result != gw.Result__Succ {
+	rep, _ := client.gatewayI.Alive(Server.Context, client.getCidReq())
+	ret := Server.Id32(rep)
+	if ret < R_SUCC_MIN {
 		that.locker.Lock()
 		defer that.locker.Unlock()
 		that.closeOld(client, client.cid, unique, false)
@@ -413,7 +415,7 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 	}
 }
 
-func (that *MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (int64, bool, error) {
+func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (int64, bool, error) {
 	if qs >= 2 {
 		if MsgMng.LastMax <= 0 {
 			qs = 1
@@ -426,7 +428,7 @@ func (that *MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue
 			return 0, false, ERR_NOWAY
 		}
 
-		msg := NewMsg(uri, bytes, unique)
+		msg := NewMsg(uri, data, unique)
 		succ, err := sess.QueuePush(msg)
 		return msg.Get().Id, succ, err
 
@@ -440,7 +442,7 @@ func (that *MsgGrp) Push(uri string, bytes []byte, isolate bool, qs int32, queue
 		}
 
 		var err error = nil
-		msg := NewMsg(uri, bytes, unique)
+		msg := NewMsg(uri, data, unique)
 		that.lastPush(sess, msg, fid)
 		msgD := msg.Get()
 		if qs >= 3 && MsgMng.Db != nil {
@@ -499,8 +501,8 @@ const (
 var ERR_NOWAY = errors.New("ERR_NOWAY")
 var ERR_FAIL = errors.New("ERR_FAIL")
 
-func (that *MsgSess) OnResult(ret gw.Result_, err error, rpc ERpc, client *MsgClient, unique string) bool {
-	if ret == gw.Result__Succ {
+func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
+	if Server.Id32(rep) >= R_SUCC_MIN {
 		client.idleTime = time.Now().UnixNano() + MsgMng.IdleDrt
 		return true
 	}
@@ -519,12 +521,24 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string) bool {
 			return true
 		}
 
-		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, client.cid, msgD.Uri, msgD.Data, false, msgD.Fid)
-		return that.OnResult(ret, err, ER_PUSH, client, unique)
+		rep, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, &gw.PushReq{
+			Cid:     client.cid,
+			Uri:     msgD.Uri,
+			Data:    msgD.Data,
+			Id:      msgD.Fid,
+			Isolate: false,
+		})
+		return that.OnResult(rep, err, ER_PUSH, client, unique)
 
 	} else {
-		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, client.cid, msgD.Uri, msgD.Data, false, msgD.Id)
-		return that.OnResult(ret, err, ER_PUSH, client, unique)
+		rep, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, &gw.PushReq{
+			Cid:     client.cid,
+			Uri:     msgD.Uri,
+			Data:    msgD.Data,
+			Id:      msgD.Id,
+			Isolate: false,
+		})
+		return that.OnResult(rep, err, ER_PUSH, client, unique)
 	}
 }
 
@@ -561,8 +575,13 @@ func (that *MsgSess) QueuePush(msg Msg) (bool, error) {
 		client := that.client
 		if client != nil {
 			msgD := msg.Get()
-			ret, err := that.client.gatewayI.Push(Server.Context, client.cid, msgD.Uri, msgD.Data, true, 0)
-			return that.OnResult(ret, err, ER_PUSH, client, ""), err
+			rep, err := that.client.gatewayI.Push(Server.Context, &gw.PushReq{
+				Cid:     client.cid,
+				Uri:     msgD.Uri,
+				Data:    msgD.Data,
+				Isolate: true,
+			})
+			return that.OnResult(rep, err, ER_PUSH, client, ""), err
 		}
 
 		return false, ERR_NOWAY
@@ -733,8 +752,13 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 			that.Lasts(client.lastId, client, unique, client.continuous)
 
 		} else {
-			ret, err := client.gatewayI.Last(Server.Context, client.cid, that.grp.gid, client.connVer, false)
-			that.OnResult(ret, err, ER_LAST, client, unique)
+			rep, err := client.gatewayI.Last(Server.Context, &gw.ILastReq{
+				Cid:        client.cid,
+				Gid:        that.grp.gid,
+				ConnVer:    client.connVer,
+				Continuous: false,
+			})
+			that.OnResult(rep, err, ER_LAST, client, unique)
 		}
 
 		// 休眠一秒， 防止通知过于频繁|必需
@@ -818,8 +842,13 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	}
 
 	if pushNum > 0 {
-		ret, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, client.cid, that.grp.gid, client.connVer, true)
-		that.OnResult(ret, err, ER_LAST, client, unique)
+		rep, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, &gw.ILastReq{
+			Cid:        client.cid,
+			Gid:        that.grp.gid,
+			ConnVer:    client.connVer,
+			Continuous: true,
+		})
+		that.OnResult(rep, err, ER_LAST, client, unique)
 	}
 }
 
@@ -842,8 +871,13 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 	if continuous > 1 {
 		num := *pushNum + 1
 		if num >= continuous {
-			ret, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, client.cid, that.grp.gid, client.connVer, true)
-			if that.OnResult(ret, err, ER_LAST, client, unique) {
+			rep, err := Server.GetProdCid(client.cid).GetGWIClient().Last(Server.Context, &gw.ILastReq{
+				Cid:        client.cid,
+				Gid:        that.grp.gid,
+				ConnVer:    client.connVer,
+				Continuous: true,
+			})
+			if that.OnResult(rep, err, ER_LAST, client, unique) {
 				return false
 			}
 
@@ -958,4 +992,14 @@ func (that *MsgSess) lastGet(client *MsgClient, lastLoop int64, lastId int64) (M
 	}
 
 	return nil, lastIn
+}
+
+func (that *MsgClient) getCidReq() *gw.CidReq {
+	if that.cidReq == nil {
+		that.cidReq = &gw.CidReq{
+			Cid: that.cid,
+		}
+	}
+
+	return that.cidReq
 }

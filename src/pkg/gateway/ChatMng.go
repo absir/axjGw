@@ -3,6 +3,7 @@ package gateway
 import (
 	"axj/APro"
 	"axj/Thrd/Util"
+	"axjGW/gen/gw"
 	"sync"
 	"time"
 )
@@ -77,7 +78,9 @@ func (that *chatMng) CheckLoop() {
 				for i := 0; i < tLen; i++ {
 					// 启动组管道
 					tId := tIds[i]
-					Server.GetProdGid(tId).GetGWIClient().TStarts(Server.Context, tId)
+					Server.GetProdGid(tId).GetGWIClient().TStarts(Server.Context, &gw.GidReq{
+						Gid: tId,
+					})
 				}
 			}
 
@@ -122,12 +125,22 @@ func (that *chatMng) MsgFail(id int64, gid string) error {
 	}
 
 	// 未发送
-	result, err := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid, "", nil, false, 3, false, "", id)
+	rep, err := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
+		Gid: gid,
+		//Uri: "",
+		//Data: nil,
+		Qs: 3,
+		//Unique: "",
+		//Queue: false,
+		Fid: id,
+		//Isolate: false,
+	})
 	if err != nil {
 		return err
 	}
 
-	if result < R_SUCC_MIN {
+	var fid = Server.Id64(rep)
+	if fid < R_SUCC_MIN {
 		return ERR_FAIL
 	}
 
@@ -299,37 +312,31 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 	indexDid := index
 	for ; index < mLen; index++ {
 		member := members[index]
+		gid := member.Gid
 		if member.Nofeed {
 			// 不推送到gid， 需要主动拉去tid_gid
-			gid := that.tid + "_" + member.Gid
-			ret, err := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid, msgTeam.Uri, msgTeam.Data, false, 3, false, "", msgTeam.Id)
-			if err != nil || ret < R_SUCC_MIN {
-				// 已执行索引
-				if db {
-					MsgMng.Db.TeamUpdate(msgTeam, indexDid)
-				}
-
-				return false
-			}
-
-			indexDid = index
-
-		} else {
-			// 直接推送到gid
-			gid := member.Gid
-			ret, err := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, gid, msgTeam.Uri, msgTeam.Data, false, 3, false, "", msgTeam.Id)
-			if err != nil || ret < R_SUCC_MIN {
-				// 已执行索引
-				if db {
-					MsgMng.Db.TeamUpdate(msgTeam, indexDid)
-				}
-
-				return false
-			}
-
-			indexDid = index
+			gid = that.tid + "_" + gid
 		}
 
+		rep, _ := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
+			Gid:  gid,
+			Uri:  msgTeam.Uri,
+			Data: msgTeam.Data,
+			Qs:   3,
+			Fid:  msgTeam.Id,
+		})
+
+		var fid = Server.Id64(rep)
+		if fid < R_SUCC_MIN {
+			// 已执行索引
+			if db {
+				MsgMng.Db.TeamUpdate(msgTeam, indexDid)
+			}
+
+			return false
+		}
+
+		indexDid = index
 		if !db {
 			msgTeam.Index = indexDid
 		}
@@ -343,36 +350,61 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 }
 
 // 点对点发送聊天 调用注意分布一致hash 入口
-func (that *chatMng) Send(fromId string, toId string, uri string, bytes []byte, db bool) (bool, error) {
-	fClient := Server.GetProdGid(fromId).GetGWIClient()
-	fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, 3, false, "", F_FAIL)
-	if fid < R_SUCC_MIN {
-		return false, err
-	}
-
+func (that *chatMng) Send(fromId string, toId string, uri string, data []byte, db bool) (bool, error) {
 	var qs int32 = 3
 	if !db {
 		qs = 2
 	}
 
-	tid, err := Server.GetProdGid(toId).GetGWIClient().GPush(Server.Context, toId, uri, bytes, true, qs, false, "", fid)
+	fClient := Server.GetProdGid(fromId).GetGWIClient()
+	rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
+		Gid:     fromId,
+		Uri:     uri,
+		Data:    data,
+		Qs:      qs,
+		Fid:     F_FAIL,
+		Isolate: true,
+	})
+
+	fid := Server.Id64(rep)
+	if fid < R_SUCC_MIN {
+		return false, err
+	}
+
+	rep, err = Server.GetProdGid(toId).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
+		Gid:  toId,
+		Uri:  uri,
+		Data: data,
+		Qs:   qs,
+		Fid:  fid,
+	})
+
+	tid := Server.Id64(rep)
 	if tid < R_SUCC_MIN {
 		if db {
-			fClient.GPushA(Server.Context, fromId, fid, false)
+			fClient.GPushA(Server.Context, &gw.IGPushAReq{
+				Gid:  fromId,
+				Id:   fid,
+				Succ: false,
+			})
 		}
 
 		return false, err
 	}
 
 	if db {
-		fClient.GPushA(Server.Context, fromId, fid, true)
+		fClient.GPushA(Server.Context, &gw.IGPushAReq{
+			Gid:  fromId,
+			Id:   fid,
+			Succ: true,
+		})
 	}
 
 	return true, err
 }
 
 // 发送群聊天 调用注意分布一致hash 入口
-func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri string, bytes []byte, queue bool, db bool) (bool, error) {
+func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri string, data []byte, queue bool, db bool) (bool, error) {
 	var qs int32 = 3
 	if !db {
 		qs = 2
@@ -387,7 +419,18 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 		if !team.ReadFeed {
 			// 写扩散
 			fClient := Server.GetProdGid(fromId).GetGWIClient()
-			fid, err := fClient.GPush(Server.Context, fromId, uri, bytes, true, qs, false, "", F_FAIL)
+			rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
+				Gid:  fromId,
+				Uri:  uri,
+				Data: data,
+				Qs:   qs,
+				//Unique: "",
+				Queue: queue,
+				Fid:   F_FAIL,
+				//Isolate: false,
+			})
+
+			var fid = Server.Id64(rep)
 			if fid < R_SUCC_MIN {
 				return false, err
 			}
@@ -398,7 +441,7 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 				Members: team.Members,
 				Index:   0,
 				Uri:     uri,
-				Data:    bytes,
+				Data:    data,
 			}
 
 			msgDb := MsgMng.Db != nil && qs == 3
@@ -407,7 +450,11 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 				err = MsgMng.Db.TeamInsert(msgTeam)
 				if err != nil {
 					if db {
-						fClient.GPushA(Server.Context, fromId, fid, false)
+						fClient.GPushA(Server.Context, &gw.IGPushAReq{
+							Gid:  fromId,
+							Id:   fid,
+							Succ: false,
+						})
 					}
 
 					return false, err
@@ -415,7 +462,11 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 			}
 
 			if db {
-				fClient.GPushA(Server.Context, fromId, fid, true)
+				fClient.GPushA(Server.Context, &gw.IGPushAReq{
+					Gid:  fromId,
+					Id:   fid,
+					Succ: true,
+				})
 			}
 
 			if msgDb {
@@ -430,13 +481,19 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 	}
 
 	// 读扩散
-	ret, err := Server.GetProdGid(tid).GetGWIClient().GPush(Server.Context, tid, uri, bytes, false, qs, queue, "", 0)
-	if err != nil {
-		return false, err
-	}
+	rep, err := Server.GetProdGid(tid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
+		Gid:  tid,
+		Uri:  uri,
+		Data: data,
+		Qs:   qs,
+		//Unique: "",
+		Queue: queue,
+		//Isolate: false,
+	})
 
-	if ret < R_SUCC_MIN {
-		return false, ERR_FAIL
+	var fid = Server.Id64(rep)
+	if fid < R_SUCC_MIN {
+		return false, err
 	}
 
 	return true, nil
