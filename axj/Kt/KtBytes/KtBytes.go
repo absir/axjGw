@@ -15,9 +15,9 @@ func Copy(bs []byte) []byte {
 		return bs
 	}
 
-	src := make([]byte, bLen)
-	copy(bs, src)
-	return src
+	dst := make([]byte, bLen)
+	copy(dst, bs)
+	return dst
 }
 
 func GetIntBytes(val int32) []byte {

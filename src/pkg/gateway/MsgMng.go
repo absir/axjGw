@@ -517,7 +517,7 @@ func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgC
 	return false
 }
 
-func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string) bool {
+func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string, isolate bool) bool {
 	if msgD == nil {
 		return true
 	}
@@ -532,7 +532,7 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string) bool {
 			Uri:     msgD.Uri,
 			Data:    msgD.Data,
 			Id:      msgD.Fid,
-			Isolate: false,
+			Isolate: isolate,
 		})
 		return that.OnResult(rep, err, ER_PUSH, client, unique)
 
@@ -542,7 +542,7 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string) bool {
 			Uri:     msgD.Uri,
 			Data:    msgD.Data,
 			Id:      msgD.Id,
-			Isolate: false,
+			Isolate: isolate,
 		})
 		return that.OnResult(rep, err, ER_PUSH, client, unique)
 	}
@@ -658,7 +658,7 @@ func (that *MsgSess) queueRun() {
 			break
 		}
 
-		if !that.Push(msg.Get(), client, "") {
+		if !that.Push(msg.Get(), client, "", true) {
 			break
 		}
 
@@ -840,14 +840,14 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 				}
 
 				for j := 0; j < mLen; j++ {
-					if !that.lastMsg(lastLoop, client, &msgDs[j], &lastId, unique, continuous, &pushNum) {
+					if !that.lastMsg(lastLoop, client, &msgDs[j], &lastId, unique, false, continuous, &pushNum) {
 						return
 					}
 				}
 			}
 
 		} else {
-			if !that.lastMsg(lastLoop, client, msg, &lastId, unique, continuous, &pushNum) {
+			if !that.lastMsg(lastLoop, client, msg, &lastId, unique, true, continuous, &pushNum) {
 				return
 			}
 		}
@@ -864,13 +864,13 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	}
 }
 
-func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId *int64, unique string, continuous int32, pushNum *int32) bool {
+func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId *int64, unique string, isolate bool, continuous int32, pushNum *int32) bool {
 	if lastLoop != client.lastLoop {
 		return false
 	}
 
 	msgD := msg.Get()
-	if !that.Push(msg.Get(), client, "") {
+	if !that.Push(msg.Get(), client, "", isolate) {
 		return false
 	}
 
