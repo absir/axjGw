@@ -160,6 +160,8 @@ message GConnReq {
     string gid = 2;
     string unique = 3;
     bool kick = 4;
+    // 新版本
+    bool newVer = 5;
 }
 
 message GDiscReq {

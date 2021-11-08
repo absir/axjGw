@@ -348,11 +348,14 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 	}
 }
 
-func (that *MsgGrp) Conn(cid int64, unique string, kick bool) *MsgClient {
+func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgClient {
 	client := that.getClient(unique)
 	if client != nil {
 		if client.cid == cid {
-			client.connVer = MsgMng.newConnVer()
+			if newVer {
+				client.connVer = MsgMng.newConnVer()
+			}
+
 			return client
 
 		} else if client.cid > cid {

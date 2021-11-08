@@ -31,6 +31,7 @@ func (g GatewayS) Push(ctx context.Context, req *gw.PushReq) (*gw.Id32Rep, error
 
 func (g GatewayS) GConn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, error) {
 	// req.Kick = false
+	req.NewVer = true
 	return gateway.Server.GetProdGid(req.Gid).GetGWIClient().Conn(ctx, req)
 }
 

@@ -120,7 +120,7 @@ func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	client := gateway.MsgMng.GetMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick)
+	client := gateway.MsgMng.GetMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer)
 	if client == nil {
 		return Result_Fail_Rep, nil
 	}
@@ -204,7 +204,7 @@ func (g GatewayIs) GQueue(ctx context.Context, req *gw.IGQueueReq) (*gw.Id32Rep,
 	}
 
 	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
-	client := grp.Conn(req.Cid, req.Unique, false)
+	client := grp.Conn(req.Cid, req.Unique, false, false)
 	if client == nil {
 		return Result_IdNone_Rep, nil
 	}
@@ -238,7 +238,7 @@ func (g GatewayIs) GLasts(ctx context.Context, req *gw.GLastsReq) (*gw.Id32Rep, 
 	}
 
 	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
-	client := grp.Conn(req.Cid, req.Unique, false)
+	client := grp.Conn(req.Cid, req.Unique, false, false)
 	if client == nil {
 		return Result_IdNone_Rep, nil
 	}
