@@ -229,9 +229,9 @@ func SubCfg(sub string) Kt.Map {
 	m := Kt.If(Cfg == nil, nil, KtCfg.Get(Cfg, sub))
 	var cfg Kt.Map = nil
 	if m != nil {
-		mp, ok := m.(*Kt.Map)
+		mp, ok := m.(Kt.Map)
 		if ok && mp != nil {
-			cfg = *mp
+			cfg = mp
 		}
 	}
 

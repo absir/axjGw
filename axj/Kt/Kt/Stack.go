@@ -6,26 +6,26 @@ type Stack struct {
 	lst *list.List
 }
 
-func (s *Stack) Init() *Stack {
-	s.lst = list.New()
-	return s
+func (that *Stack) Init() *Stack {
+	that.lst = list.New()
+	return that
 }
 
-func (s *Stack) Push(val interface{}) {
-	s.lst.PushBack(s)
+func (that *Stack) Push(val interface{}) {
+	that.lst.PushBack(that)
 }
 
-func (s *Stack) Pop() interface{} {
-	el := s.lst.Back()
+func (that *Stack) Pop() interface{} {
+	el := that.lst.Back()
 	if el == nil {
 		return nil
 	}
-	s.lst.Remove(el)
+	that.lst.Remove(el)
 	return el.Value
 }
 
-func (s *Stack) Peek() (interface{}, bool) {
-	el := s.lst.Back()
+func (that *Stack) Peek() (interface{}, bool) {
+	el := that.lst.Back()
 	if el == nil {
 		return nil, false
 	}
@@ -33,10 +33,10 @@ func (s *Stack) Peek() (interface{}, bool) {
 	return el.Value, true
 }
 
-func (s *Stack) Clear() {
-	s.lst.Init()
+func (that *Stack) Clear() {
+	that.lst.Init()
 }
 
-func (s *Stack) IsEmpty() bool {
-	return s.lst.Front() == nil
+func (that *Stack) IsEmpty() bool {
+	return that.lst.Front() == nil
 }

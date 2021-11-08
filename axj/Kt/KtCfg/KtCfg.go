@@ -15,23 +15,35 @@ import (
 // 配置字典别名
 type Cfg map[interface{}]interface{}
 
-func (c Cfg) Map() map[interface{}]interface{} {
-	return c
+func (that Cfg) Map() map[interface{}]interface{} {
+	return that
 }
 
-func (c Cfg) Get(key interface{}) interface{} {
-	return c[key]
+func (that Cfg) Range(fun func(key interface{}, val interface{}) bool) {
+	if fun == nil {
+		return
+	}
+
+	for key, val := range that {
+		if !fun(key, val) {
+			break
+		}
+	}
 }
 
-func (c Cfg) Put(key interface{}, val interface{}) interface{} {
-	_val := c[key]
-	c[key] = val
+func (that Cfg) Get(key interface{}) interface{} {
+	return that[key]
+}
+
+func (that Cfg) Put(key interface{}, val interface{}) interface{} {
+	_val := that[key]
+	that[key] = val
 	return _val
 }
 
-func (c Cfg) Remove(key interface{}) interface{} {
-	_val := c[key]
-	delete(c, key)
+func (that Cfg) Remove(key interface{}) interface{} {
+	_val := that[key]
+	delete(that, key)
 	return _val
 }
 

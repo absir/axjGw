@@ -1,7 +1,7 @@
 package KtCvt
 
 import (
-	Kt2 "axj/Kt/Kt"
+	"axj/Kt/Kt"
 	"container/list"
 	"fmt"
 	"reflect"
@@ -69,7 +69,7 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 			return obj
 		}
 
-		if val, ok := obj.(Kt2.IVal); ok {
+		if val, ok := obj.(Kt.IVal); ok {
 			obj = val.Get()
 			oTyp = reflect.TypeOf(obj)
 			if oTyp == typ {
@@ -994,6 +994,33 @@ func BindMap(target reflect.Value, from map[interface{}]interface{}) {
 	}
 }
 
+func BindKtMap(target reflect.Value, from Kt.Map) {
+	if target.Kind() == reflect.Ptr {
+		target = target.Elem()
+	}
+
+	if target.Kind() != reflect.Struct {
+		return
+	}
+
+	from.Range(func(key interface{}, val interface{}) bool {
+		name := ToString(key)
+		if name == "" {
+			return true
+		}
+
+		field := target.FieldByName(name)
+		if !field.CanSet() {
+			return true
+		}
+
+		val = ToSafe(val, field.Type(), false)
+		// Convert 类型转化
+		field.Set(reflect.ValueOf(val).Convert(field.Type()))
+		return true
+	})
+}
+
 func BindMapVal(target reflect.Value, from reflect.Value) {
 	if from.Kind() != reflect.Map {
 		return
@@ -1030,11 +1057,16 @@ func BindInterface(target interface{}, from interface{}) {
 		return
 	}
 
-	if val, ok := from.(Kt2.IVal); ok {
+	if val, ok := from.(Kt.IVal); ok {
 		from = val.Get()
 		if from == nil {
 			return
 		}
+	}
+
+	if mp, ok := from.(Kt.Map); ok {
+		BindKtMap(reflect.ValueOf(target), mp)
+		return
 	}
 
 	BindMapVal(reflect.ValueOf(target), reflect.ValueOf(from))

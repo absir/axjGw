@@ -100,19 +100,19 @@ func (that *MsgGorm) Insert(msg *MsgD) error {
 
 func (that *MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
 	var msgDS []MsgD = nil
-	that.db.Where("Gid = ? AND Id > ?", gid, lastId).Order("Id").Limit(limit).Find(&msgDS)
+	that.db.Where("gid = ? AND id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
 	return msgDS
 }
 
 func (that *MsgGorm) LastId(gid string, limit int) int64 {
 	var id int64 = 0
-	that.db.Exec("SELECT Id FROM MsgD WHERE gid = ? ORDER BY Id DESC LIMIT ?, 1", gid, limit).First(&id)
+	that.db.Exec("SELECT id FROM msg_ds WHERE gid = ? ORDER BY id DESC LIMIT ?, 1", gid, limit).First(&id)
 	return id
 }
 
 func (that *MsgGorm) Last(gid string, limit int) []MsgD {
 	var msgDS []MsgD = nil
-	that.db.Where("Gid = ?", gid).Order("Id DESC").Limit(limit).Find(&msgDS)
+	that.db.Where("gid = ?", gid).Order("id DESC").Limit(limit).Find(&msgDS)
 	if msgDS != nil {
 		// 倒序
 		mLen := len(msgDS)
@@ -130,24 +130,24 @@ func (that *MsgGorm) Last(gid string, limit int) []MsgD {
 }
 
 func (that *MsgGorm) Delete(id int64) error {
-	return that.db.Exec("DELETE FROM MsgD WHERE id = ?", id).Error
+	return that.db.Exec("DELETE FROM msg_ds WHERE id = ?", id).Error
 }
 
 func (that *MsgGorm) DeleteF(fid int64) error {
-	return that.db.Exec("DELETE FROM MsgD WHERE Fid = ?", fid).Error
+	return that.db.Exec("DELETE FROM msg_ds WHERE fid = ?", fid).Error
 }
 
 func (that *MsgGorm) Clear(oId int64) error {
-	return that.db.Exec("DELETE FROM MsgD WHERE Id <= ?", oId).Error
+	return that.db.Exec("DELETE FROM msg_ds WHERE id <= ?", oId).Error
 }
 
 func (that *MsgGorm) UpdateF(id int64, fid int64) error {
-	return that.db.Exec("UPDATE MsgD SET Fid = ? WHERE Id <= ?", fid, id).Error
+	return that.db.Exec("UPDATE msg_ds SET fid = ? WHERE id <= ?", fid, id).Error
 }
 
 func (that *MsgGorm) FidGet(fid int64, gid string) int64 {
 	var id int64 = 0
-	that.db.Exec("SELECT Id FROM MsgD WHERE fid = ? AND gid = ?", fid, gid).First(&id)
+	that.db.Exec("SELECT id FROM msg_ds WHERE fid = ? AND gid = ?", fid, gid).First(&id)
 	return id
 }
 
@@ -156,7 +156,7 @@ func (that *MsgGorm) FidRange(fid int64, step int, idMax int64, idMin int64, fun
 	var msgDS []MsgD = nil
 	var msgD *MsgD
 	for {
-		that.db.Where("Fid = ? AND Id > ? AND Id < ?", fid, id, idMax).Order("Id").Limit(step).Find(&msgDS)
+		that.db.Where("fid = ? AND id > ? AND id < ?", fid, id, idMax).Order("id").Limit(step).Find(&msgDS)
 		mLen := len(msgDS)
 		if mLen == 0 {
 			break
@@ -193,21 +193,21 @@ func (that *MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
 	}
 
 	if index >= tLen {
-		return that.db.Exec("DELETE FROM MsgTeam WHERE Id <= ?", msgTeam.Id).Error
+		return that.db.Exec("DELETE FROM msg_teams WHERE id <= ?", msgTeam.Id).Error
 
 	} else {
-		return that.db.Exec("UPDATE MsgTeam SET Index = ? WHERE Id <= ?", msgTeam.Id, index).Error
+		return that.db.Exec("UPDATE msg_teams SET index = ? WHERE id <= ?", msgTeam.Id, index).Error
 	}
 }
 
 func (that *MsgGorm) TeamList(tid string, limit int) []MsgTeam {
 	var MsgTeams []MsgTeam = nil
-	that.db.Where("Tid = ?", tid).Order("Id").Limit(limit).Find(&MsgTeams)
+	that.db.Where("tid = ?", tid).Order("id").Limit(limit).Find(&MsgTeams)
 	return MsgTeams
 }
 
 func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 	var tIds []string = nil
-	that.db.Exec("SELECT Tid FROM MsgTeam GROUP BY Tid").Limit(limit).Find(&tIds)
+	that.db.Exec("SELECT tid FROM msg_teams GROUP BY tid").Limit(limit).Find(&tIds)
 	return tIds
 }

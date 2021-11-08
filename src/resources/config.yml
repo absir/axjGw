@@ -1,3 +1,5 @@
 prods:
   acl:
     1: 127.0.0.1:8083
+msg:
+  LastUrl: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local
