@@ -822,7 +822,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 					continue
 				}
 
-				return
+				break
 
 			} else {
 				// 缓冲消息
@@ -833,7 +833,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 						continue
 					}
 
-					return
+					break
 				}
 
 				for j := 0; j < mLen; j++ {
