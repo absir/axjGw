@@ -131,7 +131,8 @@ func (that *msgMng) CheckLoop() {
 }
 
 func (that *msgMng) checkRange(key interface{}, val interface{}) bool {
-	that.checkGrp(key, val.(*MsgGrp))
+	msgGrp, _ := val.(*MsgGrp)
+	that.checkGrp(key, msgGrp)
 	return true
 }
 
@@ -173,14 +174,15 @@ func (that *msgMng) checkGrp(key interface{}, grp *MsgGrp) {
 
 func (that *msgMng) MsgGrp(gid string) *MsgGrp {
 	val, _ := that.grpMap.Load(gid)
-	return val.(*MsgGrp)
+	msgGrp, _ := val.(*MsgGrp)
+	return msgGrp
 }
 
 func (that *msgMng) GetMsgGrp(gid string) *MsgGrp {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	val, _ := that.grpMap.Load(gid)
-	grp := val.(*MsgGrp)
+	grp, _ := val.(*MsgGrp)
 	if grp != nil {
 		if Server.IsProdHash(grp.ghash) {
 			grp.retain()
@@ -278,7 +280,8 @@ func (that *MsgGrp) getClient(unique string) *MsgClient {
 	}
 
 	client, _ := clientMap.Load(unique)
-	return client.(*MsgClient)
+	msgClient, _ := client.(*MsgClient)
+	return msgClient
 }
 
 func (that *MsgGrp) closeOld(old *MsgClient, cid int64, unique string, kick bool) bool {
@@ -320,7 +323,9 @@ func (that *MsgGrp) checkClients() {
 }
 
 func (that *MsgGrp) checkRange(key, val interface{}) bool {
-	that.checkClient(val.(*MsgClient), key.(string))
+	client, _ := val.(*MsgClient)
+	unique, _ := key.(string)
+	that.checkClient(client, unique)
 	return true
 }
 
@@ -344,8 +349,6 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 }
 
 func (that *MsgGrp) Conn(cid int64, unique string, kick bool) *MsgClient {
-	that.locker.Lock()
-	defer that.locker.Unlock()
 	client := that.getClient(unique)
 	if client != nil {
 		if client.cid == cid {
@@ -661,7 +664,7 @@ func (that *MsgSess) queueRun() {
 }
 
 func (that *MsgSess) queueGet() Msg {
-	that.grp.locker.RLocker()
+	that.grp.locker.RLock()
 	defer that.grp.locker.RUnlock()
 	msg, _ := that.queue.Get(0)
 	if msg == nil {
@@ -685,7 +688,9 @@ func (that *MsgSess) LastsStart() {
 }
 
 func (that *MsgSess) LastsStartRange(key, val interface{}) bool {
-	that.LastStart(val.(*MsgClient), key.(string))
+	client, _ := val.(*MsgClient)
+	unique, _ := key.(string)
+	that.LastStart(client, unique)
 	return true
 }
 
@@ -800,6 +805,10 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	if continuous <= 0 {
 		// loop监听下不为0
 		client.lastId = 1
+
+	} else if client.lastId < 2 {
+		// 最小连续监听id为2
+		client.lastId = 2
 	}
 
 	var pushNum int32 = 0
@@ -807,7 +816,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 		lastTime = client.lastTime
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
 		if msg == nil {
-			if lastIn {
+			if lastIn || MsgMng.Db == nil {
 				// 消息已读取完毕
 				if that.conLastLoop(client, lastTime) {
 					continue
@@ -863,7 +872,7 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 	}
 
 	// 遍历Next
-	lastId = &msgD.Id
+	*lastId = msgD.Id
 	if continuous > 0 {
 		client.lastId = *lastId
 	}
@@ -884,7 +893,7 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 			num = 0
 		}
 
-		pushNum = &num
+		*pushNum = num
 	}
 
 	return true
@@ -892,7 +901,7 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 
 func (that *MsgSess) inLastLoop(client *MsgClient) int64 {
 	lastLoop := time.Now().UnixNano()
-	that.grp.locker.RLocker()
+	that.grp.locker.RLock()
 	defer that.grp.locker.RUnlock()
 	client.lastLoop = lastLoop
 	return lastLoop
@@ -969,14 +978,20 @@ func (that *MsgSess) lastLoad() {
 func (that *MsgSess) lastGet(client *MsgClient, lastLoop int64, lastId int64) (Msg, bool) {
 	// 预加载
 	that.lastLoad()
+	// lock锁提前初始化
+	that.getLastQueue()
 	// 锁查找
-	that.grp.locker.RLocker()
+	that.grp.locker.RLock()
 	defer that.grp.locker.RUnlock()
 	if client.lastLoop != lastLoop {
 		return nil, true
 	}
 
-	size := that.getLastQueue().Size()
+	if that.lastQueue == nil {
+		return nil, false
+	}
+
+	size := that.lastQueue.Size()
 	i := 0
 	lastIn := false
 	for ; i < size; i++ {

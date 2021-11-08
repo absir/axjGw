@@ -1,5 +1,7 @@
 package ANet
 
+import "time"
+
 type Handler interface {
 	OnOpen(client Client)
 	OnClose(client Client, err error, reason interface{})
@@ -8,4 +10,5 @@ type Handler interface {
 	OnReqIO(client Client, req int32, uri string, uriI int32, data []byte)
 	Processor() *Processor
 	UriDict() UriDict
+	KickDrt() time.Duration
 }

@@ -183,7 +183,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 				if strings.IndexByte(arg, '=') > 0 {
 					if fun == nil {
 						f := KtCfg.ReadFunc(_cfg, &readMap)
-						fun = &f
+						*fun = f
 					}
 
 					(*fun)(arg[1:])
@@ -205,7 +205,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 					// 分离参数
 					if fun == nil {
 						f := KtCfg.ReadFunc(_cfg, &readMap)
-						fun = &f
+						*fun = f
 					}
 
 					(*fun)(name + "=" + arg)

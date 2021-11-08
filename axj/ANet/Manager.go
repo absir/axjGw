@@ -124,6 +124,10 @@ func (that *Manager) UriDict() UriDict {
 	return that.handlerM.UriDict()
 }
 
+func (that *Manager) KickDrt() time.Duration {
+	return that.handlerM.KickDrt()
+}
+
 // 空闲检测
 func (that *Manager) CheckStop() {
 	that.checkLoop = -1
@@ -145,7 +149,8 @@ func (that *Manager) checkRange(key interface{}, val interface{}) bool {
 }
 
 func (that *Manager) checkClient(key interface{}, val interface{}) {
-	client, _ := val.(ClientM)
+	client, _ := val.(Client)
+	clientM := that.ClientM(client)
 	if client == nil {
 		that.clientMap.Delete(key)
 		return
@@ -158,7 +163,7 @@ func (that *Manager) checkClient(key interface{}, val interface{}) {
 		return
 	}
 
-	if client.GetM().idleTime <= that.checkTime {
+	if clientM.GetM().idleTime <= that.checkTime {
 		// 直接心跳
 		that.OnKeep(client, false)
 		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)
@@ -168,13 +173,12 @@ func (that *Manager) checkClient(key interface{}, val interface{}) {
 }
 
 func (that *Manager) Open(conn Conn, encryKey []byte, compress bool, id int64) Client {
-	handlerM := that.handlerM
-	client := handlerM.New(conn)
+	client := that.handlerM.New(conn)
 	clientM := that.ClientM(client)
 	clientM.id = id
 	clientM.initTime = time.Now().UnixNano()
 	clientM.idleTime = clientM.initTime + that.idleDrt
-	client.Get().Open(conn, that, encryKey, compress)
-	handlerM.OnOpen(client)
+	client.Get().Open(client, conn, that, encryKey, compress)
+	that.OnOpen(client)
 	return client
 }

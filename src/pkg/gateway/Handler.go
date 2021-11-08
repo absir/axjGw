@@ -7,6 +7,7 @@ import (
 	"context"
 	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 const (
@@ -142,6 +143,10 @@ func (that *handler) Processor() *ANet.Processor {
 
 func (that *handler) UriDict() ANet.UriDict {
 	return UriDict
+}
+
+func (that *handler) KickDrt() time.Duration {
+	return Config.KickDrt
 }
 
 func (that *handler) New(conn ANet.Conn) ANet.ClientM {

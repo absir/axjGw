@@ -90,17 +90,18 @@ func (that *server) StartGw() {
 }
 
 func (that *server) ConnLoop(conn ANet.Conn) {
-	client := that.connOpen(conn)
+	client := that.connOpen(&conn)
 	if client != nil {
 		client.Get().ReqLoop()
 
-	} else {
+	} else if conn != nil {
 		// 连接失败关闭
 		conn.Close()
 	}
 }
 
-func (that *server) connOpen(conn ANet.Conn) ANet.Client {
+func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
+	conn := *pConn
 	manager := that.Manager
 	// 交换密钥
 	var encryptKey []byte = nil
@@ -146,6 +147,7 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 		Data: loginData,
 		Addr: conn.RemoteAddr(),
 	})
+
 	if err != nil || login == nil {
 		if err == io.EOF {
 			AZap.Logger.Debug("serv acl Login EOF")
@@ -162,9 +164,18 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 		return nil
 	}
 
+	if login.KickData != nil {
+		// 登录失败被踢
+		processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
+		*pConn = nil
+		go ANet.CloseDelay(conn, Config.KickDrt)
+		return nil
+	}
+
 	// 客户端注册
 	client := manager.Open(conn, encryptKey, compress, cid)
 	clientG := Handler.ClientG(client)
+	// clientG.Kick()
 	// 用户状态设置
 	clientG.SetId(login.Uid, login.Sid, login.Unique)
 	if clientG.Gid() != "" {
@@ -190,13 +201,13 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 	// 消息处理
 	if clientG.Gid() != "" {
 		// 清理消息队列配置
-		result, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
+		rep, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
 			Gid:    clientG.gid,
 			Cid:    clientG.Id(),
 			Unique: clientG.Unique(),
 			Clear:  login.Clear,
 		})
-		if result == nil || result.Id < R_SUCC_MIN {
+		if Server.Id32(rep) < R_SUCC_MIN {
 			clientG.Close(err, nil)
 			return nil
 		}
@@ -218,7 +229,7 @@ func (that *server) connOpen(conn ANet.Conn) ANet.Client {
 
 	// 登录成功
 	client.Get().Rep(true, ANet.REQ_LOOP, "", 0, login.Data, false, false, 0)
-	if !client.Get().IsClosed() {
+	if client.Get().IsClosed() {
 		return nil
 	}
 
@@ -242,6 +253,12 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 		return KtStr.Matchers(matchers, ip, true)
 	})
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				AZap.Logger.Error("grpc server recover from err ", zap.Reflect("err", err))
+			}
+		}()
+
 		if err := serv.Serve(lisIps); err != nil {
 			AZap.Logger.Error("grpc server err "+addr, zap.Error(err))
 		}
@@ -283,7 +300,8 @@ func (that *server) GetProds(name string) *Prods {
 		return nil
 	}
 
-	return val.(*Prods)
+	prods, _ := val.(*Prods)
+	return prods
 }
 
 func (that *server) PutProds(name string, prods *Prods) {

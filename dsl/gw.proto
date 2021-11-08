@@ -65,6 +65,8 @@ message LoginRep {
     bool clear = 8;
     // 登录回调
     bool back = 9;
+    // 登录失败
+    bytes kickData = 10;
 }
 
 message LoginBack {

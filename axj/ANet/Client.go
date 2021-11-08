@@ -43,6 +43,7 @@ type Client interface {
 }
 
 type ClientCnn struct {
+	client   Client
 	conn     Conn
 	handler  Handler
 	encryKey []byte
@@ -50,6 +51,10 @@ type ClientCnn struct {
 	locker   sync.Locker
 	closed   int8
 	limiter  Util.Limiter
+}
+
+func (that *ClientCnn) Client() Client {
+	return that.client
 }
 
 func (that *ClientCnn) Locker() sync.Locker {
@@ -60,7 +65,12 @@ func (that *ClientCnn) IsClosed() bool {
 	return that.closed != 0
 }
 
-func (that *ClientCnn) Open(conn Conn, handler Handler, encryKey []byte, compress bool) {
+func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey []byte, compress bool) {
+	if client == nil {
+		client = that
+	}
+
+	that.client = client
 	that.conn = conn
 	that.handler = handler
 	that.encryKey = encryKey
@@ -118,7 +128,7 @@ func (that *ClientCnn) close(err error, reason interface{}, inner bool) {
 	handler := that.handler
 	if handler != nil {
 		that.handler = nil
-		handler.OnClose(that, err, reason)
+		handler.OnClose(that.client, err, reason)
 	}
 
 	if err != nil || reason != nil {
@@ -182,7 +192,8 @@ func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {
 
 	handler := that.handler
 	// 保持连接
-	handler.OnKeep(that, true)
+	handler.OnKeep(that.client, false)
+
 	// 获取请求
 	err, req, uri, uriI, data := handler.Processor().Req(that.conn, that.encryKey)
 	if uri == "" && uriI > 0 {
@@ -210,7 +221,7 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 	}
 
 	// 保持连接
-	handler.OnKeep(that, false)
+	handler.OnKeep(that.client, false)
 
 	// 加密key
 	var encryKey []byte = nil
@@ -233,7 +244,7 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 	return err
 }
 
-func closeDelay(conn Conn, drt time.Duration) {
+func CloseDelay(conn Conn, drt time.Duration) {
 	if drt < 1 {
 		drt = 1
 	}
@@ -249,7 +260,11 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 
 	conn := that.conn
 	if conn != nil {
-		go closeDelay(conn, drt)
+		if drt <= 0 {
+			drt = that.handler.KickDrt()
+		}
+
+		go CloseDelay(conn, drt)
 		that.conn = nil
 		that.handler.Processor().Rep(nil, true, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
 	}

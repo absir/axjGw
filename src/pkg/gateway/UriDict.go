@@ -29,7 +29,10 @@ var UriDict *uriDict
 func initUriDict() {
 	cfg := APro.FileCfg("uriDict.properties")
 	if cfg == nil {
-		UriDict = nil
+		UriDict = new(uriDict)
+		UriDict.UriMapHash = ""
+		UriDict.uriMapUriI = map[string]int32{}
+		UriDict.uriIMapUri = map[int32]string{}
 
 	} else {
 		UriDict = new(uriDict)

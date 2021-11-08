@@ -293,7 +293,7 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 	_buff := *buff
 	if _buff == nil || len(_buff) < 4 {
 		_buff = make([]byte, 4)
-		buff = &_buff
+		*buff = _buff
 	}
 
 	// 写入头
@@ -440,15 +440,15 @@ func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh 
 
 	// 写入锁
 	if locker != nil {
-		defer locker.Unlock()
 		locker.Lock()
+		defer locker.Unlock()
 	}
 
 	// buff准备
 	_buff := *buff
 	if _buff == nil {
 		_buff = make([]byte, 4)
-		buff = &_buff
+		*buff = _buff
 	}
 
 	// 写入批量头状态

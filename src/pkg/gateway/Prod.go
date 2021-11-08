@@ -64,7 +64,7 @@ func (that *Prod) initClient(locker bool) error {
 	that.gwIClient = nil
 	that.aclClient = nil
 	that.passClient = nil
-	client, err := grpc.Dial(that.url)
+	client, err := grpc.Dial(that.url, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,25 @@ func (that *Prod) initClient(locker bool) error {
 }
 
 func (that *Prod) GetGWIClient() gw.GatewayIClient {
-	that.initClient(true)
+	err := that.initClient(true)
+	if that.client == nil {
+		if Server.gatewayISC != nil {
+			if that.id == Config.WorkId {
+				that.gwIClient = Server.gatewayISC
+				return that.gwIClient
+			}
+		}
+
+		if err == nil {
+			AZap.Logger.Warn("initClient err nil")
+
+		} else {
+			AZap.Logger.Warn("initClient err " + err.Error())
+		}
+
+		return nil
+	}
+
 	if that.gwIClient == nil {
 		that.locker.Lock()
 		defer that.locker.Unlock()
@@ -95,7 +113,12 @@ func (that *Prod) GetGWIClient() gw.GatewayIClient {
 }
 
 func (that *Prod) GetAclClient() gw.AclClient {
-	that.initClient(true)
+	err := that.initClient(true)
+	if that.client == nil {
+		AZap.Logger.Warn("initClient err " + err.Error())
+		return nil
+	}
+
 	if that.aclClient == nil {
 		that.locker.Lock()
 		defer that.locker.Unlock()
@@ -108,7 +131,12 @@ func (that *Prod) GetAclClient() gw.AclClient {
 }
 
 func (that *Prod) GetPassClient() gw.PassClient {
-	that.initClient(true)
+	err := that.initClient(true)
+	if that.client == nil {
+		AZap.Logger.Warn("initClient err " + err.Error())
+		return nil
+	}
+
 	if that.passClient == nil {
 		that.locker.Lock()
 		defer that.locker.Unlock()

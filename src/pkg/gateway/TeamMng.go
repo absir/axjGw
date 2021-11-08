@@ -25,7 +25,7 @@ func (that *teamMng) Dirty(tid string) {
 
 func (that *teamMng) GetTeam(tid string) *gw.TeamRep {
 	val, _ := that.teamMap.Get(tid)
-	team := val.(*gw.TeamRep)
+	team, _ := val.(*gw.TeamRep)
 	if team != nil {
 		return team
 	}

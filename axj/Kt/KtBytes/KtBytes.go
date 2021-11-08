@@ -50,7 +50,7 @@ func GetInt(bs []byte, off int, offP *int) int32 {
 	val += int32(bs[off] & 0xFF)
 	off++
 	if offP != nil {
-		offP = &off
+		*offP = off
 	}
 
 	return val

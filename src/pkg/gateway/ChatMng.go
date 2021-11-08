@@ -94,7 +94,7 @@ func (that *chatMng) checkMsgD(msgD *MsgD) bool {
 }
 
 func (that *chatMng) checkChatTeam(key, val interface{}) bool {
-	chatTeam := val.(*ChatTeam)
+	chatTeam, _ := val.(*ChatTeam)
 	if chatTeam == nil {
 		that.teamMap.Delete(key)
 
@@ -108,7 +108,7 @@ func (that *chatMng) checkChatTeam(key, val interface{}) bool {
 const (
 	F_SUCC     = 0
 	F_FAIL     = 1
-	R_SUCC_MIN = 32
+	R_SUCC_MIN = 16
 )
 
 func (that *chatMng) MsgSucc(id int64) error {
@@ -155,12 +155,12 @@ type ChatTeam struct {
 
 func (that *chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 	val, _ := that.teamMap.Load(tid)
-	chatTeam := val.(*ChatTeam)
+	chatTeam, _ := val.(*ChatTeam)
 	if chatTeam == nil {
 		that.locker.Lock()
 		defer that.locker.Unlock()
 		val, _ = that.teamMap.Load(tid)
-		chatTeam = val.(*ChatTeam)
+		chatTeam, _ = val.(*ChatTeam)
 		if chatTeam == nil {
 			chatTeam = &ChatTeam{
 				tid: tid,
@@ -199,7 +199,8 @@ func (that *ChatTeam) getMsgTeam() *MsgTeam {
 	}
 
 	val, _ := that.msgQueue.Get(0)
-	return val.(*MsgTeam)
+	msgTeam, _ := val.(*MsgTeam)
+	return msgTeam
 }
 
 func (that *ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
