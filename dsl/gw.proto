@@ -18,35 +18,44 @@ enum Result {
 }
 
 message CidReq {
+    // 客户端编号
     int64 cid = 1;
 }
 
 message CidsReq {
+    // 客户端编号列表
     repeated int64 cids = 1;
 }
 
 message UIdRep {
+    // 整形用户编号
     int64 uid = 1;
+    // 字符串用户编号
     string sid = 2;
 }
 
 message UIdsRep {
+    // 用户编号列表
     repeated UIdRep uidReps = 1;
 }
 
 message GidReq {
+    // 群主、管道编号
     string gid = 1;
 }
 
 message Id64Rep {
+    // 长整编号
     int64 id = 1;
 }
 
 message Id32Rep {
+    // 整形编号
     int32 id = 1;
 }
 
 message DataRep {
+    // 二进制数据
     bytes data = 1;
 }
 
@@ -85,9 +94,13 @@ message LoginRep {
 }
 
 message LoginBack {
+    // 客户端编号
     int64 cid = 1;
+    // 客户端登录，同用户下唯一标识
     string unique = 2;
+    // 用户整型编号
     int64 uid = 3;
+    // 用户字符编号
     string sid = 4;
 }
 
@@ -119,10 +132,15 @@ service Acl {
 }
 
 message PassReq {
+    // 客户端编号
     int64 cid = 1;
+    // 用户整型编号
     int64 uid = 2;
+    // 用户字符编号
     string sid = 3;
+    // 请求路径
     string uri = 4;
+    // 请求数据
     bytes data = 5;
 }
 
@@ -134,39 +152,58 @@ service Pass {
 }
 
 message CloseReq {
+    // 客户端编号
     int64 cid = 1;
+    // 关闭原因
     string reason = 2;
 }
 
 message KickReq {
+    // 客户端编号
     int64 cid = 1;
+    // 踢出原因
     bytes data = 2;
 }
 
 message RidReq {
+    // 客户端编号
     int64 cid = 1;
+    // Pass组名
     string name = 2;
+    // Pass组服务编号
     int32 rid = 3;
 }
 
 message RidsReq {
+    // 客户端编号
     int64 cid = 1;
+    // Pass组名，编号映射
     map<string, int32> rids = 2;
 }
 
 message PushReq {
+    // 客户端编号
     int64 cid = 1;
+    // 路径
     string uri = 2;
+    // 数据
     bytes data = 3;
+    // 是否数据隔离，gw用不到
     bool isolate = 4;
+    // PUSHI 携带消息编号，gw一般不用
     int64 id = 5;
 }
 
 message GPushReq {
+    // 群组，管道编号
     string gid = 1;
+    // 路径
     string uri = 2;
+    // 数据
     bytes data = 3;
+    // qs 消息质量，0 内存发送成功 1 队列发送[unique 唯一标识(消息队列，一个标识只需要最新数据)] 2 last队列 3 last 队列持久化
     int32 qs = 4;
+    // qs 为1时， 唯一unique会覆盖更新
     string unique = 5;
     bool queue = 6;
     int64 fid = 7;

@@ -686,12 +686,19 @@ func (that *MsgSess) queueRun() {
 func (that *MsgSess) queueGet() Msg {
 	that.grp.locker.RLock()
 	defer that.grp.locker.RUnlock()
-	msg, _ := that.queue.Get(0)
-	if msg == nil {
-		return nil
-	}
+	for {
+		if that.queue.IsEmpty() {
+			return nil
+		}
 
-	return msg.(Msg)
+		msg, _ := that.queue.Get(0)
+		if msg == nil {
+			that.queue.Pop()
+			continue
+		}
+
+		return msg.(Msg)
+	}
 }
 
 func (that *MsgSess) queueRemove(msg Msg) {
