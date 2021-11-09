@@ -20,7 +20,7 @@ type msgMng struct {
 	LastLimit int           // last消息队类，初始化载入列表数
 	LastMax   int           // last消息队列大小
 	LastLoad  bool          // 是否执行 last消息队类，初始化载入列表数
-	LastUrl   string        // 消息持久化，数据库连接
+	LastUri   string        // 消息持久化，数据库连接
 	CheckDrt  time.Duration // 执行检查逻辑，间隔
 	LiveDrt   int64         // 连接断开，存活时间
 	IdleDrt   int64         // 连接检查，间隔
@@ -43,9 +43,9 @@ func initMsgMng() {
 	MsgMng = &msgMng{
 		QueueMax:  20,
 		NextLimit: 10,
-		LastMax:   20,
-		LastLoad:  false,
-		LastUrl:   "",
+		LastMax:   21, // over load cover msgs
+		LastLoad:  true,
+		LastUri:   "",
 		CheckDrt:  5000,
 		LiveDrt:   15000,
 		IdleDrt:   30000,
@@ -60,8 +60,8 @@ func initMsgMng() {
 	that.IdleDrt = that.IdleDrt * int64(time.Millisecond)
 
 	// 消息持久化
-	if that.LastUrl != "" {
-		db, err := gorm.Open(mysql.Open(that.LastUrl), &gorm.Config{})
+	if that.LastUri != "" {
+		db, err := gorm.Open(mysql.Open(that.LastUri), &gorm.Config{})
 		Kt.Panic(err)
 
 		msgGorm := &MsgGorm{
@@ -818,6 +818,10 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	for lastLoop == client.lastLoop {
 		lastTime = client.lastTime
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
+		if !lastIn && MsgMng.Db != nil {
+			msg = nil
+		}
+
 		if msg == nil {
 			if lastIn || MsgMng.Db == nil {
 				// 消息已读取完毕
@@ -889,7 +893,7 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 				ConnVer:    client.connVer,
 				Continuous: true,
 			})
-			if that.OnResult(rep, err, ER_LAST, client, unique) {
+			if !that.OnResult(rep, err, ER_LAST, client, unique) {
 				return false
 			}
 

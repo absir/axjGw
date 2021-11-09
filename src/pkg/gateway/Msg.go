@@ -106,7 +106,7 @@ func (that *MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
 
 func (that *MsgGorm) LastId(gid string, limit int) int64 {
 	var id int64 = 0
-	that.db.Exec("SELECT id FROM msg_ds WHERE gid = ? ORDER BY id DESC LIMIT ?, 1", gid, limit).First(&id)
+	that.db.Raw("SELECT id FROM msg_ds WHERE gid = ? ORDER BY id DESC LIMIT ?, 1", gid, limit).Find(&id)
 	return id
 }
 
@@ -147,7 +147,7 @@ func (that *MsgGorm) UpdateF(id int64, fid int64) error {
 
 func (that *MsgGorm) FidGet(fid int64, gid string) int64 {
 	var id int64 = 0
-	that.db.Exec("SELECT id FROM msg_ds WHERE fid = ? AND gid = ?", fid, gid).First(&id)
+	that.db.Raw("SELECT id FROM msg_ds WHERE fid = ? AND gid = ?", fid, gid).Find(&id)
 	return id
 }
 
@@ -208,6 +208,6 @@ func (that *MsgGorm) TeamList(tid string, limit int) []MsgTeam {
 
 func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 	var tIds []string = nil
-	that.db.Exec("SELECT tid FROM msg_teams GROUP BY tid").Limit(limit).Find(&tIds)
+	that.db.Raw("SELECT tid FROM msg_teams GROUP BY tid").Limit(limit).Find(&tIds)
 	return tIds
 }

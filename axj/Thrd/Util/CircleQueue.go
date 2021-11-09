@@ -1,31 +1,31 @@
 package Util
 
 type CircleQueue struct {
+	maxM  int
 	array []interface{}
-	max   int
 	head  int
 	tail  int
 }
 
 func NewCircleQueue(max int) *CircleQueue {
 	array := new(CircleQueue)
-	array.array = make([]interface{}, max)
-	array.max = max
+	array.maxM = max + 1
+	array.array = make([]interface{}, array.maxM)
 	//array.head = 0
 	//array.tail = 0
 	return array
 }
 
 func (that *CircleQueue) mod(i int) int {
-	if i < that.max {
+	if i < that.maxM {
 		return i
 	}
 
-	return i - that.max
+	return i - that.maxM
 }
 
 func (that *CircleQueue) Size() int {
-	return that.mod(that.max + that.tail - that.head)
+	return that.mod(that.maxM + that.tail - that.head)
 }
 
 func (that *CircleQueue) IsEmpty() bool {
@@ -40,7 +40,6 @@ func (that *CircleQueue) Push(val interface{}, cover bool) bool {
 	if that.IsFull() {
 		if cover {
 			that.head = that.mod(that.head + 1)
-			return true
 
 		} else {
 			return false
@@ -86,7 +85,7 @@ func (that *CircleQueue) Set(idx int, val interface{}) bool {
 func (that *CircleQueue) Clear() {
 	that.head = 0
 	that.tail = 0
-	for i := that.max - 1; i >= 0; i-- {
+	for i := that.maxM - 1; i >= 0; i-- {
 		that.array[i] = nil
 	}
 }
