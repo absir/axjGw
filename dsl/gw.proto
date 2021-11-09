@@ -205,52 +205,80 @@ message GPushReq {
     int32 qs = 4;
     // qs 为1时， 唯一unique会覆盖更新
     string unique = 5;
+    // 持久同时是否强制创建队列
     bool queue = 6;
+    // PUSHI 携带消息编号，gw一般不用
     int64 fid = 7;
+    // 是否数据隔离，gw用不到
     bool isolate = 8;
 }
 
 message GConnReq {
+    // 客户端编号
     int64 cid = 1;
+    // 群组，管道编号
     string gid = 2;
+    // 群组，管道编号下连接唯一编号，可以cid或用户uid相同
     string unique = 3;
+    // 连接相同唯一编号后，踢出旧客户端，下线，gw一般不用
     bool kick = 4;
-    // 新版本
+    // 连接信息新版本，gw一般不用
     bool newVer = 5;
 }
 
 message GDiscReq {
+    // 客户端编号
     int64 cid = 1;
+    // 群组，管道编号
     string gid = 2;
+    // 群组，管道编号下连接唯一编号，必须和连接一致
     string unique = 3;
+    // 连接信息新版本
     int32 connVer = 4;
+    // 同时踢出旧客户端，下线，gw一般不用
     bool kick = 5;
 }
 
 message GLastsReq {
+    // 群组，管道编号
     string gid = 1;
+    // 客户端编号
     int64 cid = 2;
+    // 群组，管道编号下连接唯一编号，可以cid或用户uid相同
     string unique = 3;
+    // 最后消息编号 <65535时 = 获取缓存消息数量， lastId = 1
     int64 lastId = 4;
+    // <= 0 不连续获取， 每次通过REQ_LAST 通知更新后，主动再调用GLasts， =1 不发送REQ_LASTC管道LASTC消息 >1 最多多少条消息发送管道LASTC消息
     int32 continuous = 5;
 }
 
 message SendReq {
+    // 发送放用户编号
     string fromId = 1;
+    // 接收方用户编号
     string toId = 2;
+    // 消息路径
     string uri = 3;
+    // 消息数据
     bytes data = 4;
+    // 是否持久消息
     bool db = 5;
 }
 
 message TPushReq {
+    // 发送方用户编号
     string fromId = 1;
+    // 群编号
     string tid = 2;
     // 读扩散
     bool readFeed = 3;
+    // 消息路径
     string uri = 4;
+    // 消息数据
     bytes data = 5;
+    // 是否持久消息
     bool db = 6;
+    // 持久同时是否强制创建队列
     bool queue = 7;
 }
 
