@@ -16,6 +16,7 @@ type ClientG struct {
 	sid      string    // 用户编号string
 	gid      string    // 消息组编号
 	unique   string    // 唯一标识
+	discBack bool      // 断线回调
 	hash     int       // hash值
 	rid      int32     // 请求编号
 	ridMap   *sync.Map // 请求字典
@@ -40,7 +41,7 @@ func (that *ClientG) Unique() string {
 	return that.unique
 }
 
-func (that *ClientG) SetId(uid int64, sid string, unique string) {
+func (that *ClientG) SetId(uid int64, sid string, unique string, discBack bool) {
 	that.uid = uid
 	that.sid = sid
 	if uid > 0 {
@@ -51,6 +52,7 @@ func (that *ClientG) SetId(uid int64, sid string, unique string) {
 	}
 
 	that.unique = unique
+	that.discBack = discBack
 	that.hash = -1
 }
 

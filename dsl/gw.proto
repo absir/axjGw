@@ -78,14 +78,17 @@ message LoginRep {
     bool clear = 8;
     // 登录回调
     bool back = 9;
+    // 断线回调
+    bool discBack = 10;
     // 登录失败
-    bytes kickData = 10;
+    bytes kickData = 11;
 }
 
 message LoginBack {
     int64 cid = 1;
-    int64 uid = 2;
-    string sid = 3;
+    string unique = 2;
+    int64 uid = 3;
+    string sid = 4;
 }
 
 message Member {
@@ -109,6 +112,8 @@ service Acl {
     rpc login(LoginReq) returns (LoginRep);
     // 登录回调
     rpc loginBack(LoginBack) returns (Id32Rep);
+    // 断线回调
+    rpc discBack(LoginBack) returns (Id32Rep);
     // 组查询 tid
     rpc team(GidReq) returns (TeamRep);
 }

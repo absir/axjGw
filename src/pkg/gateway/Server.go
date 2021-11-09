@@ -205,7 +205,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	clientG := Handler.ClientG(client)
 	// clientG.Kick()
 	// 用户状态设置
-	clientG.SetId(login.Uid, login.Sid, login.Unique)
+	clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
 	if clientG.Gid() != "" {
 		// 用户连接保持
 		clientG.ConnKeep()
@@ -244,9 +244,10 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	// 注册成功回调
 	if login.Back {
 		rep, err := aclClient.LoginBack(that.Context, &gw.LoginBack{
-			Cid: clientG.Id(),
-			Uid: clientG.uid,
-			Sid: clientG.sid,
+			Cid:    clientG.Id(),
+			Unique: clientG.unique,
+			Uid:    clientG.uid,
+			Sid:    clientG.sid,
 		})
 
 		if Server.Id32(rep) < R_SUCC_MIN {

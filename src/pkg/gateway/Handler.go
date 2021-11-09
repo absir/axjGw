@@ -41,12 +41,12 @@ func (that *handler) ClientG(client ANet.Client) *ClientG {
 }
 
 func (that *handler) OnOpen(client ANet.Client) {
-	clientG := new(ClientG)
+	clientG := that.ClientG(client)
 	clientG.ConnKeep()
 }
 
 func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) {
-	clientG := new(ClientG)
+	clientG := that.ClientG(client)
 	if clientG.gid != "" {
 		// 断开连接通知
 		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, &gw.GDiscReq{
@@ -54,6 +54,15 @@ func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) 
 			Gid:    clientG.gid,
 			Unique: clientG.unique,
 			//Kick:   true,
+		})
+	}
+
+	if clientG.discBack {
+		Server.GetProds(Config.AclProd).GetProdHash(clientG.Hash()).GetAclClient().DiscBack(Server.Context, &gw.LoginBack{
+			Cid:    clientG.Id(),
+			Unique: clientG.unique,
+			Uid:    clientG.uid,
+			Sid:    clientG.sid,
 		})
 	}
 }
@@ -156,7 +165,7 @@ func (that *handler) New(conn ANet.Conn) ANet.ClientM {
 }
 
 func (that *handler) Check(time int64, client ANet.Client) {
-	clientG := new(ClientG)
+	clientG := that.ClientG(client)
 	if clientG.connTime < time {
 		clientG.ConnKeep()
 		go clientG.ConnCheck()
