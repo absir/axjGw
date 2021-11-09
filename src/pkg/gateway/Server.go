@@ -272,7 +272,17 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 	AZap.Logger.Info("StartGrpc: " + addr)
 	lis, err := net.Listen("tcp", addr)
 	Kt.Panic(err)
-	serv := grpc.NewServer()
+	recoverFun := func() {
+		if err := recover(); err != nil {
+			AZap.Logger.Warn("grpc stream err", zap.Reflect("err", err))
+		}
+	}
+	serv := grpc.NewServer(
+		grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+			defer recoverFun()
+			return handler(ctx, req)
+		}),
+	)
 	gw.RegisterGatewayIServer(serv, that.gatewayISC.Server)
 	gw.RegisterGatewayServer(serv, gateway)
 	matchers := KtStr.ForMatchers(ips, false, true)
@@ -280,12 +290,6 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 		return KtStr.Matchers(matchers, ip, true)
 	})
 	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				AZap.Logger.Error("grpc server recover from err ", zap.Reflect("err", err))
-			}
-		}()
-
 		if err := serv.Serve(lisIps); err != nil {
 			AZap.Logger.Error("grpc server err "+addr, zap.Error(err))
 		}
