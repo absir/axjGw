@@ -2,10 +2,11 @@ package gateway
 
 import (
 	"axj/APro"
+	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtEncry"
-	"axj/Kt/KtJson"
 	"axj/Kt/KtUnsafe"
+	jsoniter "github.com/json-iterator/go"
 )
 
 type uriDict struct {
@@ -39,8 +40,8 @@ func initUriDict() {
 		UriDict.uriMapUriI = map[string]int32{}
 		UriDict.uriIMapUri = map[int32]string{}
 		for key, val := range cfg {
-			uri := KtCvt.ToType(key, KtCvt.String).(string)
-			uriI := KtCvt.ToType(val, KtCvt.Int32).(int32)
+			uriI := KtCvt.ToType(key, KtCvt.Int32).(int32)
+			uri := KtCvt.ToType(val, KtCvt.String).(string)
 			if uri == "" || uriI <= 0 {
 				continue
 			}
@@ -49,7 +50,14 @@ func initUriDict() {
 			UriDict.uriIMapUri[uriI] = uri
 		}
 
-		UriDict.UriMapJson, _ = KtJson.ToJsonStr(UriDict.uriMapUriI)
+		// 排序保证hash一致
+		config := jsoniter.Config{
+			SortMapKeys: true,
+		}
+
+		json, err := config.Froze().MarshalToString(UriDict.uriMapUriI)
+		Kt.Panic(err)
+		UriDict.UriMapJson = json
 		UriDict.UriMapHash = KtEncry.EnMd5(KtUnsafe.StringToBytes(UriDict.UriMapJson))
 		UriDict.UriMapJsonData = KtUnsafe.StringToBytes(UriDict.UriMapJson)
 	}
