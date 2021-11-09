@@ -8,6 +8,7 @@ import (
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
 	"context"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"io"
@@ -17,11 +18,14 @@ import (
 )
 
 type server struct {
+	Locker     sync.Locker
 	Manager    *ANet.Manager
 	Context    context.Context
 	prodsMap   *sync.Map
 	prodsGw    *Prods
 	gatewayISC *gatewayISC
+	cron       *cron.Cron
+	started    bool
 }
 
 var Server = new(server)
@@ -42,7 +46,24 @@ func (that *server) Id64(rep *gw.Id64Rep) int64 {
 	return rep.Id
 }
 
+func (that *server) Cron() *cron.Cron {
+	if that.cron == nil {
+		that.Locker.Lock()
+		defer that.Locker.Unlock()
+		if that.cron == nil {
+			that.cron = cron.New(cron.WithParser(cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)))
+			if that.started {
+				that.cron.Start()
+			}
+		}
+	}
+
+	return that.cron
+}
+
 func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayIServer) {
+	// 全局锁
+	that.Locker = new(sync.Mutex)
 	// 配置初始化
 	initConfig(workId)
 	// 初始化服务
@@ -87,6 +108,12 @@ func (that *server) StartGw() {
 	go that.Manager.CheckLoop()
 	go MsgMng.CheckLoop()
 	go ChatMng.CheckLoop()
+	that.Locker.Lock()
+	defer that.Locker.Unlock()
+	that.started = true
+	if that.cron != nil {
+		that.cron.Start()
+	}
 }
 
 func (that *server) ConnLoop(conn ANet.Conn) {

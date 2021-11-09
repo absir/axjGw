@@ -10,6 +10,7 @@ import (
 	"errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"strings"
 	"sync"
 	"time"
 )
@@ -21,6 +22,8 @@ type msgMng struct {
 	LastMax   int           // last消息队列大小
 	LastLoad  bool          // 是否执行 last消息队类，初始化载入列表数
 	LastUri   string        // 消息持久化，数据库连接
+	ClearCron string        // 消息清理，执行周期
+	ClearDay  int64         // 清理消息过期天数
 	CheckDrt  time.Duration // 执行检查逻辑，间隔
 	LiveDrt   int64         // 连接断开，存活时间
 	IdleDrt   int64         // 连接检查，间隔
@@ -46,6 +49,8 @@ func initMsgMng() {
 		LastMax:   21, // over load cover msgs
 		LastLoad:  true,
 		LastUri:   "",
+		ClearCron: "0 0 3 * * *",
+		ClearDay:  30,
 		CheckDrt:  5000,
 		LiveDrt:   15000,
 		IdleDrt:   30000,
@@ -59,6 +64,11 @@ func initMsgMng() {
 	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
 	that.IdleDrt = that.IdleDrt * int64(time.Millisecond)
 
+	// 属性初始化
+	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
+	that.locker = new(sync.Mutex)
+	that.grpMap = new(sync.Map)
+
 	// 消息持久化
 	if that.LastUri != "" {
 		db, err := gorm.Open(mysql.Open(that.LastUri), &gorm.Config{})
@@ -70,12 +80,11 @@ func initMsgMng() {
 		// 自动创建表
 		msgGorm.AutoMigrate()
 		that.Db = msgGorm
+		if that.ClearCron != "" && !strings.HasPrefix(that.ClearCron, "#") {
+			Server.Cron().AddFunc(that.ClearCron, that.ClearPass)
+			that.ClearPass()
+		}
 	}
-
-	// 属性初始化
-	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
-	that.locker = new(sync.Mutex)
-	that.grpMap = new(sync.Map)
 }
 
 type MsgGrp struct {
@@ -113,6 +122,13 @@ type MsgClient struct {
 
 func (that *MsgClient) ConnVer() int32 {
 	return that.connVer
+}
+
+func (that *msgMng) ClearPass() {
+	if that.Db != nil && that.ClearDay > 0 {
+		oId := that.idWorkder.Timestamp(time.Now().UnixNano() - that.ClearDay*24*int64(time.Hour))
+		that.Db.Clear(oId)
+	}
 }
 
 // 空闲检测
