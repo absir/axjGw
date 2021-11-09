@@ -301,6 +301,7 @@ func (that *MsgGrp) closeOld(old *MsgClient, cid int64, unique string, kick bool
 		sess.clientMap.Delete(unique)
 	}
 
+	old.connVer = 0
 	sess.clientNum--
 	if kick {
 		// 关闭通知
@@ -798,6 +799,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 
 	lastTime := client.lastTime
 	lastLoop := that.inLastLoop(client)
+	connVer := client.connVer
 	defer that.outLastLoop(client, unique, lastLoop, lastTime)
 	if lastId < 65535 && MsgMng.Db != nil {
 		// 从最近多少条开始
@@ -815,7 +817,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	}
 
 	var pushNum int32 = 0
-	for lastLoop == client.lastLoop {
+	for lastLoop == client.lastLoop && connVer == client.connVer {
 		lastTime = client.lastTime
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
 		if !lastIn && MsgMng.Db != nil {
