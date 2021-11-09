@@ -12,7 +12,7 @@ func (that *Stack) Init() *Stack {
 }
 
 func (that *Stack) Push(val interface{}) {
-	that.lst.PushBack(that)
+	that.lst.PushBack(val)
 }
 
 func (that *Stack) Pop() interface{} {

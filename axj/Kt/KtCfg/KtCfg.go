@@ -208,12 +208,17 @@ type Read func(str string)
 
 var splits = []byte("=:")
 
+type BLinkedMap struct {
+	b  int
+	mp *Kt.LinkedMap
+}
+
 func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 	var bBuilder *strings.Builder
 	var bAppend int
 	var yB int
 	var yMap *Kt.LinkedMap
-	var yMaps *Kt.Stack
+	var ybMaps *Kt.Stack
 	return func(str string) {
 		sLen := len(str)
 		sLast := sLen - 1
@@ -291,49 +296,43 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			}
 
 			// yml支持
-			if str[index] == ':' && len(strings.TrimSpace(str[index:])) == 1 {
+			if str[index] == ':' {
 				b := index - nLen
-				if yB < b {
-					if yMap != nil {
-						if yMaps == nil {
-							yMaps = new(Kt.Stack).Init()
-						}
-
-						yMaps.Push(yMap)
+				for {
+					if b > yB || ybMaps == nil {
+						break
 					}
 
-					lmap := new(Kt.LinkedMap).Init()
-					if yMap == nil {
-						cfg.Put(name, lmap)
-
-					} else {
-						yMap.Put(name, lmap)
+					if ybMaps.IsEmpty() {
+						yMap = nil
+						break
 					}
 
-					yMap = lmap
-
-				} else {
-					if b == 0 {
-						// 根配置
-						if yMaps != nil {
-							yMaps.Clear()
-						}
-
-						yMap = new(Kt.LinkedMap).Init()
-						cfg.Put(name, yMap)
-
-					} else {
-						if yMaps == nil || yMaps.IsEmpty() {
-							yMap = nil
-
-						} else {
-							yMap = yMaps.Pop().(*Kt.LinkedMap)
-						}
-					}
+					ybMap := ybMaps.Pop().(*BLinkedMap)
+					yB = ybMap.b
+					yMap = ybMap.mp
 				}
 
-				yB = b
-				return
+				// yaml字典key 例如 server:
+				if len(strings.TrimSpace(str[index:])) == 1 {
+					mp := new(Kt.LinkedMap).Init()
+					if yMap == nil {
+						cfg.Put(name, mp)
+
+					} else {
+						yMap.Put(name, mp)
+					}
+
+					yB = b
+					yMap = mp
+
+					if ybMaps == nil {
+						ybMaps = new(Kt.Stack).Init()
+					}
+
+					ybMaps.Push(&BLinkedMap{b: yB, mp: yMap})
+					return
+				}
 			}
 
 			eIndex := index
