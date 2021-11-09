@@ -21,6 +21,19 @@ message CidReq {
     int64 cid = 1;
 }
 
+message CidsReq {
+    repeated int64 cids = 1;
+}
+
+message UIdRep {
+    int64 uid = 1;
+    string sid = 2;
+}
+
+message UIdsRep {
+    repeated UIdRep uidReps = 1;
+}
+
 message GidReq {
     string gid = 1;
 }
@@ -201,6 +214,10 @@ message TPushReq {
 
 // 网关
 service Gateway {
+    // uid查询
+    rpc uid(CidReq) returns (UIdRep);
+    // uids查询
+    rpc uids(CidsReq) returns (UIdsRep);
     // 关闭连接
     rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接

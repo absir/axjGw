@@ -5,8 +5,10 @@ import (
 	"axjGW/gen/gw"
 	"axjGW/pkg/gateway"
 	"context"
+	"errors"
 )
 
+var Result_ProdErr error
 var Result_Fail_Rep *gw.Id32Rep
 var Result_IdNone_Rep *gw.Id32Rep
 var Result_ProdErr_Rep *gw.Id32Rep
@@ -17,6 +19,7 @@ var Result_ProdErr_Rep64 *gw.Id64Rep
 var Result_Succ_Rep64 *gw.Id64Rep
 
 func init() {
+	Result_ProdErr = errors.New("ProdErr")
 	Result_Fail_Rep = &gw.Id32Rep{
 		Id: int32(gw.Result_Fail),
 	}
@@ -44,6 +47,48 @@ func init() {
 }
 
 type GatewayIs struct {
+}
+
+func (g GatewayIs) Uid(ctx context.Context, req *gw.CidReq) (*gw.UIdRep, error) {
+	if !gateway.Server.IsProdCid(req.Cid) {
+		return nil, Result_ProdErr
+	}
+
+	client := gateway.Server.Manager.Client(req.Cid)
+	if client == nil {
+		return nil, nil
+	}
+
+	clientG := gateway.Handler.ClientG(client)
+	return clientG.UidRep(), nil
+}
+
+func (g GatewayIs) Uids(ctx context.Context, req *gw.CidsReq) (*gw.UIdsRep, error) {
+	cLen := 0
+	if req.Cids != nil {
+		cLen = len(req.Cids)
+	}
+
+	if req.Cids == nil {
+		return nil, nil
+	}
+
+	uidsRep := &gw.UIdsRep{}
+	uidsRep.UidReps = make([]*gw.UIdRep, cLen)
+	for i := 0; i < cLen; i++ {
+		cid := req.Cids[i]
+		if !gateway.Server.IsProdCid(cid) {
+			return nil, Result_ProdErr
+		}
+
+		client := gateway.Server.Manager.Client(cid)
+		if client != nil {
+			clientG := gateway.Handler.ClientG(client)
+			uidsRep.UidReps[i] = clientG.UidRep()
+		}
+	}
+
+	return uidsRep, nil
 }
 
 func (g GatewayIs) Close(ctx context.Context, req *gw.CloseReq) (*gw.Id32Rep, error) {

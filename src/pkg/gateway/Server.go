@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -255,7 +256,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	}
 
 	// 登录成功
-	client.Get().Rep(true, ANet.REQ_LOOP, "", 0, login.Data, false, false, 0)
+	client.Get().Rep(true, ANet.REQ_LOOP, strconv.FormatInt(cid, 10)+"/"+clientG.unique+"/"+clientG.gid, 0, login.Data, false, false, 0)
 	if client.Get().IsClosed() {
 		return nil
 	}
@@ -342,6 +343,10 @@ func (that *server) PutProds(name string, prods *Prods) {
 	} else {
 		that.prodsMap.Store(name, prods)
 	}
+}
+
+func (that *server) GetProdId(id int32) *Prod {
+	return that.GetProds(Config.GwProd).GetProd(id)
 }
 
 func (that *server) GetProdCid(cid int64) *Prod {

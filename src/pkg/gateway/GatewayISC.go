@@ -10,6 +10,14 @@ type gatewayISC struct {
 	Server gw.GatewayIServer
 }
 
+func (that gatewayISC) Uid(ctx context.Context, in *gw.CidReq, opts ...grpc.CallOption) (*gw.UIdRep, error) {
+	return that.Server.Uid(ctx, in)
+}
+
+func (that gatewayISC) Uids(ctx context.Context, in *gw.CidsReq, opts ...grpc.CallOption) (*gw.UIdsRep, error) {
+	return that.Server.Uids(ctx, in)
+}
+
 func (that gatewayISC) Close(ctx context.Context, in *gw.CloseReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
 	return that.Server.Close(ctx, in)
 }

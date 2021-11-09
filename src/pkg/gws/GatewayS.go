@@ -9,6 +9,15 @@ import (
 type GatewayS struct {
 }
 
+func (g GatewayS) Uid(ctx context.Context, req *gw.CidReq) (*gw.UIdRep, error) {
+	return gateway.Server.GetProdCid(req.Cid).GetGWIClient().Uid(ctx, req)
+}
+
+func (g GatewayS) Uids(ctx context.Context, req *gw.CidsReq) (*gw.UIdsRep, error) {
+	// 复合查询Prod组合
+	panic("implement me")
+}
+
 func (g GatewayS) Close(ctx context.Context, req *gw.CloseReq) (*gw.Id32Rep, error) {
 	return gateway.Server.GetProdCid(req.Cid).GetGWIClient().Close(ctx, req)
 }

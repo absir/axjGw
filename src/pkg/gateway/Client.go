@@ -21,6 +21,7 @@ type ClientG struct {
 	ridMap   *sync.Map // 请求字典
 	connTime int64     // 最后连接时间
 	connReq  *gw.GConnReq
+	uidRep   *gw.UIdRep
 }
 
 func (that *ClientG) Uid() int64 {
@@ -183,5 +184,17 @@ func (that *ClientG) ConnCheck() {
 	}
 }
 
-func (that *ClientG) ConnStart(clear bool, lasts bool) {
+func (that *ClientG) UidRep() *gw.UIdRep {
+	if that.uidRep == nil {
+		uidRep := &gw.UIdRep{}
+		if that.uid > 0 {
+			uidRep.Uid = that.uid
+		}
+
+		if that.sid != "" {
+			uidRep.Sid = that.sid
+		}
+	}
+
+	return that.uidRep
 }

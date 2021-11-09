@@ -39,6 +39,10 @@ message IGPushAReq {
 
 // 网关内部
 service GatewayI {
+    // uid查询
+    rpc uid(CidReq) returns (UIdRep);
+    // uids查询
+    rpc uids(CidsReq) returns (UIdsRep);
     // 关闭连接
     rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接
