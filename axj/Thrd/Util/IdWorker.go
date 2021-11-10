@@ -28,7 +28,7 @@ const (
 	workerIdMax    = 1<<workerIdBits - 1         //支持的最大机器id数量
 	worderIdMask   = workerIdMax                 //机器id掩码
 	sequenceBits   = uint(12)                    //序列所占的位数
-	sequenceMask   = int64(1)<<sequenceBits - 1  //序号掩码
+	sequenceMask   = int(1)<<sequenceBits - 1    //序号掩码
 	workerIdShift  = sequenceBits                //机器id左移位数
 	timestampShift = sequenceBits + workerIdBits //时间戳左移位数
 )
@@ -38,7 +38,7 @@ type IdWorker struct {
 	sync.Mutex
 	timestamp int64
 	workerId  int64
-	sequence  int64
+	sequence  int
 }
 
 // NewNode returns a new snowflake worker that can be used to generate snowflake IDs
@@ -62,30 +62,40 @@ func NewIdWorkerPanic(workerId int32) *IdWorker {
 
 // Generate creates and returns a unique snowflake ID
 func (that *IdWorker) Generate() int64 {
+	return that.GenerateM(0, 0)
+}
+
+func (that *IdWorker) GenerateM(mod int, flg int) int64 {
 	that.Lock()
 	defer that.Unlock()
 
 	now := time.Now().UnixNano() / 1000000
 	if that.timestamp == now {
-		that.sequence = (that.sequence + 1) & sequenceMask
-		if that.sequence == 0 {
+		sequence := (that.sequence + 1) & sequenceMask
+		if mod > 1 {
+			sequence = ((that.sequence+1)/mod)*mod + flg
+		}
+
+		if sequence <= that.sequence {
 			for now <= that.timestamp {
 				time.Sleep(time.Nanosecond)
 				now = time.Now().UnixNano() / 1000000
 			}
 		}
 
+		that.sequence = sequence
+
 	} else {
-		that.sequence = 0
+		that.sequence = flg
 	}
 
 	that.timestamp = now
-	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | (that.sequence)
+	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | int64(that.sequence)
 }
 
 func (that *IdWorker) Timestamp(nanoTime int64) int64 {
 	now := nanoTime / 1000000
-	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift) | (that.sequence)
+	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift)
 }
 
 func (that *IdWorker) GetWorkerId(id int64) int32 {

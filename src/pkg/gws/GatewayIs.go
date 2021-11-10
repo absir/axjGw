@@ -257,7 +257,7 @@ func (g GatewayIs) Push(ctx context.Context, req *gw.PushReq) (*gw.Id32Rep, erro
 		req.Isolate = false
 	}
 
-	err := client.Get().Rep(true, reqI, req.Uri, 0, req.Data, req.Isolate, true, req.Id)
+	err := client.Get().RepCData(true, reqI, req.Uri, 0, req.Data, req.CData, req.Isolate, true, req.Id)
 	if err != nil {
 		return Result_Fail_Rep, err
 	}

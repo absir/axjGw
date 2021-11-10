@@ -564,13 +564,29 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string, isolate 
 		return that.OnResult(rep, err, ER_PUSH, client, unique)
 
 	} else {
-		rep, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, &gw.PushReq{
+		pushReg := &gw.PushReq{
 			Cid:     client.cid,
 			Uri:     msgD.Uri,
 			Data:    msgD.Data,
 			Id:      msgD.Id,
 			Isolate: isolate,
-		})
+		}
+
+		compress := Server.CidCompress(client.cid)
+		if compress {
+			cData, cDid := msgD.CData()
+			pushReg.Data = cData
+			if cDid {
+				// 已压缩
+				pushReg.CData = 1
+
+			} else {
+				// 无法压缩
+				pushReg.CData = 2
+			}
+		}
+
+		rep, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, pushReg)
 		return that.OnResult(rep, err, ER_PUSH, client, unique)
 	}
 }

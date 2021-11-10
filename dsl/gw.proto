@@ -207,6 +207,8 @@ message PushReq {
     bool isolate = 4;
     // PUSHI 携带消息编号，gw一般不用
     int64 id = 5;
+    // 数据压缩状态，gw不用
+    int32 cData = 6;
 }
 
 message GPushReq {

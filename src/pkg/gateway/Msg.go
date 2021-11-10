@@ -21,6 +21,7 @@ type MsgD struct {
 	Data []byte `gorm:""`
 	// 压缩后Data不映射字段
 	cData []byte `sql:"-"`
+	cDid  bool   `sql:"-"`
 }
 
 func (that *MsgD) Get() *MsgD {
@@ -31,24 +32,24 @@ func (that *MsgD) Unique() string {
 	return ""
 }
 
-func (that *MsgD) CData() []byte {
+func (that *MsgD) CData() ([]byte, bool) {
 	if that.cData != nil {
-		return that.cData
+		return that.cData, that.cDid
 	}
 
 	if that.Data == nil {
-		return that.Data
+		return that.Data, false
 	}
 
 	if Processor.Compress == nil {
 		that.cData = that.Data
-		return that.cData
+		return that.cData, that.cDid
 	}
 
 	dLen := len(that.Data)
 	if dLen <= 0 || dLen < Processor.CompressMin {
 		that.cData = that.Data
-		return that.cData
+		return that.cData, that.cDid
 	}
 
 	cData, err := Processor.Compress.Compress(that.Data)
@@ -59,11 +60,12 @@ func (that *MsgD) CData() []byte {
 		}
 
 		that.cData = that.Data
-		return that.cData
+		return that.cData, that.cDid
 	}
 
 	that.cData = cData
-	return that.cData
+	that.cDid = true
+	return that.cData, that.cDid
 }
 
 type MsgU struct {

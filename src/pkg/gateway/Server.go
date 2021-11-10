@@ -47,6 +47,19 @@ func (that *server) Id64(rep *gw.Id64Rep) int64 {
 	return rep.Id
 }
 
+func (that *server) CidGen(compress bool) int64 {
+	flg := 0
+	if compress {
+		flg = 1
+	}
+
+	return that.Manager.IdWorker().GenerateM(2, flg)
+}
+
+func (that *server) CidCompress(cid int64) bool {
+	return (cid & 0X01) == 1
+}
+
 func (that *server) Cron() *cron.Cron {
 	if that.cron == nil {
 		that.Locker.Lock()
@@ -168,7 +181,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	}
 
 	// 登录Acl处理
-	cid := manager.IdWorker().Generate()
+	cid := that.CidGen(compress)
 	aclClient := that.GetProds(Config.AclProd).GetProdHash(Config.WorkHash).GetAclClient()
 	login, err := aclClient.Login(that.Context, &gw.LoginReq{
 		Cid:  cid,
