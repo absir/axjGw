@@ -86,7 +86,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 	reped := false
 	defer that.reqRcvr(client, req, reped)
 	name := Config.PassProd
-	if uri[0] == '@' {
+	if uri != "" && uri[0] == '@' {
 		i := strings.IndexByte(uri, '/')
 		if i > 0 {
 			name = uri[0:i]
@@ -123,9 +123,17 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 				AZap.Logger.Warn("Req err " + uri + " " + err.Error())
 			}
 
+			reped = true
+			if err == nil {
+				clientG.Get().Rep(true, req, "", ERR_PROD_NO, nil, false, false, 0)
+
+			} else {
+				clientG.Get().Rep(true, req, "", ERR_PORD_ERR, nil, false, false, 0)
+			}
+
 		} else {
 			reped = true
-			clientG.Get().Rep(true, req, "", ERR_PROD_NO, result.Data, false, false, 0)
+			clientG.Get().Rep(true, req, "", result.Err, result.Data, false, false, 0)
 		}
 
 	} else {

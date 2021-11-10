@@ -328,5 +328,5 @@ func (that *ClientCnn) poolReqIO(poolG Util.Limiter, req int32, uri string, uriI
 		defer poolG.Done()
 	}
 
-	that.handler.OnReqIO(that, req, uri, uriI, data)
+	that.handler.OnReqIO(that.client, req, uri, uriI, data)
 }

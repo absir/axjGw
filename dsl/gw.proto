@@ -72,6 +72,8 @@ message Id64Rep {
 message DataRep {
     // 二进制数据
     bytes data = 1;
+    // 请求错误
+    int32 err = 2;
 }
 
 message LoginReq {
