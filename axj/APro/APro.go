@@ -77,7 +77,7 @@ func atTmpFile(file string) bool {
 	if len(tmp) > 0 && tmp[0] == '/' {
 		idx := KtStr.IndexByte(tmp, '/', 1)
 		if idx > 0 {
-			prv := file[1:idx]
+			prv := tmp[1:idx]
 			switch prv {
 			case "private":
 				break
