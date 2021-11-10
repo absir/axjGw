@@ -9,6 +9,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -46,12 +47,20 @@ func Caller(fun func(skip int) (pc uintptr, file string, line int, ok bool), dir
 // 获取系统临时目录，兼容go run
 func Tmp() string {
 	if tmp == "" {
-		dir := os.Getenv("TEMP")
-		if dir == "" {
-			dir = os.Getenv("TMP")
+		dir, err := ioutil.TempDir("", "")
+		if dir == "" || err != nil {
+			dir = os.Getenv("TEMP")
+			if dir == "" {
+				dir = os.Getenv("TMP")
+				if dir == "" {
+				}
+			}
+
+		} else {
+			dir = filepath.Dir(dir)
 		}
 
-		dir, err := filepath.EvalSymlinks(dir)
+		dir, err = filepath.EvalSymlinks(dir)
 		Kt.Err(err, true)
 		tmp = dir
 	}
