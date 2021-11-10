@@ -17,6 +17,7 @@ type config struct {
 	KickDrt     time.Duration // 踢出间隔
 	GwProd      string        // 网关服务名
 	AclProd     string        // Acl服务名
+	PassProd    string        // Pass服务名
 	TeamMax     int           // 群组最大缓存
 }
 
@@ -35,6 +36,8 @@ func initConfig(workId int32) {
 		AclProd:     "acl",
 		TeamMax:     65535,
 	}
+
+	Config.PassProd = Config.AclProd
 	APro.SubCfgBind("gateway", Config)
 	Config.WorkId = workId
 	Config.WorkHash = int(workId)

@@ -85,7 +85,7 @@ func (that *handler) OnReq(client ANet.Client, req int32, uri string, uriI int32
 func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, data []byte) {
 	reped := false
 	defer that.reqRcvr(client, req, reped)
-	name := Config.AclProd
+	name := Config.PassProd
 	if uri[0] == '@' {
 		i := strings.IndexByte(uri, '/')
 		if i > 0 {
