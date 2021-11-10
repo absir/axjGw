@@ -226,15 +226,16 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 		}
 	}
 
-	// 消息处理
-	if clientG.Gid() != "" {
-		// 清理消息队列配置
+	// 消息处理 单用户登录
+	if clientG.Gid() != "" && clientG.unique == "" {
+		// 消息队列清理开启
 		rep, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
 			Gid:    clientG.gid,
 			Cid:    clientG.Id(),
 			Unique: clientG.Unique(),
 			Clear:  login.Clear,
 		})
+
 		if Server.Id32(rep) < R_SUCC_MIN {
 			clientG.Close(err, nil)
 			return nil

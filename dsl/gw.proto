@@ -40,18 +40,33 @@ message UIdsRep {
 }
 
 message GidReq {
-    // 群主、管道编号
+    // 用户编号、群组、管道编号
     string gid = 1;
 }
 
-message Id64Rep {
-    // 长整编号
-    int64 id = 1;
+message GidsReq {
+    // 用户编号、群组、管道编号列表
+    repeated string gids = 1;
+}
+
+message BoolRep {
+    // 值
+    bool val = 1;
+}
+
+message BoolsRep {
+    // 值列表
+    repeated bool vals = 1;
 }
 
 message Id32Rep {
     // 整形编号
     int32 id = 1;
+}
+
+message Id64Rep {
+    // 长整编号
+    int64 id = 1;
 }
 
 message DataRep {
@@ -282,12 +297,19 @@ message TPushReq {
     bool queue = 7;
 }
 
+message RevokeReq {
+    int64 id = 1;
+    string gid = 2;
+}
+
 // 网关
 service Gateway {
     // uid查询
     rpc uid(CidReq) returns (UIdRep);
-    // uids查询
-    rpc uids(CidsReq) returns (UIdsRep);
+    // 在线查询
+    rpc online(GidReq) returns (BoolRep);
+    // 在线查询
+    rpc onlines(GidsReq) returns (BoolsRep);
     // 关闭连接
     rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接
@@ -314,4 +336,6 @@ service Gateway {
     rpc tPush(TPushReq) returns (Id32Rep);
     // 组更新、删除 tid
     rpc tDirty(GidReq) returns (Id32Rep);
+    // 撤销消息
+    rpc revoke(RevokeReq) returns (BoolRep);
 }

@@ -21,9 +21,13 @@ var Handler *handler
 func initHandler() {
 	Processor = &ANet.Processor{
 		Protocol:    &ANet.ProtocolV{},
-		Compress:    &ANet.CompressZip{},
 		CompressMin: Config.CompressMin,
 		DataMax:     Config.DataMax,
+	}
+
+	// CompressMin < 0 不压缩
+	if Config.CompressMin >= 0 {
+		Processor.Compress = &ANet.CompressZip{}
 	}
 
 	if Config.Encrypt {

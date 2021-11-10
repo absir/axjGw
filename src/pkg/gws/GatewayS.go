@@ -13,9 +13,66 @@ func (g GatewayS) Uid(ctx context.Context, req *gw.CidReq) (*gw.UIdRep, error) {
 	return gateway.Server.GetProdCid(req.Cid).GetGWIClient().Uid(ctx, req)
 }
 
-func (g GatewayS) Uids(ctx context.Context, req *gw.CidsReq) (*gw.UIdsRep, error) {
-	// 复合查询Prod组合
-	panic("implement me")
+func (g GatewayS) Online(ctx context.Context, req *gw.GidReq) (*gw.BoolRep, error) {
+	return gateway.Server.GetProdGid(req.Gid).GetGWIClient().Online(ctx, req)
+}
+
+func (g GatewayS) Onlines(ctx context.Context, req *gw.GidsReq) (*gw.BoolsRep, error) {
+	gids := req.Gids
+	gLen := 0
+	if gids != nil {
+		gLen = len(gids)
+	}
+
+	if gLen <= 0 {
+		return nil, nil
+	}
+
+	nVals := make([]bool, gLen)
+	nIdxs := make([]int, gLen)
+	nGids := make([]string, gLen)
+	pId := gateway.Server.GetProdGid(req.Gids[0]).Id()
+	var pIdIdx int
+	var pIdNext int32
+	for {
+		pIdIdx = 0
+		pIdNext = 0
+		for i := 0; i < gLen; i++ {
+			gid := gids[i]
+			id := gateway.Server.GetProdGid(gid).Id()
+			if id == pId {
+				// 同prod 合并请求
+				nGids[pIdIdx] = gid
+				nIdxs[pIdIdx] = i
+				pIdIdx++
+
+			} else if pIdIdx > 0 && pIdNext == 0 {
+				// 下一个遍历prodId
+				pIdNext = id
+			}
+		}
+
+		if pIdIdx <= 0 || pIdNext == 0 {
+			break
+		}
+
+		req.Gids = nGids[0:pIdIdx]
+		boolsRep, err := gateway.Server.GetProdId(pId).GetGWIClient().Onlines(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		// 开始赋值
+		for i := 0; i < pIdIdx; i++ {
+			nVals[nIdxs[i]] = boolsRep.Vals[i]
+		}
+
+		pId = pIdNext
+	}
+
+	return &gw.BoolsRep{
+		Vals: nVals,
+	}, nil
 }
 
 func (g GatewayS) Close(ctx context.Context, req *gw.CloseReq) (*gw.Id32Rep, error) {
@@ -71,4 +128,17 @@ func (g GatewayS) TPush(ctx context.Context, req *gw.TPushReq) (*gw.Id32Rep, err
 
 func (g GatewayS) TDirty(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, error) {
 	return gateway.Server.GetProdGid(req.Gid).GetGWIClient().TDirty(ctx, req)
+}
+
+func (g GatewayS) Revoke(ctx context.Context, req *gw.RevokeReq) (*gw.BoolRep, error) {
+	if gateway.MsgMng.Db == nil {
+		return Result_Fasle, nil
+	}
+
+	err := gateway.MsgMng.Db.Revoke(req.Id, req.Gid)
+	if err != nil {
+		return Result_Fasle, err
+	}
+
+	return Result_True, nil
 }

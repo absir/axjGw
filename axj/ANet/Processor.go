@@ -23,7 +23,14 @@ func (that *Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []b
 		compr = nil
 	}
 
-	return rep(locker, out, conn, that.Protocol, compr, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, isolate, id)
+	return rep(locker, out, conn, that.Protocol, compr, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, data, false, isolate, id)
+}
+
+/*
+ * 推送已压缩数据
+ */
+func (that *Processor) RepCData(locker sync.Locker, out bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, cData []byte, isolate bool, id int64) error {
+	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, cData, true, isolate, id)
 }
 
 func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
@@ -68,7 +75,7 @@ func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decry
 	return
 }
 
-func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) (err error) {
+func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Compress, compressMin int, encrypt Encrypt, encryKey []byte, req int32, uri string, uriI int32, data []byte, cData bool, isolate bool, id int64) (err error) {
 	if req < 0 {
 		// 纯写入data
 		return conn.Write(data)
@@ -79,7 +86,10 @@ func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Co
 		bLen := len(data)
 		if bLen > 0 {
 			// 数据处理
-			if compress != nil {
+			if cData {
+				head |= HEAD_COMPRESS
+
+			} else if compress != nil {
 				if compressMin > 0 && bLen > compressMin {
 					var bs []byte
 					bs, err = compress.Compress(data)

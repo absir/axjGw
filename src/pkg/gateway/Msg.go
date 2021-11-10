@@ -1,7 +1,10 @@
 package gateway
 
 import (
+	"axj/ANet"
+	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -16,6 +19,8 @@ type MsgD struct {
 	Fid  int64  `gorm:"index:Fid"`                            // 消息来源编号
 	Uri  string `gorm:"type:varchar(255);"`
 	Data []byte `gorm:""`
+	// 压缩后Data不映射字段
+	cData []byte `sql:"-"`
 }
 
 func (that *MsgD) Get() *MsgD {
@@ -24,6 +29,41 @@ func (that *MsgD) Get() *MsgD {
 
 func (that *MsgD) Unique() string {
 	return ""
+}
+
+func (that *MsgD) CData() []byte {
+	if that.cData != nil {
+		return that.cData
+	}
+
+	if that.Data == nil {
+		return that.Data
+	}
+
+	if Processor.Compress == nil {
+		that.cData = that.Data
+		return that.cData
+	}
+
+	dLen := len(that.Data)
+	if dLen <= 0 || dLen < Processor.CompressMin {
+		that.cData = that.Data
+		return that.cData
+	}
+
+	cData, err := Processor.Compress.Compress(that.Data)
+	if cData == nil || err != nil {
+		if err != nil {
+			// 压缩错误
+			AZap.Logger.Warn("msg CData err", zap.Error(err))
+		}
+
+		that.cData = that.Data
+		return that.cData
+	}
+
+	that.cData = cData
+	return that.cData
 }
 
 type MsgU struct {
@@ -77,6 +117,7 @@ type MsgDb interface {
 	TeamUpdate(msgTeam *MsgTeam, index int) error                                      // 群组消息更新 index >= mLen || index < 0 TeamDelete
 	TeamList(tid string, limit int) []MsgTeam                                          // 群组消息列表
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
+	Revoke(id int64, gid string) error                                                 // 撤销消息
 }
 
 type MsgGorm struct {
@@ -210,4 +251,17 @@ func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 	var tIds []string = nil
 	that.db.Raw("SELECT tid FROM msg_teams GROUP BY tid").Limit(limit).Find(&tIds)
 	return tIds
+}
+
+func (that *MsgGorm) Revoke(id int64, gid string) error {
+	tx := that.db.Exec("DELETE FROM msg_ds WHERE id = ? AND gid = ?", id, gid)
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if tx.RowsAffected <= 0 {
+		return ANet.ERR_DENIED
+	}
+
+	return that.DeleteF(id)
 }

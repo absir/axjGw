@@ -9,6 +9,8 @@ import (
 )
 
 var Result_ProdErr error
+var Result_True *gw.BoolRep
+var Result_Fasle *gw.BoolRep
 var Result_Fail_Rep *gw.Id32Rep
 var Result_IdNone_Rep *gw.Id32Rep
 var Result_ProdErr_Rep *gw.Id32Rep
@@ -20,6 +22,12 @@ var Result_Succ_Rep64 *gw.Id64Rep
 
 func init() {
 	Result_ProdErr = errors.New("ProdErr")
+	Result_True = &gw.BoolRep{
+		Val: true,
+	}
+	Result_Fasle = &gw.BoolRep{
+		Val: false,
+	}
 	Result_Fail_Rep = &gw.Id32Rep{
 		Id: int32(gw.Result_Fail),
 	}
@@ -63,32 +71,46 @@ func (g GatewayIs) Uid(ctx context.Context, req *gw.CidReq) (*gw.UIdRep, error) 
 	return clientG.UidRep(), nil
 }
 
-func (g GatewayIs) Uids(ctx context.Context, req *gw.CidsReq) (*gw.UIdsRep, error) {
-	cLen := 0
-	if req.Cids != nil {
-		cLen = len(req.Cids)
+func (g GatewayIs) Online(ctx context.Context, req *gw.GidReq) (*gw.BoolRep, error) {
+	if !gateway.Server.IsProdHashS(req.Gid) {
+		return nil, Result_ProdErr
 	}
 
-	if req.Cids == nil {
+	msgGrp := gateway.MsgMng.MsgGrp(req.Gid)
+	if msgGrp == nil || msgGrp.ClientNum() <= 0 {
+		return Result_Fasle, nil
+	}
+
+	return Result_True, nil
+}
+
+func (g GatewayIs) Onlines(ctx context.Context, req *gw.GidsReq) (*gw.BoolsRep, error) {
+	gLen := 0
+	if req.Gids != nil {
+		gLen = len(req.Gids)
+	}
+
+	if gLen <= 0 {
 		return nil, nil
 	}
 
-	uidsRep := &gw.UIdsRep{}
-	uidsRep.UidReps = make([]*gw.UIdRep, cLen)
-	for i := 0; i < cLen; i++ {
-		cid := req.Cids[i]
-		if !gateway.Server.IsProdCid(cid) {
+	boolsRep := &gw.BoolsRep{}
+	boolsRep.Vals = make([]bool, gLen)
+	for i := 0; i < gLen; i++ {
+		gid := req.Gids[i]
+		if !gateway.Server.IsProdHashS(gid) {
 			return nil, Result_ProdErr
 		}
 
-		client := gateway.Server.Manager.Client(cid)
-		if client != nil {
-			clientG := gateway.Handler.ClientG(client)
-			uidsRep.UidReps[i] = clientG.UidRep()
+		msgGrp := gateway.MsgMng.MsgGrp(gid)
+		if msgGrp == nil || msgGrp.ClientNum() <= 0 {
+			continue
 		}
+
+		boolsRep.Vals[i] = true
 	}
 
-	return uidsRep, nil
+	return boolsRep, nil
 }
 
 func (g GatewayIs) Close(ctx context.Context, req *gw.CloseReq) (*gw.Id32Rep, error) {
@@ -243,6 +265,9 @@ func (g GatewayIs) Push(ctx context.Context, req *gw.PushReq) (*gw.Id32Rep, erro
 	return Result_Succ_Rep, nil
 }
 
+/**
+ * 单用户登录 client 建立连接 gid, 消息队列清理开启
+ */
 func (g GatewayIs) GQueue(ctx context.Context, req *gw.IGQueueReq) (*gw.Id32Rep, error) {
 	if !gateway.Server.IsProdHashS(req.Gid) {
 		return Result_ProdErr_Rep, nil

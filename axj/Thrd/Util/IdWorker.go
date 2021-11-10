@@ -70,6 +70,7 @@ func (that *IdWorker) Generate() int64 {
 		that.sequence = (that.sequence + 1) & sequenceMask
 		if that.sequence == 0 {
 			for now <= that.timestamp {
+				time.Sleep(time.Nanosecond)
 				now = time.Now().UnixNano() / 1000000
 			}
 		}

@@ -13,6 +13,7 @@ import (
 // 错误
 var ERR_CLOSED = errors.New("CLOSED")
 var ERR_CRASH = errors.New("CRASH")
+var ERR_NOWAY = errors.New("NOWAY")
 
 // 最终关闭状态
 const CONN_CLOSED int8 = 127
@@ -210,6 +211,10 @@ func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {
 }
 
 func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, id int64) error {
+	return that.RepCData(out, req, uri, uriI, data, 0, isolate, encry, id)
+}
+
+func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, data []byte, cData int32, isolate bool, encry bool, id int64) error {
 	handler := that.handler
 	uriDict := handler.UriDict()
 	if uriI <= 0 {
@@ -238,7 +243,27 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 		return ERR_CLOSED
 	}
 
-	err := handler.Processor().Rep(nil, out, that.conn, encryKey, that.compress, req, uri, uriI, data, isolate, id)
+	var err error
+	if cData > 0 {
+		if cData == 1 {
+			// 推送已压缩数据
+			if !that.compress {
+				// 客户端不支持压缩数据
+				return ERR_NOWAY
+			}
+
+			err = handler.Processor().RepCData(nil, out, that.conn, encryKey, req, uri, uriI, data, isolate, id)
+
+		} else {
+			// 无法压缩
+			err = handler.Processor().Rep(nil, out, that.conn, encryKey, false, req, uri, uriI, data, isolate, id)
+		}
+
+	} else {
+		// 自决压缩
+		err = handler.Processor().Rep(nil, out, that.conn, encryKey, that.compress, req, uri, uriI, data, isolate, id)
+	}
+
 	if err != nil {
 		that.Close(err, nil)
 	}

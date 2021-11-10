@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"axj/ANet"
 	"axj/APro"
 	"axj/Kt/Kt"
 	"axj/Kt/KtBytes"
@@ -240,6 +241,15 @@ func (that *MsgGrp) Sess() *MsgSess {
 
 func (that *MsgGrp) retain() {
 	that.passTime = time.Now().UnixNano() + MsgMng.LiveDrt
+}
+
+func (that *MsgGrp) ClientNum() int {
+	sess := that.sess
+	if sess == nil {
+		return 0
+	}
+
+	return sess.clientNum
 }
 
 func (that *MsgGrp) newMsgSess() *MsgSess {
@@ -521,8 +531,8 @@ const (
 	ER_LAST ERpc = 2
 )
 
-var ERR_NOWAY = errors.New("ERR_NOWAY")
-var ERR_FAIL = errors.New("ERR_FAIL")
+var ERR_NOWAY = ANet.ERR_NOWAY
+var ERR_FAIL = errors.New("FAIL")
 
 func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
 	if Server.Id32(rep) >= R_SUCC_MIN {

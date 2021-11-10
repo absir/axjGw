@@ -43,6 +43,10 @@ func NewProd(id int32, url string) (*Prod, error) {
 	return prod, nil
 }
 
+func (that *Prod) Id() int32 {
+	return that.id
+}
+
 func (that *Prod) initClient(locker bool) error {
 	if that.url == "" {
 		return nil

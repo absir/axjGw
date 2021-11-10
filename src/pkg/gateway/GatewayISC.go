@@ -14,8 +14,12 @@ func (that gatewayISC) Uid(ctx context.Context, in *gw.CidReq, opts ...grpc.Call
 	return that.Server.Uid(ctx, in)
 }
 
-func (that gatewayISC) Uids(ctx context.Context, in *gw.CidsReq, opts ...grpc.CallOption) (*gw.UIdsRep, error) {
-	return that.Server.Uids(ctx, in)
+func (that gatewayISC) Online(ctx context.Context, in *gw.GidReq, opts ...grpc.CallOption) (*gw.BoolRep, error) {
+	return that.Server.Online(ctx, in)
+}
+
+func (that gatewayISC) Onlines(ctx context.Context, in *gw.GidsReq, opts ...grpc.CallOption) (*gw.BoolsRep, error) {
+	return that.Server.Onlines(ctx, in)
 }
 
 func (that gatewayISC) Close(ctx context.Context, in *gw.CloseReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {

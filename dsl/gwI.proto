@@ -41,8 +41,10 @@ message IGPushAReq {
 service GatewayI {
     // uid查询
     rpc uid(CidReq) returns (UIdRep);
-    // uids查询
-    rpc uids(CidsReq) returns (UIdsRep);
+    // 在线查询
+    rpc online(GidReq) returns (BoolRep);
+    // 在线查询
+    rpc onlines(GidsReq) returns (BoolsRep);
     // 关闭连接
     rpc close(CloseReq) returns (Id32Rep);
     // 软关闭连接
