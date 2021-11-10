@@ -69,20 +69,23 @@ func Tmp() string {
 }
 
 func atTmpFile(file string) bool {
-	idx := strings.Index(Tmp(), file)
-	if idx < 0 {
-		return false
-	}
-
-	if idx == 0 {
+	tmp := Tmp()
+	if strings.HasPrefix(file, tmp) {
 		return true
 	}
 
-	if len(file) > 0 && file[0] == '/' {
-		prv := file[1:idx]
-		switch prv {
-		case "private":
-			return true
+	if len(tmp) > 0 && tmp[0] == '/' {
+		idx := KtStr.IndexByte(tmp, '/', 1)
+		if idx > 0 {
+			prv := file[1:idx]
+			switch prv {
+			case "private":
+				break
+			default:
+				return false
+			}
+
+			return strings.HasPrefix(file, tmp[idx:])
 		}
 	}
 
