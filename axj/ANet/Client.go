@@ -324,7 +324,7 @@ func (that *ClientCnn) ReqLoop() {
 }
 
 func (that *ClientCnn) poolReqIO(poolG Util.Limiter, req int32, uri string, uriI int32, data []byte) {
-	if poolG == nil {
+	if poolG != nil {
 		defer poolG.Done()
 	}
 

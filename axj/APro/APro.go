@@ -63,12 +63,9 @@ func Path() string {
 	if path == "" {
 		file, err := os.Executable()
 		Kt.Err(err, true)
+		Kt.Log("exe : " + file)
+		Kt.Log("tmp : " + Tmp())
 		if file == "" || (strings.HasPrefix(file, Tmp()) && callerP != nil) {
-			if file != "" {
-				Kt.Log("exe : " + file)
-				Kt.Log("tmp : " + Tmp())
-			}
-
 			file = ""
 			ok := true
 			if callerP == nil {
@@ -99,6 +96,8 @@ func Path() string {
 				callerP = nil
 			}
 		}
+
+		Kt.Log("path : " + path)
 	}
 
 	return path
