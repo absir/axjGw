@@ -68,13 +68,34 @@ func Tmp() string {
 	return tmp
 }
 
+func atTmpFile(file string) bool {
+	idx := strings.Index(Tmp(), file)
+	if idx < 0 {
+		return false
+	}
+
+	if idx == 0 {
+		return true
+	}
+
+	if len(file) > 0 && file[0] == '/' {
+		prv := file[1:idx]
+		switch prv {
+		case "private":
+			return true
+		}
+	}
+
+	return false
+}
+
 func Path() string {
 	if path == "" {
 		file, err := os.Executable()
 		Kt.Err(err, true)
 		Kt.Log("exe : " + file)
 		Kt.Log("tmp : " + Tmp())
-		if file == "" || (strings.HasPrefix(file, Tmp()) && callerP != nil) {
+		if file == "" && callerP != nil || atTmpFile(file) {
 			file = ""
 			ok := true
 			if callerP == nil {
