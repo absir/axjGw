@@ -65,19 +65,36 @@ func Get(cfg Kt.Map, name string) interface{} {
 		}
 
 		if cfg != nil {
-			i := -1
-			for {
-				i = KtStr.LastIndex(name, ".", i)
-				if i < 0 {
-					break
+			ei := KtStr.IndexByte(name, '.', 0)
+			if ei > 0 {
+				mp := cfg
+				si := 0
+				for {
+					if ei <= 0 {
+						break
+					}
+
+					found := false
+					if val = mp.Get(name[si:ei]); val != nil {
+						if m, ok := val.(Kt.Map); ok {
+							found = true
+							mp = m
+						}
+					}
+
+					if !found || mp == nil {
+						return nil
+					}
+
+					si = ei + 1
+					ei = KtStr.IndexByte(name, '.', si)
 				}
 
-				c := cfg.Get(name[0:i])
-				if c != nil {
-					if mp, is := c.(Kt.Map); is {
-						return Get(mp, name[i+1:])
-					}
+				if mp == nil {
+					return nil
 				}
+
+				return mp.Get(name[si:])
 			}
 		}
 	}

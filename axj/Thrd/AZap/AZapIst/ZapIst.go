@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"os"
 )
 
 func InitCfg(std bool, opts ...zap.Option) {
@@ -113,21 +114,24 @@ func fileCore() *zapcore.Core {
 		return lvl > zapcore.WarnLevel
 	})
 
-	//if(APro.GetCfg("log.out", KtCvt.Bool, Kt.Env < Kt.Test).(bool)) {
-	//	core := zapcore.NewTee(
-	//		zapcore.NewCore(encoder, zapcore.AddSync(warnLogger), warnLevel),
-	//		zapcore.NewCore(encoder, zapcore.AddSync(errorLogger), errorLevel),
-	//		zapcore.NewCore(encoder, zapcore.AddSync(fmt))
-	//	)
-	//
-	//} else {
-	//
-	//}
+	if APro.GetCfg("log.out", KtCvt.Bool, Kt.Env < Kt.Test).(bool) {
+		// 文件，控制台都要
+		core := zapcore.NewTee(
+			zapcore.NewCore(encoder, zapcore.AddSync(warnLogger), warnLevel),
+			zapcore.NewCore(encoder, zapcore.AddSync(errorLogger), errorLevel),
+			zapcore.NewCore(encoder, zapcore.Lock(os.Stdout), zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+				return true
+			})),
+		)
 
-	core := zapcore.NewTee(
-		zapcore.NewCore(encoder, zapcore.AddSync(warnLogger), warnLevel),
-		zapcore.NewCore(encoder, zapcore.AddSync(errorLogger), errorLevel),
-	)
+		return &core
 
-	return &core
+	} else {
+		core := zapcore.NewTee(
+			zapcore.NewCore(encoder, zapcore.AddSync(warnLogger), warnLevel),
+			zapcore.NewCore(encoder, zapcore.AddSync(errorLogger), errorLevel),
+		)
+
+		return &core
+	}
 }
