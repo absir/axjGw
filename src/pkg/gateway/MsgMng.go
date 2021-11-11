@@ -58,7 +58,7 @@ func initMsgMng() {
 	}
 
 	// 配置处理
-	APro.SubCfgBind("msg", &MsgMng)
+	APro.SubCfgBind("msg", MsgMng)
 	that := MsgMng
 	that.LastLoad = that.LastLoad && that.LastMax > 0
 	that.CheckDrt = that.CheckDrt * time.Millisecond

@@ -38,7 +38,7 @@ func initConfig(workId int32) {
 	}
 
 	Config.PassProd = Config.AclProd
-	APro.SubCfgBind("gateway", &Config)
+	APro.SubCfgBind("gateway", Config)
 	Config.WorkId = workId
 	Config.WorkHash = int(workId)
 }
