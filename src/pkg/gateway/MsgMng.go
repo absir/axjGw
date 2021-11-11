@@ -17,24 +17,25 @@ import (
 )
 
 type msgMng struct {
-	QueueMax  int           // 主client消息队列大小
-	NextLimit int           // last消息，单次读取列表数
-	LastLimit int           // last消息队类，初始化载入列表数
-	LastMax   int           // last消息队列大小
-	LastLoad  bool          // 是否执行 last消息队类，初始化载入列表数
-	LastUri   string        // 消息持久化，数据库连接
-	ClearCron string        // 消息清理，执行周期
-	ClearDay  int64         // 清理消息过期天数
-	CheckDrt  time.Duration // 执行检查逻辑，间隔
-	LiveDrt   int64         // 连接断开，存活时间
-	IdleDrt   int64         // 连接检查，间隔
-	checkLoop int64
-	checkTime int64
-	Db        MsgDb
-	idWorkder *Util.IdWorker
-	locker    sync.Locker
-	connVer   int32
-	grpMap    *sync.Map
+	QueueMax   int           // 主client消息队列大小
+	NextLimit  int           // last消息，单次读取列表数
+	LastLimit  int           // last消息队类，初始化载入列表数
+	LastMax    int           // last消息队列大小
+	LastMaxAll int           // 所有消息队列对打
+	LastLoad   bool          // 是否执行 last消息队类，初始化载入列表数
+	LastUri    string        // 消息持久化，数据库连接
+	ClearCron  string        // 消息清理，执行周期
+	ClearDay   int64         // 清理消息过期天数
+	CheckDrt   time.Duration // 执行检查逻辑，间隔
+	LiveDrt    int64         // 连接断开，存活时间
+	IdleDrt    int64         // 连接检查，间隔
+	checkLoop  int64
+	checkTime  int64
+	Db         MsgDb
+	idWorkder  *Util.IdWorker
+	locker     sync.Locker
+	connVer    int32
+	grpMap     *sync.Map
 }
 
 // 初始变量
@@ -64,6 +65,9 @@ func initMsgMng() {
 	that.CheckDrt = that.CheckDrt * time.Millisecond
 	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
 	that.IdleDrt = that.IdleDrt * int64(time.Millisecond)
+
+	// 最长消息队列
+	that.LastMaxAll = that.LastMax
 
 	// 属性初始化
 	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
@@ -841,6 +845,21 @@ func (that *MsgSess) Lasts(lastId int64, client *MsgClient, unique string, conti
 	go that.lastLoop(lastId, client, unique, continuous)
 }
 
+func (that *MsgSess) lastQueueId(max int) int64 {
+	if max < MsgMng.LastMaxAll && max >= 0 && that.lastQueue != nil {
+		that.grp.locker.RLock()
+		defer that.grp.locker.RUnlock()
+		size := that.lastQueue.Size()
+		if size > max {
+			val, _ := that.lastQueue.Get(size - max - 1)
+			msg := val.(Msg)
+			return msg.Get().Id
+		}
+	}
+
+	return int64(max)
+}
+
 func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, continuous int32) {
 	if client == nil {
 		return
@@ -850,9 +869,14 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	lastLoop := that.inLastLoop(client)
 	connVer := client.connVer
 	defer that.outLastLoop(client, unique, lastLoop, lastTime)
-	if lastId < 65535 && MsgMng.Db != nil {
-		// 从最近多少条开始
-		lastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
+	if lastId < 65535 {
+		if MsgMng.Db == nil {
+			lastId = that.lastQueueId(int(lastId))
+
+		} else {
+			// 从最近多少条开始
+			lastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
+		}
 	}
 
 	client.continuous = continuous

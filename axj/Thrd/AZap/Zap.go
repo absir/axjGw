@@ -12,3 +12,10 @@ func init() {
 	Kt.Panic(err)
 	Logger = logger
 }
+
+func SetLogger(logger *zap.Logger, err error) {
+	Kt.Err(err, true)
+	if logger != nil {
+		Logger = logger
+	}
+}
