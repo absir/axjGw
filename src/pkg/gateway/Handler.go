@@ -178,7 +178,7 @@ func (that *handler) New(conn ANet.Conn) ANet.ClientM {
 
 func (that *handler) Check(time int64, client ANet.Client) {
 	clientG := that.ClientG(client)
-	if clientG.connTime < time {
+	if clientG.gid != "" && clientG.connTime < time {
 		clientG.ConnKeep()
 		go clientG.ConnCheck()
 	}
