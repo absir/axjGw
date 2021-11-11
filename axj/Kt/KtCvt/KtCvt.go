@@ -3,6 +3,7 @@ package KtCvt
 import (
 	"axj/Kt/Kt"
 	"container/list"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -155,7 +156,7 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 		// struct转化
 		if oTyp != nil && oTyp.Kind() == reflect.Map {
 			val := reflect.New(typ)
-			BindMapVal(val, reflect.ValueOf(obj))
+			BindMapVal(&val, reflect.ValueOf(obj))
 			return val.Interface()
 		}
 	default:
@@ -216,7 +217,7 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 		} else if typ.Kind() == reflect.Struct {
 			// 转换对象
 			val := reflect.New(typ)
-			BindMapVal(val, reflect.ValueOf(obj))
+			BindMapVal(&val, reflect.ValueOf(obj))
 			return val.Elem().Interface()
 		}
 	}
@@ -968,9 +969,10 @@ func ToArray(lst *list.List, typ reflect.Type) interface{} {
 	return array
 }
 
-func BindMap(target reflect.Value, from map[interface{}]interface{}) {
+func BindMap(target *reflect.Value, from map[interface{}]interface{}) {
 	if target.Kind() == reflect.Ptr {
-		target = target.Elem()
+		value := target.Elem()
+		target = &value
 	}
 
 	if target.Kind() != reflect.Struct {
@@ -994,9 +996,10 @@ func BindMap(target reflect.Value, from map[interface{}]interface{}) {
 	}
 }
 
-func BindKtMap(target reflect.Value, from Kt.Map) {
+func BindKtMap(target *reflect.Value, from Kt.Map) {
 	if target.Kind() == reflect.Ptr {
-		target = target.Elem()
+		value := target.Elem()
+		target = &value
 	}
 
 	if target.Kind() != reflect.Struct {
@@ -1021,13 +1024,14 @@ func BindKtMap(target reflect.Value, from Kt.Map) {
 	})
 }
 
-func BindMapVal(target reflect.Value, from reflect.Value) {
+func BindMapVal(target *reflect.Value, from reflect.Value) {
 	if from.Kind() != reflect.Map {
 		return
 	}
 
 	if target.Kind() == reflect.Ptr {
-		target = target.Elem()
+		value := target.Elem()
+		target = &value
 	}
 
 	if target.Kind() != reflect.Struct {
@@ -1052,6 +1056,15 @@ func BindMapVal(target reflect.Value, from reflect.Value) {
 	}
 }
 
+func BindTarget(target interface{}) *reflect.Value {
+	value := reflect.ValueOf(target)
+	if value.Kind() == reflect.Struct {
+		Kt.Err(errors.New("BindTarget Struct need ptr"), true)
+	}
+
+	return &value
+}
+
 func BindInterface(target interface{}, from interface{}) {
 	if target == nil || from == nil {
 		return
@@ -1064,10 +1077,15 @@ func BindInterface(target interface{}, from interface{}) {
 		}
 	}
 
-	if mp, ok := from.(Kt.Map); ok {
-		BindKtMap(reflect.ValueOf(target), mp)
+	if mp, ok := from.(map[interface{}]interface{}); ok {
+		BindMap(BindTarget(target), mp)
 		return
 	}
 
-	BindMapVal(reflect.ValueOf(target), reflect.ValueOf(from))
+	if mp, ok := from.(Kt.Map); ok {
+		BindKtMap(BindTarget(target), mp)
+		return
+	}
+
+	BindMapVal(BindTarget(target), reflect.ValueOf(from))
 }

@@ -42,7 +42,7 @@ func initChatMng() {
 	}
 
 	// 配置处理
-	APro.SubCfgBind("chat", ChatMng)
+	APro.SubCfgBind("chat", &ChatMng)
 	that := ChatMng
 	that.FDrt = that.FDrt * time.Millisecond
 	that.FTimeout = that.FTimeout * int64(time.Millisecond)

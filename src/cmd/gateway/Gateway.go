@@ -47,7 +47,7 @@ func main() {
 
 	// 默认配置
 	{
-		KtCvt.BindInterface(GCfg, APro.Cfg)
+		KtCvt.BindInterface(&GCfg, APro.Cfg)
 		GwWorkHash = int(APro.WorkId())
 	}
 
