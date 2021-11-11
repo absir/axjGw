@@ -1,6 +1,6 @@
 #GrpcAddr: 127.0.0.1:8989
-log:
-  file: 1
+#log:
+#  file: 1
 
 prods:
   acl:
@@ -8,4 +8,4 @@ prods:
   pass:
     1: 127.0.0.1:8083
 msg:
-  LastUri: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local
+#  LastUri: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local

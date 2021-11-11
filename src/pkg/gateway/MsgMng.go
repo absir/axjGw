@@ -879,6 +879,7 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 		}
 	}
 
+	client.lastId = lastId
 	client.continuous = continuous
 	if continuous <= 0 {
 		// loop监听下不为0
