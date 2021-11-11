@@ -7,6 +7,7 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
+	"axj/Thrd/AZap/AZapIst"
 	"axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
 	"go.uber.org/zap"
@@ -95,6 +96,7 @@ func main() {
 
 	// 启动完成
 	AZap.Logger.Info("Gateway all started")
+	AZapIst.InitCfg(true)
 	// 等待关闭
 	APro.Signal()
 }

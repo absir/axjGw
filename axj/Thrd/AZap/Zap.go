@@ -1,5 +1,14 @@
 package AZap
 
-import "go.uber.org/zap"
+import (
+	"axj/Kt/Kt"
+	"go.uber.org/zap"
+)
 
-var Logger, _ = zap.NewDevelopment()
+var Logger *zap.Logger
+
+func init() {
+	logger, err := zap.NewDevelopment(zap.AddCaller())
+	Kt.Panic(err)
+	Logger = logger
+}

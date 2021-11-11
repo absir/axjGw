@@ -85,7 +85,7 @@ func Get(cfg Kt.Map, name string) interface{} {
 	return val
 }
 
-func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}, tName string) interface{} {
+func GetType(cfg Kt.Map, name string, typ reflect.Type, dVal interface{}) interface{} {
 	val := Get(cfg, name)
 	if val != nil {
 		if typ == nil {
@@ -162,7 +162,7 @@ func GetExpRemain(cfg Kt.Map, exp string, strict bool, remain bool) string {
 					val := vals[0]
 					if len(vals) == 3 {
 						strict = false
-						valD = Kt.If(GetType(cfg, val.(string), KtCvt.Bool, false, "").(bool), vals[1], vals[2])
+						valD = Kt.If(GetType(cfg, val.(string), KtCvt.Bool, false).(bool), vals[1], vals[2])
 
 					} else {
 						value = Get(cfg, val.(string))
@@ -353,7 +353,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 							break
 						}
 
-					} else if GetType(cfg, cond, KtCvt.Bool, false, "").(bool) {
+					} else if GetType(cfg, cond, KtCvt.Bool, false).(bool) {
 						conds = nil
 						break
 					}
@@ -397,7 +397,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				break
 			case ',':
 				strs := KtStr.SplitStrBr(str, ",;", true, 0, false, 0, true).(*list.List)
-				o := GetType(mp, name, nil, nil, "").(*list.List)
+				o := GetType(mp, name, nil, nil).(*list.List)
 				if o == nil {
 					o = strs
 					mp.Put(name, o)
@@ -407,7 +407,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				}
 				break
 			case '+':
-				o := GetType(mp, name, nil, nil, "").(*list.List)
+				o := GetType(mp, name, nil, nil).(*list.List)
 				if o == nil {
 					o = list.New()
 					mp.Put(name, o)

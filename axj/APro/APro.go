@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -297,6 +298,10 @@ func FileCfg(file string) KtCfg.Cfg {
 	}
 }
 
+func GetCfg(name string, typ reflect.Type, dVal interface{}) interface{} {
+	return KtCfg.GetType(Cfg, name, typ, dVal)
+}
+
 var workId int32 = -1
 
 func WorkId() int32 {
@@ -306,7 +311,7 @@ func WorkId() int32 {
 		if workId < 0 {
 			var id int32 = 0
 			if Cfg != nil {
-				id = KtCfg.GetType(Cfg, "workId", KtCvt.Int32, 0, "").(int32)
+				id = KtCfg.GetType(Cfg, "workId", KtCvt.Int32, 0).(int32)
 			}
 
 			if id <= 0 {
