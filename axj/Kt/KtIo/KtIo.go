@@ -1,7 +1,7 @@
 package KtIo
 
 import (
-	KtBytes2 "axj/Kt/KtBytes"
+	"axj/Kt/KtBytes"
 	"io"
 )
 
@@ -12,22 +12,22 @@ func GetVIntReader(reader io.ByteReader) int32 {
 		return val
 	}
 
-	val = int32(b) & KtBytes2.VINT
-	if (b & KtBytes2.VINT_NB) != 0 {
+	val = int32(b) & KtBytes.VINT
+	if (b & KtBytes.VINT_NB) != 0 {
 		b, err = reader.ReadByte()
 		if err != nil {
 			return val
 		}
 
-		val += int32(b&KtBytes2.VINT_B) << 7
-		if (b & KtBytes2.VINT_NB) != 0 {
+		val += int32(b&KtBytes.VINT_B) << 7
+		if (b & KtBytes.VINT_NB) != 0 {
 			b, err = reader.ReadByte()
 			if err != nil {
 				return val
 			}
 
-			val += int32(b&KtBytes2.VINT_B) << 14
-			if (b & KtBytes2.VINT_NB) != 0 {
+			val += int32(b&KtBytes.VINT_B) << 14
+			if (b & KtBytes.VINT_NB) != 0 {
 				b, err = reader.ReadByte()
 				if err != nil {
 					return val

@@ -1,7 +1,7 @@
 package KtRand
 
 import (
-	KtBytes2 "axj/Kt/KtBytes"
+	"axj/Kt/KtBytes"
 	"math/rand"
 )
 
@@ -15,7 +15,7 @@ func RandBytes(bLen int) []byte {
 
 	i := 0
 	for ; i < sLen; {
-		KtBytes2.SetInt(bs, i, rand.Int31(), &i)
+		KtBytes.SetInt(bs, i, rand.Int31(), &i)
 	}
 
 	for ; i < bLen; i++ {

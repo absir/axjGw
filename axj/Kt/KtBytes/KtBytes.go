@@ -1,7 +1,7 @@
 package KtBytes
 
 import (
-	KtUnsafe2 "axj/Kt/KtUnsafe"
+	"axj/Kt/KtUnsafe"
 	"fmt"
 )
 
@@ -204,5 +204,5 @@ func IndexByte(bs []byte, b byte, start int, end int) int {
 		end = bLen
 	}
 
-	return KtUnsafe2.IndexByte(bs, b, start, end)
+	return KtUnsafe.IndexByte(bs, b, start, end)
 }
