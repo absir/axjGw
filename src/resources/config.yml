@@ -2,7 +2,7 @@
 #log:
 #  file: 1
 log:
-  level: 1
+#  level: 1
 
 prods:
   acl:
