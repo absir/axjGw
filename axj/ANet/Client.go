@@ -6,6 +6,7 @@ import (
 	"errors"
 	"go.uber.org/zap"
 	"io"
+	"net"
 	"sync"
 	"time"
 )
@@ -155,7 +156,12 @@ func (that *ClientCnn) closeLog(err error, reason interface{}) {
 		AZap.Logger.Debug("Conn close EOF", zap.Reflect("reason", reason))
 
 	} else {
-		AZap.Logger.Warn("Conn close ERR", zap.Error(err), zap.Reflect("reason", reason))
+		if nErr, ok := err.(*net.OpError); ok {
+			AZap.Logger.Debug("Conn close", zap.String("ERR", nErr.Error()), zap.Reflect("reason", reason))
+
+		} else {
+			AZap.Logger.Warn("Conn close ERR", zap.Error(err), zap.Reflect("reason", reason))
+		}
 	}
 }
 
