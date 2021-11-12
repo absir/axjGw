@@ -53,7 +53,7 @@ func (that *MsgD) CData() ([]byte, bool) {
 	}
 
 	cData, err := Processor.Compress.Compress(that.Data)
-	if cData == nil || err != nil || len(cData) <= dLen {
+	if cData == nil || err != nil || len(cData) >= dLen {
 		if err != nil {
 			// 压缩错误
 			AZap.Logger.Warn("msg CData err", zap.Error(err))

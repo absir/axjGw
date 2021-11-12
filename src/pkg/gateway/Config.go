@@ -25,8 +25,8 @@ var Config *config
 
 func initConfig(workId int32) {
 	Config = &config{
-		CompressMin: 1024,
-		DataMax:     1024 << 10,
+		CompressMin: 256,
+		DataMax:     256 << 10,
 		Encrypt:     true,
 		CheckDrt:    3000,
 		IdleDrt:     30000,
