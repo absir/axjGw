@@ -40,7 +40,8 @@ func InitCfg(std bool, opts ...zap.Option) {
 		opts = nOpts
 	}
 
-	core := fileCore()
+	level := zapcore.Level(APro.GetCfg("log.level", KtCvt.Int8, -8).(int8))
+	core := fileCore(level)
 	if core == nil {
 		var config zap.Config
 		if Kt.Env < Kt.Test {
@@ -52,7 +53,11 @@ func InitCfg(std bool, opts ...zap.Option) {
 			config = zap.NewProductionConfig()
 		}
 
-		APro.SubCfgBind("log", &config)
+		APro.SubCfgBind("log.config", &config)
+		if level > -8 {
+			config.Level.SetLevel(level)
+		}
+
 		AZap.SetLogger(config.Build(opts...))
 
 	} else {
@@ -60,7 +65,7 @@ func InitCfg(std bool, opts ...zap.Option) {
 	}
 }
 
-func fileCore() *zapcore.Core {
+func fileCore(level zapcore.Level) *zapcore.Core {
 	if !APro.GetCfg("log.file", KtCvt.Bool, Kt.Env >= Kt.Test).(bool) {
 		return nil
 	}
@@ -107,7 +112,7 @@ func fileCore() *zapcore.Core {
 
 	// 实现两个判断日志等级的interface
 	warnLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl <= zapcore.WarnLevel
+		return lvl <= zapcore.WarnLevel && lvl >= level
 	})
 
 	errorLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {

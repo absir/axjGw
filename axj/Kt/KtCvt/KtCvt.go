@@ -2,9 +2,11 @@ package KtCvt
 
 import (
 	"axj/Kt/Kt"
+	"axj/Thrd/AZap"
 	"container/list"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"reflect"
 	"strconv"
 )
@@ -226,7 +228,12 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 		return obj
 	}
 
-	return reflect.ValueOf(obj).Convert(typ)
+	pVal := ConvertSafe(reflect.ValueOf(obj), typ)
+	if pVal == nil {
+		return nil
+	}
+
+	return &pVal
 }
 
 func ToBool(obj interface{}) bool {
@@ -980,19 +987,61 @@ func BindMap(target *reflect.Value, from map[interface{}]interface{}) {
 	}
 
 	for key, val := range from {
-		name := ToString(key)
-		if name == "" {
-			continue
+		BindKeyVal(target, key, val)
+	}
+}
+
+func BindKeyVal(target *reflect.Value, key interface{}, val interface{}) {
+	name := ToString(key)
+	if name == "" {
+		return
+	}
+
+	field := target.FieldByName(name)
+	if !field.CanSet() {
+		return
+	}
+
+	fType := field.Type()
+	if fType.Kind() == reflect.Struct {
+		BindInterface(field, val)
+		return
+
+	} else if fType.Kind() == reflect.Ptr && fType.Elem().Kind() == reflect.Struct {
+		fVal := field.Interface()
+		if fVal == nil {
+			rVal := reflect.New(fType.Elem())
+			fVal = rVal.Interface()
+			if fVal == nil {
+				return
+			}
+
+			field.Set(rVal)
 		}
 
-		field := target.FieldByName(name)
-		if !field.CanSet() {
-			continue
-		}
+		BindInterface(field, val)
+		return
+	}
 
-		val = ToSafe(val, field.Type(), false)
-		// Convert 类型转化
-		field.Set(reflect.ValueOf(val).Convert(field.Type()))
+	val = ToSafe(val, field.Type(), false)
+	// Convert 类型转化
+	pVal := ConvertSafe(reflect.ValueOf(val), field.Type())
+	if pVal != nil {
+		field.Set(*pVal)
+	}
+}
+
+func ConvertSafe(val reflect.Value, typ reflect.Type) *reflect.Value {
+	var pVal *reflect.Value = nil
+	defer convertSafeRcvr(val, typ)
+	tVal := val.Convert(typ)
+	pVal = &tVal
+	return pVal
+}
+
+func convertSafeRcvr(val reflect.Value, typ reflect.Type) {
+	if err := recover(); err != nil {
+		AZap.Logger.Warn("Convert err", zap.Reflect("val", val), zap.Reflect("typ", typ))
 	}
 }
 
@@ -1007,19 +1056,7 @@ func BindKtMap(target *reflect.Value, from Kt.Map) {
 	}
 
 	from.Range(func(key interface{}, val interface{}) bool {
-		name := ToString(key)
-		if name == "" {
-			return true
-		}
-
-		field := target.FieldByName(name)
-		if !field.CanSet() {
-			return true
-		}
-
-		val = ToSafe(val, field.Type(), false)
-		// Convert 类型转化
-		field.Set(reflect.ValueOf(val).Convert(field.Type()))
+		BindKeyVal(target, key, val)
 		return true
 	})
 }
@@ -1040,26 +1077,17 @@ func BindMapVal(target *reflect.Value, from reflect.Value) {
 
 	it := from.MapRange()
 	for it.Next() {
-		name := ToString(it.Key())
-		if name == "" {
-			continue
-		}
-
-		field := target.FieldByName(name)
-		if !field.CanSet() {
-			continue
-		}
-
-		val := ToSafe(it.Value(), field.Type(), false)
-		// Convert 类型转化
-		field.Set(reflect.ValueOf(val).Convert(field.Type()))
+		BindKeyVal(target, it.Key(), it.Value())
 	}
 }
 
 func BindTarget(target interface{}) *reflect.Value {
-	value := reflect.ValueOf(target)
-	if value.Kind() == reflect.Struct {
-		Kt.Err(errors.New("BindTarget Struct need ptr"), true)
+	value, ok := target.(reflect.Value)
+	if !ok {
+		value = reflect.ValueOf(target)
+		if value.Kind() == reflect.Struct {
+			Kt.Err(errors.New("BindTarget Struct need ptr"), true)
+		}
 	}
 
 	return &value

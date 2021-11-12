@@ -1,6 +1,8 @@
 #GrpcAddr: 127.0.0.1:8989
 #log:
 #  file: 1
+log:
+  level: 1
 
 prods:
   acl:
