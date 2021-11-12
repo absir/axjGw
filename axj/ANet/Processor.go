@@ -14,7 +14,13 @@ type Processor struct {
 }
 
 func (that *Processor) Req(conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
-	return req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, that.DataMax)
+	return req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, nil, that.DataMax)
+}
+
+func (that *Processor) ReqPId(conn Conn, decryKey []byte) (error, int32, string, int32, int64, []byte) {
+	var pid int64 = 0
+	err, req, uri, uriI, data := req(conn, that.Protocol, that.Compress, that.Encrypt, decryKey, &pid, that.DataMax)
+	return err, req, uri, uriI, pid, data
 }
 
 func (that *Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
@@ -33,7 +39,7 @@ func (that *Processor) RepCData(locker sync.Locker, out bool, conn Conn, encryKe
 	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, cData, true, isolate, id)
 }
 
-func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
+func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, id *int64, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
 	err, bs, read := conn.ReadA()
 	if err != nil {
 		return
@@ -41,10 +47,10 @@ func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decry
 
 	var head byte
 	if bs != nil {
-		err, head, req, uri, uriI, data = protocol.Req(bs)
+		err, head, req, uri, uriI, data = protocol.Req(bs, id)
 
 	} else if read != nil {
-		err, head, req, uri, uriI, data = protocol.ReqReader(read, conn.Sticky(), dataMax)
+		err, head, req, uri, uriI, data = protocol.ReqReader(read, conn.Sticky(), id, dataMax)
 
 	} else {
 		err = io.EOF

@@ -30,9 +30,9 @@ var ERR_MAX = errors.New("MAX")
 // 数据协议
 type Protocol interface {
 	// 请求读取
-	Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte)
+	Req(bs []byte, pid *int64) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 流请求读取
-	ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
+	ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 返回数据
 	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte
 	// 返回流写入
@@ -55,7 +55,7 @@ func (that *ProtocolV) isCrc(head byte) bool {
 	return ((head >> HEAD_CRC_MSK_N) % HEAD_CRC_MSK_M) == (head & HEAD_CRC_MSK)
 }
 
-func (that *ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that *ProtocolV) Req(bs []byte, pid *int64) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head = bs[0]
 	// 头部校验
 	if !that.isCrc(head) {
@@ -88,6 +88,11 @@ func (that *ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri stri
 		uriI = KtBytes.GetVInt(bs, off, &off)
 	}
 
+	// pid 读取
+	if pid != nil && req == REQ_PUSHI {
+		*pid = KtBytes.GetInt64(bs, off, &off)
+	}
+
 	// 数据解析
 	if (head & HEAD_DATA) != 0 {
 		data = bs[off:]
@@ -96,7 +101,7 @@ func (that *ProtocolV) Req(bs []byte) (err error, head byte, req int32, uri stri
 	return
 }
 
-func (that *ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head, err = reader.ReadByte()
 	if err != nil {
 		return
@@ -134,6 +139,11 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, dataMax int32) (err
 	// 路由压缩解析
 	if (head & HEAD_URI_I) != 0 {
 		uriI = KtIo.GetVIntReader(reader)
+	}
+
+	// pid 读取
+	if pid != nil && req == REQ_PUSHI {
+		*pid = KtIo.GetInt64Reader(reader)
 	}
 
 	// 数据解析
