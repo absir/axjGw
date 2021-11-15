@@ -47,5 +47,12 @@ func main() {
 		})
 	}
 
+	for i := 0; i < 10000; i++ {
+		go func() {
+			client := asdk.NewClient("127.0.0.1:8683", true, true, 256, 256<<10, 3, 8320, &Opt{})
+			client.Conn()
+		}()
+	}
+
 	APro.Signal()
 }
