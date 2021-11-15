@@ -763,7 +763,15 @@ func (that *MsgSess) LastStart(client *MsgClient, unique string) {
 
 	that.grp.locker.Lock()
 	defer that.grp.locker.Unlock()
-	client.lastTime = time.Now().UnixNano()
+	// 保证lastTime递增
+	lastTime := time.Now().UnixNano()
+	if client.lastTime < lastTime {
+		client.lastTime = lastTime
+
+	} else {
+		client.lastTime++
+	}
+
 	if client.lastLoop > 0 && client.lastId > 1 {
 		// lastLoop执行中
 		return
@@ -785,10 +793,14 @@ func (that *MsgSess) lastIn(client *MsgClient) bool {
 	return true
 }
 
-func (that *MsgSess) lastOut(client *MsgClient) {
+func (that *MsgSess) lastOut(client *MsgClient, unique string, lastTime int64) {
 	that.grp.locker.Lock()
 	defer that.grp.locker.Unlock()
 	client.lasting = false
+	if client.lastTime > lastTime {
+		// 漏掉重启
+		go that.lastRun(client, unique)
+	}
 }
 
 func (that *MsgSess) lastDone(client *MsgClient, lastTime int64) bool {
@@ -802,14 +814,15 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 		return
 	}
 
-	defer that.lastOut(client)
+	lastTime := client.lastTime
+	defer that.lastOut(client, unique, lastTime)
 	for {
 		if client.lastLoop > 0 {
 			continue
 		}
 
 		// 不执行lastLoop才通知
-		lastTime := client.lastTime
+		lastTime = client.lastTime
 		if client.lastId > 0 {
 			that.Lasts(client.lastId, client, unique, client.continuous)
 

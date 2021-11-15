@@ -337,11 +337,14 @@ func WorkId() int32 {
 	return workId
 }
 
+var Stopped bool
+
 // 关闭信号
 func Signal() os.Signal {
 	c := make(chan os.Signal, 0)
 	signal.Notify(c, syscall.SIGTERM)
 	s := <-c
 	fmt.Printf("exit pro ------- signal:[%v]", s)
+	Stopped = true
 	return s
 }

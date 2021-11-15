@@ -2,12 +2,13 @@ package asdk
 
 import (
 	"axj/ANet"
-	"axj/Kt/Kt"
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
+	"container/list"
 	"encoding/json"
 	"go.uber.org/zap"
 	"net"
@@ -54,22 +55,24 @@ type Opt interface {
 }
 
 type Client struct {
-	locker     sync.Locker
-	addr       string
-	out        bool
-	encry      bool
-	compress   bool
-	checkDrt   time.Duration
-	checkTime  int64
-	rqIMax     int32
-	opt        Opt
-	adapter    *Adapter
-	processor  *ANet.Processor
-	uriMapUriI map[string]int32
-	uriIMapUri map[int32]string
-	uriMapHash string
-	reqsMap    *sync.Map
-	reqIdx     int32
+	locker      sync.Locker
+	addr        string
+	out         bool
+	encry       bool
+	compress    bool
+	checkDrt    time.Duration
+	checkTime   int64
+	checksAsync *Util.NotifierAsync
+	rqIMax      int32
+	processor   *ANet.Processor
+	opt         Opt
+	adapter     *Adapter
+	uriMapUriI  map[string]int32
+	uriIMapUri  map[int32]string
+	uriMapHash  string
+	rqAry       *list.List
+	rqDict      map[int32]*rqDt
+	rqI         int32
 }
 
 type Adapter struct {
@@ -84,7 +87,7 @@ type Adapter struct {
 	kicked   bool
 }
 
-type req struct {
+type rqDt struct {
 	adapter *Adapter
 	timeout int64
 	send    bool
@@ -92,33 +95,45 @@ type req struct {
 	uri     string
 	data    []byte
 	encrypt bool
+	rqI     int32
 }
 
-func NewClient(addr string, out bool, encry bool, compress bool, checkDrt int32, rqIMax int32, opt Opt) *Client {
+func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, checkDrt int, rqIMax int, opt Opt) *Client {
 	that := new(Client)
 	that.locker = new(sync.Mutex)
 	that.addr = addr
 	that.out = out
 	that.encry = encry
-	that.compress = compress
+	that.compress = compressMin > 0
 	// 检测间隔
 	if checkDrt < 1 {
 		checkDrt = 1
 	}
 
 	that.checkDrt = time.Duration(checkDrt) * time.Second
+	that.checksAsync = Util.NewNotifierAsync(that.doChecks, that.locker)
 
 	// 最大请求编号
-	if rqIMax < KtBytes.VINT_1_MAX {
-		rqIMax = KtBytes.VINT_1_MAX
+	that.rqIMax = int32(rqIMax)
+	if that.rqIMax < KtBytes.VINT_1_MAX {
+		that.rqIMax = KtBytes.VINT_1_MAX
 	}
 
-	that.rqIMax = rqIMax
+	processor := &ANet.Processor{
+		Protocol:    &ANet.ProtocolV{},
+		Compress:    &ANet.CompressZip{},
+		CompressMin: compressMin,
+		Encrypt:     &ANet.EncryptSr{},
+		DataMax:     int32(dataMax),
+	}
 
+	that.processor = processor
 	that.opt = opt
 	that.uriMapUriI = map[string]int32{}
 	that.uriIMapUri = map[int32]string{}
 	that.loadUriMapUriI()
+	that.rqAry = new(list.List)
+	that.rqDict = map[int32]*rqDt{}
 	return that
 }
 
@@ -192,7 +207,7 @@ func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, ba
 	}
 
 	// 请求对象
-	rq := &req{
+	rq := &rqDt{
 		adapter: adapter,
 		back:    back,
 		uri:     uri,
@@ -205,30 +220,168 @@ func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, ba
 		rq.timeout = time.Now().UnixNano() + int64(timeout)*int64(time.Second)
 	}
 
+	// 请求队列
+	that.rqAdd(rq)
 	// 超时检测
 	that.checkStart()
+	// 发送触发
+	that.checksAsync.Start(nil)
+}
 
+func (that *Client) rqGet(rqI int32) *rqDt {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	return that.rqDict[rqI]
+}
+
+func (that *Client) rqDelDict(rqI int32) {
+	if rqI <= ANet.REQ_ONEWAY {
+		return
+	}
+
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	delete(that.rqDict, rqI)
+}
+
+func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte) {
+	if rq == nil {
+		rq = that.rqGet(rqI)
+
+	} else if rqI <= 0 {
+		rqI = rq.rqI
+	}
+
+	if rq != nil {
+		// 已发送
+		rq.send = true
+		back := rq.back
+		that.rqDelDict(rqI)
+		if back != nil {
+			// 已回调
+			rq.back = nil
+			defer that.onRepRecr()
+			back(err, data)
+		}
+	}
+}
+
+func (that *Client) onRepRecr() {
+	if err := recover(); err != nil {
+		AZap.Logger.Warn("onRep err", zap.Reflect("err", err))
+	}
+}
+
+func (that *Client) rqAdd(rq *rqDt) {
 	// 加入请求唯一rqI，需要锁保持唯一
 	that.locker.Lock()
 	defer that.locker.Unlock()
-	rqI := that.reqIdx
-	for {
-		rqI++
-		if rqI <= ANet.REQ_ONEWAY || rqI >= that.rqIMax {
-			rqI = ANet.REQ_ONEWAY + 1
+	if rq.back == nil {
+		rq.rqI = ANet.REQ_ONEWAY
+
+	} else {
+		rqI := that.rqI
+		for {
+			rqI++
+			if rqI <= ANet.REQ_ONEWAY || rqI >= that.rqIMax {
+				rqI = ANet.REQ_ONEWAY + 1
+			}
+
+			if that.rqDict[rqI] == nil {
+				break
+			}
 		}
 
-		if _, ok := that.reqsMap.Load(rqI); !ok {
+		that.rqI = rqI
+		rq.rqI = rqI
+		that.rqDict[rqI] = rq
+	}
+
+	that.rqAry.PushBack(rq)
+}
+
+func (that *Client) rqNext(el *list.Element) *list.Element {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	if el == nil {
+		return that.rqAry.Front()
+	}
+
+	return el.Next()
+}
+
+func (that *Client) rqDelAry(el *list.Element) {
+	that.locker.Lock()
+	defer that.locker.Unlock()
+	that.rqAry.Remove(el)
+}
+
+func (that *Client) doChecks() {
+	adapter := that.adapter
+	looped := adapter != nil && adapter.looped
+	time := time.Now().UnixNano()
+	var el *list.Element
+	nxt := that.rqNext(nil)
+	for {
+		if el = nxt; el == nil {
 			break
 		}
+
+		nxt = that.rqNext(el)
+		rq, _ := el.Value.(*rqDt)
+		if rq == nil {
+			that.rqDelAry(el)
+			continue
+		}
+
+		if rq.adapter != adapter {
+			// 请求已关闭
+			that.onRep(0, rq, "closed", nil)
+
+		} else if rq.timeout <= time {
+			// 请求已关闭
+			that.onRep(0, rq, "timeout", nil)
+
+		} else if !rq.send && looped {
+			// 发送请求
+			that.rqSend(rq)
+		}
+
+		if rq.send && rq.back == nil {
+			// 已发送返回, 队列删除
+			that.rqDelAry(el)
+		}
+	}
+}
+
+func (that *Client) rqSend(rq *rqDt) {
+	if rq.send {
+		return
 	}
 
-	// 加入请求
-	that.reqsMap.Store(rqI, rq)
-	if adapter.looped {
-		// 发送请求
-		go that.send(rqI, rq)
+	adapter := rq.adapter
+	if !adapter.looped {
+		return
 	}
+
+	rq.send = true
+	if rq.uri == "" && rq.data == nil {
+		// 无数据请求 loop回调
+		if rq.back != nil {
+			that.onRep(0, rq, "", SUCC)
+		}
+
+		return
+	}
+
+	decryKey := adapter.decryKey
+	if !rq.encrypt {
+		decryKey = nil
+	}
+
+	err := that.processor.Rep(adapter.locker, that.out, adapter.conn, decryKey, that.compress, rq.rqI, rq.uri, 0, rq.data, false, 0)
+	// 发送错误处理
+	that.onError(adapter, err)
 }
 
 func (that *Client) checkStart() {
@@ -262,78 +415,7 @@ func (that *Client) checkLoop() {
 	defer that.checkOut()
 	for checkTime == that.checkTime {
 		time.Sleep(that.checkDrt)
-		that.check()
-	}
-}
-
-func (that *Client) check() {
-	reqsMap := that.reqsMap
-	if reqsMap != nil {
-		time := time.Now().UnixNano()
-		reqsMap.Range(func(key, value interface{}) bool {
-			if rq, ok := value.(*req); ok && rq != nil {
-				if rq.adapter != that.adapter {
-					// adapter 关闭
-					that.onRep(key, "closed", nil)
-
-				} else if rq.timeout <= time {
-					// 超时
-					that.onRep(key, "timeout", nil)
-
-				} else if !rq.send && rq.adapter.looped {
-					// 发送
-					that.send(key, rq)
-				}
-
-			} else {
-				// 移除
-				reqsMap.Delete(key)
-			}
-
-			return true
-		})
-	}
-}
-
-func (that *Client) send(rqI interface{}, rq *req) {
-	if rq.send {
-		return
-	}
-
-	adapter := rq.adapter
-	if !adapter.looped {
-		return
-	}
-
-	rq.send = true
-	if rq.uri == "" && rq.data == nil {
-		// 无数据请求 loop回调
-		that.onRep(rqI, "", SUCC)
-		return
-	}
-
-	decryKey := adapter.decryKey
-	if !rq.encrypt {
-		decryKey = nil
-	}
-
-	err := that.processor.Rep(adapter.locker, that.out, adapter.conn, decryKey, that.compress, KtCvt.ToInt32(Kt.If(rq.back == nil, ANet.REQ_ONEWAY, rqI)), rq.uri, 0, rq.data, false, 0)
-	if rq.back == nil {
-		// 无回调请求
-		that.onRep(rqI, "", SUCC)
-	}
-
-	// 发送错误处理
-	that.onError(adapter, err)
-}
-
-func (that *Client) onRep(rqI interface{}, err string, data []byte) {
-	if val, ok := that.reqsMap.Load(rqI); ok {
-		that.reqsMap.Delete(rqI)
-		rq, _ := val.(*req)
-		if rq != nil && rq.back != nil {
-			go rq.back(err, data)
-		}
+		that.checksAsync.Start(nil)
 	}
 }
 
@@ -369,7 +451,7 @@ func (that *Client) onError(adapter *Adapter, err error) bool {
 	}
 
 	// 请求检查
-	that.check()
+	that.checksAsync.Start(nil)
 	return true
 }
 
@@ -474,7 +556,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 				break
 			}
 
-			that.onRep(req, errS, data)
+			that.onRep(req, nil, errS, data)
 		}
 	}
 }
@@ -500,5 +582,5 @@ func (that *Client) onLoop(adapter *Adapter, uri string) {
 		adapter.gid = ids[2]
 	}
 
-	that.check()
+	that.checksAsync.Start(nil)
 }

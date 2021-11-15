@@ -1,15 +1,26 @@
 package KtUnsafe
 
 import (
+	"reflect"
 	"unsafe"
 )
 
-func StringToBytes(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(&s))
+func StringToBytes(s string) (b []byte) {
+	pB := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	pS := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	pB.Data = pS.Data
+	pB.Len = pS.Len
+	pB.Cap = pS.Len
+	return
 }
 
-func BytesToString(b []byte) string {
-	return *(*string)(unsafe.Pointer(&b))
+func BytesToString(b []byte) (s string) {
+	//pB := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	//pS := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	//pS.Data = pB.Data
+	//pS.Len = pB.Len
+	s = *(*string)(unsafe.Pointer(&b))
+	return
 }
 
 func StringToRunes(s string) []rune {

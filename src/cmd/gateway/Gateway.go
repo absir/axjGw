@@ -67,12 +67,14 @@ func main() {
 		Kt.Panic(err)
 		defer serv.Close()
 		go func() {
-			conn, err := serv.Accept()
-			if err != nil {
-				AZap.Logger.Warn("serv Accept err", zap.Error(err))
-			}
+			for !APro.Stopped {
+				conn, err := serv.Accept()
+				if err != nil {
+					AZap.Logger.Warn("serv Accept err", zap.Error(err))
+				}
 
-			go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn)))
+				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn)))
+			}
 		}()
 	}
 
