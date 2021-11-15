@@ -85,7 +85,7 @@ func (that *ClientCnn) SetLimiter(limit int) {
 		that.limiter = Util.LimiterOne
 
 	} else if limit > 0 {
-		that.limiter = Util.NewLimiterLocker(limit)
+		that.limiter = Util.NewLimiterLocker(limit, nil)
 
 	} else {
 		that.limiter = nil
@@ -126,6 +126,15 @@ func (that *ClientCnn) close(err error, reason interface{}, inner bool) {
 	if conn != nil {
 		that.conn = nil
 		conn.Close()
+	}
+
+	// 解除reqLoop阻塞
+	limiter := that.limiter
+	if limiter != nil {
+		that.limiter = nil
+		if limiter != Util.LimiterOne && !limiter.StrictAs(1) {
+			limiter.Done()
+		}
 	}
 
 	// 关闭处理
@@ -315,23 +324,23 @@ func (that *ClientCnn) ReqLoop() {
 		}
 
 		if !that.handler.OnReq(that, req, uri, uriI, data) {
-			poolG := that.limiter
-			if poolG == Util.LimiterOne || (poolG != nil && poolG.StrictAs(1)) {
+			limiter := that.limiter
+			if limiter == nil || limiter == Util.LimiterOne || (limiter != nil && limiter.StrictAs(1)) {
 				that.poolReqIO(nil, req, uri, uriI, data)
 
 			} else {
-				go that.poolReqIO(poolG, req, uri, uriI, data)
-				if poolG != nil {
-					poolG.Add()
+				go that.poolReqIO(limiter, req, uri, uriI, data)
+				if limiter != nil {
+					limiter.Add()
 				}
 			}
 		}
 	}
 }
 
-func (that *ClientCnn) poolReqIO(poolG Util.Limiter, req int32, uri string, uriI int32, data []byte) {
-	if poolG != nil {
-		defer poolG.Done()
+func (that *ClientCnn) poolReqIO(limiter Util.Limiter, req int32, uri string, uriI int32, data []byte) {
+	if limiter != nil {
+		defer limiter.Done()
 	}
 
 	that.handler.OnReqIO(that.client, req, uri, uriI, data)

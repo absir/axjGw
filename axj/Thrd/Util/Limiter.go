@@ -16,6 +16,10 @@ type LimiterLocker struct {
 	cond   *sync.Cond
 }
 
+func (that *LimiterLocker) Lock() sync.Locker {
+	return that.locker
+}
+
 func (that *LimiterLocker) Add() {
 	that.locker.Lock()
 	defer that.locker.Unlock()
@@ -51,13 +55,17 @@ func (that *LimiterLocker) StrictAs(limit int) bool {
 	return that.add == 0 && that.limit == limit
 }
 
-func NewLimiterLocker(limit int) *LimiterLocker {
+func NewLimiterLocker(limit int, locker sync.Locker) *LimiterLocker {
 	pl := new(LimiterLocker)
 	pl.limit = limit
 	pl.add = 0
-	pl.locker = new(sync.Mutex)
+	if locker == nil {
+		locker = new(sync.Mutex)
+	}
+
+	pl.locker = locker
 	pl.cond = sync.NewCond(pl.locker)
 	return pl
 }
 
-var LimiterOne = NewLimiterLocker(1)
+var LimiterOne = NewLimiterLocker(1, nil)

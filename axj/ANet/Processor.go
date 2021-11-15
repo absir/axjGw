@@ -39,7 +39,7 @@ func (that *Processor) RepCData(locker sync.Locker, out bool, conn Conn, encryKe
 	return rep(locker, out, conn, that.Protocol, that.Compress, that.CompressMin, that.Encrypt, encryKey, req, uri, uriI, cData, true, isolate, id)
 }
 
-func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, id *int64, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
+func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decryKey []byte, pId *int64, dataMax int32) (err error, req int32, uri string, uriI int32, data []byte) {
 	err, bs, read := conn.ReadA()
 	if err != nil {
 		return
@@ -47,10 +47,10 @@ func req(conn Conn, protocol Protocol, compress Compress, decrypt Encrypt, decry
 
 	var head byte
 	if bs != nil {
-		err, head, req, uri, uriI, data = protocol.Req(bs, id)
+		err, head, req, uri, uriI, data = protocol.Req(bs, pId)
 
 	} else if read != nil {
-		err, head, req, uri, uriI, data = protocol.ReqReader(read, conn.Sticky(), id, dataMax)
+		err, head, req, uri, uriI, data = protocol.ReqReader(read, conn.Sticky(), pId, dataMax)
 
 	} else {
 		err = io.EOF
