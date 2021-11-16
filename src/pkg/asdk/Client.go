@@ -225,7 +225,9 @@ func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, ba
 	// 超时检测
 	that.checkStart()
 	// 发送触发
-	that.checksAsync.Start(nil)
+	if adapter.looped {
+		that.checksAsync.Start(nil)
+	}
 }
 
 func (that *Client) rqGet(rqI int32) *rqDt {
