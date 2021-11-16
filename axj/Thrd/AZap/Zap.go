@@ -7,17 +7,20 @@ import (
 )
 
 var Logger *zap.Logger
+var LoggerS *zap.Logger
 
 func init() {
 	logger, err := zap.NewDevelopment(zap.AddCaller())
 	Kt.Panic(err)
 	Logger = logger
+	LoggerS = logger.WithOptions(zap.AddCallerSkip(1))
 }
 
 func SetLogger(logger *zap.Logger, err error) {
 	Kt.Err(err, true)
 	if logger != nil {
 		Logger = logger
+		LoggerS = logger.WithOptions(zap.AddCallerSkip(1))
 	}
 }
 
@@ -38,27 +41,26 @@ Go 字符串格式化符号:
 %f	浮点数
 %p	指针，十六进制方式显示
 */
-
 func Debug(msg string, args ...interface{}) {
-	if ce := Logger.Check(zap.DebugLevel, msg); ce != nil {
-		Logger.Debug(fmt.Sprintf(msg, args...))
+	if ce := LoggerS.Check(zap.DebugLevel, msg); ce != nil {
+		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Info(msg string, args ...interface{}) {
-	if ce := Logger.Check(zap.InfoLevel, msg); ce != nil {
-		Logger.Debug(fmt.Sprintf(msg, args...))
+	if ce := LoggerS.Check(zap.InfoLevel, msg); ce != nil {
+		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Warn(msg string, args ...interface{}) {
-	if ce := Logger.Check(zap.WarnLevel, msg); ce != nil {
-		Logger.Debug(fmt.Sprintf(msg, args...))
+	if ce := LoggerS.Check(zap.WarnLevel, msg); ce != nil {
+		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Error(msg string, args ...interface{}) {
-	if ce := Logger.Check(zap.ErrorLevel, msg); ce != nil {
-		Logger.Debug(fmt.Sprintf(msg, args...))
+	if ce := LoggerS.Check(zap.ErrorLevel, msg); ce != nil {
+		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }

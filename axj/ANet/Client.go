@@ -159,17 +159,17 @@ func (that *ClientCnn) closeLog(err error, reason interface{}) {
 	}
 
 	if err == nil {
-		AZap.Logger.Debug("Conn close", zap.Reflect("reason", reason))
+		AZap.LoggerS.Debug("Conn close", zap.Reflect("reason", reason))
 
 	} else if err == io.EOF {
-		AZap.Logger.Debug("Conn close EOF", zap.Reflect("reason", reason))
+		AZap.LoggerS.Debug("Conn close EOF", zap.Reflect("reason", reason))
 
 	} else {
 		if nErr, ok := err.(*net.OpError); ok {
-			AZap.Logger.Debug("Conn close", zap.String("ERR", nErr.Error()), zap.Reflect("reason", reason))
+			AZap.LoggerS.Debug("Conn close", zap.String("ERR", nErr.Error()), zap.Reflect("reason", reason))
 
 		} else {
-			AZap.Logger.Warn("Conn close ERR", zap.Error(err), zap.Reflect("reason", reason))
+			AZap.LoggerS.Warn("Conn close ERR", zap.Error(err), zap.Reflect("reason", reason))
 		}
 	}
 }
