@@ -916,10 +916,12 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	}
 
 	var pushNum int32 = 0
+	// 修复 lastQueue 中有可能会有qs=2的内存消息
+	var dbNexted = false
 	for lastLoop == client.lastLoop && connVer == client.connVer {
 		lastTime = client.lastTime
 		msg, lastIn := that.lastGet(client, lastLoop, lastId)
-		if !lastIn && MsgMng.Db != nil {
+		if !lastIn && MsgMng.Db != nil && !dbNexted {
 			msg = nil
 		}
 
@@ -937,6 +939,11 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 				msgDs := MsgMng.Db.Next(that.grp.gid, lastId, MsgMng.NextLimit)
 				mLen := len(msgDs)
 				if mLen <= 0 {
+					if !dbNexted {
+						dbNexted = true
+						continue
+					}
+
 					if that.conLastLoop(client, lastTime) {
 						continue
 					}

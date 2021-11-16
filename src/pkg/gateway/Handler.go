@@ -5,7 +5,6 @@ import (
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
 	"context"
-	"fmt"
 	"go.uber.org/zap"
 	"strings"
 	"time"
@@ -121,8 +120,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 				AZap.Logger.Warn("Req err " + uri + " nil")
 
 			} else {
-				// err.Error()
-				AZap.Logger.Warn(fmt.Sprintf("Req err %v %v", uri, err))
+				AZap.Logger.Warn("Req err " + uri + " " + err.Error())
 			}
 
 			reped = true
