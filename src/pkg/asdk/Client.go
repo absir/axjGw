@@ -11,7 +11,9 @@ import (
 	"container/list"
 	"encoding/json"
 	"go.uber.org/zap"
+	"golang.org/x/net/websocket"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -57,6 +59,7 @@ type Opt interface {
 type Client struct {
 	locker      sync.Locker
 	addr        string
+	ws          bool
 	out         bool
 	encry       bool
 	compress    bool
@@ -102,6 +105,7 @@ func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, 
 	that := new(Client)
 	that.locker = new(sync.Mutex)
 	that.addr = addr
+	that.ws = strings.HasPrefix(addr, "ws:") || strings.HasPrefix(addr, "wss:")
 	that.out = out
 	that.encry = encry
 	that.compress = compressMin > 0
@@ -171,13 +175,26 @@ func (that *Client) Conn() *Adapter {
 		return that.adapter
 	}
 
-	conn, err := net.Dial("tcp", that.addr)
-	if that.onError(nil, err) {
-		return that.adapter
+	var aConn ANet.Conn
+	if that.ws {
+		conn, err := websocket.Dial(that.addr, "", that.addr)
+		if that.onError(nil, err) {
+			return that.adapter
+		}
+
+		aConn = ANet.NewConnWebsocket(conn)
+
+	} else {
+		conn, err := net.Dial("tcp", that.addr)
+		if that.onError(nil, err) {
+			return that.adapter
+		}
+
+		aConn = ANet.NewConnSocket(conn.(*net.TCPConn))
 	}
 
 	adapter := new(Adapter)
-	adapter.conn = ANet.NewConnSocket(conn.(*net.TCPConn))
+	adapter.conn = aConn
 	adapter.locker = new(sync.Mutex)
 	that.adapter = adapter
 	that.opt.OnState(adapter, CONN, "", nil)

@@ -4,7 +4,6 @@ import (
 	"axj/APro"
 	"axj/Kt/KtUnsafe"
 	"axjGW/pkg/asdk"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -37,17 +36,19 @@ func (o Opt) SaveStorage(name string, value string) {
 }
 
 func main() {
-	client := asdk.NewClient("127.0.0.1:8683", true, true, 256, 256<<10, 3, 8320, &Opt{})
+	// 127.0.0.1:8683
+	// ws://127.0.0.1:8682/gw
+	client := asdk.NewClient("ws://127.0.0.1:8682/gw", true, true, 256, 256<<10, 3, 8320, &Opt{})
 	client.Conn()
-	for i := 0; i < 10; i++ {
-		strs := [2]string{"uri" + strconv.Itoa(i), "data" + strconv.Itoa(i)}
-		data, _ := json.Marshal(strs)
-		client.Req("test/sendU", data, false, 30, func(s string, data []byte) {
-			fmt.Println("send Back === " + s + KtUnsafe.BytesToString(data))
-		})
-	}
+	//for i := 0; i < 10; i++ {
+	//	strs := [2]string{"uri" + strconv.Itoa(i), "data" + strconv.Itoa(i)}
+	//	data, _ := json.Marshal(strs)
+	//	client.Req("test/sendU", data, false, 30, func(s string, data []byte) {
+	//		fmt.Println("send Back === " + s + KtUnsafe.BytesToString(data))
+	//	})
+	//}
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1000; i++ {
 		go func() {
 			client := asdk.NewClient("127.0.0.1:8683", true, true, 256, 256<<10, 3, 8320, &Opt{})
 			client.Conn()
