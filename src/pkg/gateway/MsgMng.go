@@ -835,7 +835,7 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 
 		// 不执行lastLoop才通知
 		lastTime = client.lastTime
-		if client.lastId > 0 {
+		if client.lastId > 1 {
 			that.Lasts(client.lastId, client, unique, client.continuous)
 
 		} else {
@@ -861,8 +861,8 @@ func (that *MsgSess) Lasts(lastId int64, client *MsgClient, unique string, conti
 		return
 	}
 
-	if continuous > 0 && lastId == 1 {
-		// 光loop监听，last通知
+	if continuous <= 0 && lastId <= 0 {
+		// 只loop监听，last通知
 		client.lastId = 1
 		return
 	}
@@ -895,13 +895,13 @@ func (that *MsgSess) lastLoop(lastId int64, client *MsgClient, unique string, co
 	connVer := client.connVer
 	defer that.outLastLoop(client, unique, lastLoop, lastTime)
 	if lastId < 65535 {
-		if MsgMng.Db == nil {
-			lastId = that.lastQueueId(int(lastId))
-
-		} else {
+		lstId := that.lastQueueId(int(lastId))
+		if lastId == lstId && MsgMng.Db != nil {
 			// 从最近多少条开始
-			lastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
+			lstId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
 		}
+
+		lastId = lstId
 	}
 
 	client.lastId = lastId
