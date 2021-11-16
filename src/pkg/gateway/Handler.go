@@ -120,7 +120,8 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 				AZap.Logger.Warn("Req err " + uri + " nil")
 
 			} else {
-				AZap.Logger.Warn("Req err " + uri + " " + err.Error())
+				// err.Error()
+				AZap.Logger.Warn("Req err "+uri+" ", zap.Error(err))
 			}
 
 			reped = true
