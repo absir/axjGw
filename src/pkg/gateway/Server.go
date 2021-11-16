@@ -228,6 +228,11 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 		}
 	}
 
+	// 请求并发限制
+	if login.Limit > 0 {
+		clientG.SetLimiter(int(login.Limit))
+	}
+
 	// 路由服务规则
 	clientG.PutRId("", login.Rid)
 	clientG.PutRIds(login.Rids)
