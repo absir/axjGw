@@ -830,6 +830,8 @@ func (that *MsgSess) lastRun(client *MsgClient, unique string) {
 	defer that.lastOut(client, unique, lastTime)
 	for {
 		if client.lastLoop > 0 {
+			// 休眠一秒， 防止通知过于频繁|必需
+			time.Sleep(time.Second)
 			continue
 		}
 
