@@ -71,6 +71,7 @@ func main() {
 				conn, err := serv.Accept()
 				if err != nil {
 					AZap.Logger.Warn("serv Accept err", zap.Error(err))
+					continue
 				}
 
 				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn)))
