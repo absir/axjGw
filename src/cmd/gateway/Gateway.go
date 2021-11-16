@@ -97,7 +97,7 @@ func main() {
 	}
 
 	// 启动完成
-	AZap.Logger.Info("Gateway all started")
+	AZap.Logger.Info("Gateway all AXJ started")
 	AZapIst.InitCfg(true)
 	// 等待关闭
 	APro.Signal()
