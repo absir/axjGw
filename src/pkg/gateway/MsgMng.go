@@ -6,6 +6,7 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtUnsafe"
+	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"errors"
@@ -190,6 +191,7 @@ func (that *msgMng) checkGrp(key interface{}, grp *MsgGrp) {
 		}
 
 		that.grpMap.Delete(key)
+		AZap.Debug("Msg Check Del %s", grp.gid)
 	}
 }
 
@@ -338,6 +340,7 @@ func (that *MsgGrp) closeOld(old *MsgClient, cid int64, unique string, kick bool
 		go old.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: old.cid}, nil)
 	}
 
+	AZap.Debug("Msg Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return true
 }
 
@@ -411,6 +414,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 	}
 
 	sess.clientNum++
+	AZap.Debug("Msg Conn %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return client
 }
 
@@ -453,6 +457,7 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 }
 
 func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (int64, bool, error) {
+	AZap.Debug("Msg Push %s %s,%d", that.gid, uri, qs)
 	if qs >= 2 {
 		if MsgMng.LastMax <= 0 {
 			qs = 1
@@ -538,10 +543,17 @@ const (
 var ERR_NOWAY = ANet.ERR_NOWAY
 var ERR_FAIL = errors.New("FAIL")
 
+var Result_IdNone = int32(gw.Result_IdNone)
+
 func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
-	if Server.Id32(rep) >= R_SUCC_MIN {
+	ret := Server.Id32(rep)
+	if ret >= R_SUCC_MIN {
 		client.idleTime = time.Now().UnixNano() + MsgMng.IdleDrt
 		return true
+
+	} else if ret == Result_IdNone {
+		// 要不要立刻剔除呢? Conn 和 Close HASH不一致的情况下
+		that.grp.Close(client.cid, unique, client.connVer, false)
 	}
 
 	// 消息发送失败
@@ -963,7 +975,7 @@ func (that *MsgSess) lastMsg(lastLoop int64, client *MsgClient, msg Msg, lastId 
 	}
 
 	msgD := msg.Get()
-	if !that.Push(msg.Get(), client, "", isolate) {
+	if !that.Push(msg.Get(), client, unique, isolate) {
 		return false
 	}
 

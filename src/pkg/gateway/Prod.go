@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"math/rand"
-	"strconv"
 	"sync"
 )
 
@@ -37,7 +36,7 @@ func NewProd(id int32, url string) (*Prod, error) {
 	err := prod.initClient(false)
 	prod.locker = new(sync.Mutex)
 	if err != nil {
-		AZap.Logger.Debug("NewProd init err " + strconv.Itoa(int(id)) + ", " + url + " : " + err.Error())
+		AZap.Debug("NewProd init err %d, %s : %s", id, url, err.Error())
 	}
 
 	return prod, nil

@@ -198,7 +198,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 				AZap.Logger.Debug("serv acl Login Fail nil")
 
 			} else {
-				AZap.Logger.Debug("serv acl Login Fail " + err.Error())
+				AZap.Debug("serv acl Login Fail %s", err.Error())
 			}
 		}
 
