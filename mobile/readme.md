@@ -11,3 +11,8 @@ sh build.sh
 ```
 wss://gw.dev.yiyiny.com/gw
 ```
+
+## 安卓环境依赖
+
+- 1、下载 android studio
+- 2、安装sdk

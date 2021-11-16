@@ -1,0 +1,8 @@
+framework module "Asdk" {
+	header "ref.h"
+    header "Asdk.objc.h"
+    header "Universe.objc.h"
+    header "Asdk.h"
+
+    export *
+}
