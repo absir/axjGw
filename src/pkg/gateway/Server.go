@@ -295,7 +295,7 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 	Kt.Panic(err)
 	recoverFun := func() {
 		if err := recover(); err != nil {
-			AZap.Logger.Warn("grpc stream err", zap.Reflect("err", err))
+			AZap.LoggerS.Warn("grpc stream err", zap.Reflect("err", err))
 		}
 	}
 	serv := grpc.NewServer(

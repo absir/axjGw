@@ -60,6 +60,6 @@ func (that *AllocPool) Put(p Pool, recover bool) {
 
 func (that *AllocPool) recover() {
 	if reason := recover(); reason != nil {
-		AZap.Logger.Warn("AllocPool recover", zap.Reflect("reason", reason))
+		AZap.LoggerS.Warn("AllocPool recover", zap.Reflect("reason", reason))
 	}
 }

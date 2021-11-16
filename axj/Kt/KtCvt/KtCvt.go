@@ -1041,7 +1041,7 @@ func ConvertSafe(val reflect.Value, typ reflect.Type) *reflect.Value {
 
 func convertSafeRcvr(val reflect.Value, typ reflect.Type) {
 	if err := recover(); err != nil {
-		AZap.Logger.Warn("Convert err", zap.Reflect("val", val), zap.Reflect("typ", typ))
+		AZap.LoggerS.Warn("Convert err", zap.Reflect("val", val), zap.Reflect("typ", typ))
 	}
 }
 

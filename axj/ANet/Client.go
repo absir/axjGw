@@ -4,6 +4,7 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"io"
 	"net"
@@ -42,6 +43,7 @@ const (
 
 type Client interface {
 	Get() *ClientCnn
+	CId() interface{}
 }
 
 type ClientCnn struct {
@@ -53,6 +55,14 @@ type ClientCnn struct {
 	locker   sync.Locker
 	closed   int8
 	limiter  Util.Limiter
+}
+
+func (that *ClientCnn) Get() *ClientCnn {
+	return that
+}
+
+func (that *ClientCnn) CId() interface{} {
+	return nil
 }
 
 func (that *ClientCnn) Client() Client {
@@ -158,18 +168,22 @@ func (that *ClientCnn) closeLog(err error, reason interface{}) {
 		return
 	}
 
+	if !AZap.LoggerS.Core().Enabled(zap.DebugLevel) {
+		return
+	}
+
 	if err == nil {
-		AZap.LoggerS.Debug("Conn close", zap.Reflect("reason", reason))
+		AZap.LoggerS.Debug(fmt.Sprintf("Conn close %v, %v", reason, that.client.CId()))
 
 	} else if err == io.EOF {
-		AZap.LoggerS.Debug("Conn close EOF", zap.Reflect("reason", reason))
+		AZap.LoggerS.Debug(fmt.Sprintf("Conn close EOF %v, %v", reason, that.client.CId()))
 
 	} else {
 		if nErr, ok := err.(*net.OpError); ok {
-			AZap.LoggerS.Debug("Conn close", zap.String("ERR", nErr.Error()), zap.Reflect("reason", reason))
+			AZap.LoggerS.Debug(fmt.Sprintf("Conn close %v %v, %v", nErr.Error(), reason, that.client.CId()))
 
 		} else {
-			AZap.LoggerS.Warn("Conn close ERR", zap.Error(err), zap.Reflect("reason", reason))
+			AZap.LoggerS.Debug(fmt.Sprintf("Conn close ERR %v, %v", reason, that.client.CId()), zap.Error(err))
 		}
 	}
 }
@@ -187,20 +201,16 @@ func (that *ClientCnn) closeRcvr() error {
 		}
 
 		if reason == nil {
-			AZap.Logger.Warn("Conn crash", zap.Error(err))
+			AZap.LoggerS.Warn("Conn crash", zap.Error(err))
 
 		} else {
-			AZap.Logger.Warn("Conn crash", zap.Error(err), zap.Reflect("reason", reason))
+			AZap.LoggerS.Warn("Conn crash", zap.Error(err), zap.Reflect("reason", reason))
 		}
 
 		return err
 	}
 
 	return nil
-}
-
-func (that *ClientCnn) Get() *ClientCnn {
-	return that
 }
 
 func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {

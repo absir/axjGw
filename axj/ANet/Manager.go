@@ -18,6 +18,10 @@ type ClientMng struct {
 	idleTime int64
 }
 
+func (that *ClientMng) CId() interface{} {
+	return that.id
+}
+
 func (that *ClientMng) GetM() *ClientMng {
 	return that
 }

@@ -150,7 +150,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 
 func (that *handler) reqRcvr(client ANet.Client, req int32, reped bool) {
 	if err := recover(); err != nil {
-		AZap.Logger.Warn("rep err", zap.Reflect("err", err))
+		AZap.LoggerS.Warn("rep err", zap.Reflect("err", err))
 	}
 
 	if !reped && req > ANet.REQ_ONEWAY {

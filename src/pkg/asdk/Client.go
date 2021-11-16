@@ -262,15 +262,15 @@ func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte) {
 		if back != nil {
 			// 已回调
 			rq.back = nil
-			defer that.onRepRecr()
+			defer that.onRepRcvr()
 			back(err, data)
 		}
 	}
 }
 
-func (that *Client) onRepRecr() {
+func (that *Client) onRepRcvr() {
 	if err := recover(); err != nil {
-		AZap.Logger.Warn("onRep err", zap.Reflect("err", err))
+		AZap.LoggerS.Warn("onRep err", zap.Reflect("err", err))
 	}
 }
 
@@ -484,7 +484,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		}
 
 		// catch err
-		defer that.reqLoopRecr(adapter)
+		defer that.reqLoopRcvr(adapter)
 
 		// 非返回值 才需要路由压缩解密
 		if req < ANet.REQ_ONEWAY {
@@ -563,9 +563,9 @@ func (that *Client) reqLoop(adapter *Adapter) {
 	}
 }
 
-func (that *Client) reqLoopRecr(adapter *Adapter) {
+func (that *Client) reqLoopRcvr(adapter *Adapter) {
 	if err := recover(); err != nil {
-		AZap.Logger.Warn("reqLoop err", zap.Reflect("err", err))
+		AZap.LoggerS.Warn("reqLoop err", zap.Reflect("err", err))
 	}
 }
 

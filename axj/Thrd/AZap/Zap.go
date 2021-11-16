@@ -42,25 +42,25 @@ Go 字符串格式化符号:
 %p	指针，十六进制方式显示
 */
 func Debug(msg string, args ...interface{}) {
-	if ce := LoggerS.Check(zap.DebugLevel, msg); ce != nil {
+	if LoggerS.Core().Enabled(zap.DebugLevel) {
 		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Info(msg string, args ...interface{}) {
-	if ce := LoggerS.Check(zap.InfoLevel, msg); ce != nil {
+	if LoggerS.Core().Enabled(zap.InfoLevel) {
 		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Warn(msg string, args ...interface{}) {
-	if ce := LoggerS.Check(zap.WarnLevel, msg); ce != nil {
+	if LoggerS.Core().Enabled(zap.WarnLevel) {
 		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Error(msg string, args ...interface{}) {
-	if ce := LoggerS.Check(zap.ErrorLevel, msg); ce != nil {
+	if LoggerS.Core().Enabled(zap.ErrorLevel) {
 		LoggerS.Debug(fmt.Sprintf(msg, args...))
 	}
 }
