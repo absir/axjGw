@@ -70,6 +70,10 @@ func main() {
 			for !APro.Stopped {
 				conn, err := serv.Accept()
 				if err != nil {
+					if APro.Stopped {
+						return
+					}
+
 					AZap.Logger.Warn("serv Accept err", zap.Error(err))
 					continue
 				}
