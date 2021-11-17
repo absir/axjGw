@@ -31,6 +31,9 @@
 
 - (nonnull instancetype)initWithRef:(_Nonnull id)ref;
 - (nonnull instancetype)init;
+- (int64_t)getCid;
+- (NSString* _Nonnull)getUnique;
+- (BOOL)isLooped;
 @end
 
 @interface AsdkClient : NSObject <goSeqRefInterface> {
