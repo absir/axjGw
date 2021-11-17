@@ -76,7 +76,7 @@ func (g GatewayIs) Online(ctx context.Context, req *gw.GidReq) (*gw.BoolRep, err
 		return nil, Result_ProdErr
 	}
 
-	msgGrp := gateway.MsgMng.MsgGrp(req.Gid)
+	msgGrp := gateway.MsgMng.GetMsgGrp(req.Gid)
 	if msgGrp == nil || msgGrp.ClientNum() <= 0 {
 		return Result_Fasle, nil
 	}
@@ -102,7 +102,7 @@ func (g GatewayIs) Onlines(ctx context.Context, req *gw.GidsReq) (*gw.BoolsRep, 
 			return nil, Result_ProdErr
 		}
 
-		msgGrp := gateway.MsgMng.MsgGrp(gid)
+		msgGrp := gateway.MsgMng.GetMsgGrp(gid)
 		if msgGrp == nil || msgGrp.ClientNum() <= 0 {
 			continue
 		}
@@ -187,13 +187,13 @@ func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	client := gateway.MsgMng.GetMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer)
+	client := gateway.MsgMng.GetOrNewMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer)
 	if client == nil {
 		return Result_Fail_Rep, nil
 	}
 
 	return &gw.Id32Rep{
-		Id: client.ConnVer(),
+		Id: client.GetConnVer(),
 	}, nil
 }
 
@@ -202,7 +202,7 @@ func (g GatewayIs) Disc(ctx context.Context, req *gw.GDiscReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	if !gateway.MsgMng.GetMsgGrp(req.Gid).Close(req.Cid, req.Unique, req.ConnVer, req.Kick) {
+	if !gateway.MsgMng.GetOrNewMsgGrp(req.Gid).Close(req.Cid, req.Unique, req.ConnVer, req.Kick) {
 		return Result_Fail_Rep, nil
 	}
 
@@ -273,7 +273,7 @@ func (g GatewayIs) GQueue(ctx context.Context, req *gw.IGQueueReq) (*gw.Id32Rep,
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
+	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
 	client := grp.Conn(req.Cid, req.Unique, false, false)
 	if client == nil {
 		return Result_IdNone_Rep, nil
@@ -283,7 +283,7 @@ func (g GatewayIs) GQueue(ctx context.Context, req *gw.IGQueueReq) (*gw.Id32Rep,
 		grp.Clear(true, false)
 
 	} else {
-		grp.Sess().QueueStart()
+		grp.GetSess().QueueStart()
 	}
 
 	return Result_Succ_Rep, nil
@@ -294,7 +294,7 @@ func (g GatewayIs) GClear(ctx context.Context, req *gw.IGClearReq) (*gw.Id32Rep,
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.MsgGrp(req.Gid)
+	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
 	if grp != nil {
 		grp.Clear(req.Queue, req.Last)
 	}
@@ -307,14 +307,14 @@ func (g GatewayIs) GLasts(ctx context.Context, req *gw.GLastsReq) (*gw.Id32Rep, 
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
+	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
 	client := grp.Conn(req.Cid, req.Unique, false, false)
 	if client == nil {
 		return Result_IdNone_Rep, nil
 	}
 
 	// 开始拉取
-	grp.Sess().Lasts(req.LastId, client, req.Unique, req.Continuous)
+	grp.GetSess().SubLast(req.LastId, client, req.Unique, req.Continuous)
 	return Result_Succ_Rep, nil
 }
 
@@ -323,11 +323,11 @@ func (g GatewayIs) GLast(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, erro
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.MsgGrp(req.Gid)
+	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
 	if grp != nil {
-		sess := grp.Sess()
+		sess := grp.GetSess()
 		if sess != nil {
-			sess.LastsStart()
+			sess.LastStart()
 		}
 	}
 
@@ -343,7 +343,7 @@ func (g GatewayIs) GPush(ctx context.Context, req *gw.GPushReq) (*gw.Id64Rep, er
 		req.Isolate = false
 	}
 
-	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
+	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
 	id, succ, err := grp.Push(req.Uri, req.Data, req.Isolate, req.Qs, req.Queue, req.Unique, req.Fid)
 	if !succ {
 		return Result_Fail_Rep64, err

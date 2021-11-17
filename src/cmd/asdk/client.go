@@ -38,7 +38,7 @@ func (o Opt) SaveStorage(name string, value string) {
 func main() {
 	// 127.0.0.1:8683
 	// ws://127.0.0.1:8682/gw
-	client := asdk.NewClient("ws://127.0.0.1:8682/gw", true, true, 256, 256<<10, 3, 8320, &Opt{})
+	client := asdk.NewClient("127.0.0.1:8683", true, true, 256, 256<<10, 3, 8320, &Opt{})
 	client.Conn()
 	//for i := 0; i < 10; i++ {
 	//	strs := [2]string{"uri" + strconv.Itoa(i), "data" + strconv.Itoa(i)}
@@ -48,7 +48,7 @@ func main() {
 	//	})
 	//}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 2000; i++ {
 		go func() {
 			client := asdk.NewClient("127.0.0.1:8683", true, true, 256, 256<<10, 3, 8320, &Opt{})
 			client.Conn()

@@ -28,13 +28,13 @@ func (that *NotifierAsync) Start(run func()) {
 		return
 	}
 
+	runTime := time.Now().UnixNano()
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	if run != nil {
 		that.run = run
 	}
 
-	runTime := time.Now().UnixNano()
 	if that.runTime < runTime {
 		that.runTime = runTime
 

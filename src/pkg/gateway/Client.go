@@ -58,30 +58,25 @@ func (that *ClientG) SetId(uid int64, sid string, unique string, discBack bool) 
 
 func (that *ClientG) Hash() int {
 	if that.hash < 0 {
-		clientC := that.Get()
-		clientC.Locker().Lock()
-		defer clientC.Locker().Unlock()
-		if that.hash < 0 {
-			var hash int
-			if that.gid != "" {
-				hash = Kt.HashCode(KtUnsafe.StringToBytes(that.gid))
+		var hash int
+		if that.gid != "" {
+			hash = Kt.HashCode(KtUnsafe.StringToBytes(that.gid))
 
-			} else if that.sid != "" {
-				hash = Kt.HashCode(KtUnsafe.StringToBytes(that.sid))
+		} else if that.sid != "" {
+			hash = Kt.HashCode(KtUnsafe.StringToBytes(that.sid))
 
-			} else if that.uid > 0 {
-				hash = int(that.uid)
+		} else if that.uid > 0 {
+			hash = int(that.uid)
 
-			} else {
-				hash = int(that.Id())
-			}
-
-			if hash < 0 {
-				hash = -hash
-			}
-
-			that.hash = hash
+		} else {
+			hash = int(that.Id())
 		}
+
+		if hash < 0 {
+			hash = -hash
+		}
+
+		that.hash = hash
 	}
 
 	return that.hash
