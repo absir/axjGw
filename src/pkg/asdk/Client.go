@@ -102,15 +102,15 @@ func (that *Adapter) GetUnique() string {
 	return that.unique
 }
 
-func (that *Adapter) getGid() string {
+func (that *Adapter) GetGid() string {
 	return that.gid
 }
 
-func (that *Adapter) isClosed() bool {
+func (that *Adapter) IsClosed() bool {
 	return that.closed
 }
 
-func (that *Adapter) isKicked() bool {
+func (that *Adapter) IsKicked() bool {
 	return that.kicked
 }
 
