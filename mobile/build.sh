@@ -1,5 +1,5 @@
-# export ANDROID_HOME=~/Library/Android/sdk/
-# export ANDROID_NDK_HOME=$ANDROID_HOME/ndk
+export ANDROID_HOME=~/Library/Android/sdk/
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk
 # ln -s ndk/23.1.7779620  ndk-bundle
 
 echo "IOS SDK BUILD...."
