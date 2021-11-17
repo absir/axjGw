@@ -90,6 +90,30 @@ type Adapter struct {
 	kicked   bool
 }
 
+func (that *Adapter) IsLooped() bool {
+	return that.looped
+}
+
+func (that *Adapter) GetCid() int64 {
+	return that.cid
+}
+
+func (that *Adapter) GetUnique() string {
+	return that.unique
+}
+
+func (that *Adapter) getGid() string {
+	return that.gid
+}
+
+func (that *Adapter) isClosed() bool {
+	return that.closed
+}
+
+func (that *Adapter) isKicked() bool {
+	return that.kicked
+}
+
 type rqDt struct {
 	adapter *Adapter
 	timeout int64
