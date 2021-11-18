@@ -27,7 +27,8 @@ type MsgSess struct {
 	// 多客户端
 	clientMap *sync.Map
 	// 客户端数
-	clientNum int
+	clientNum      int
+	checkClientNum int
 }
 
 type ERpc int
@@ -43,6 +44,24 @@ var ERR_FAIL = errors.New("FAIL")
 var Result_IdNone = int32(gw.Result_IdNone)
 
 var SubLastSleep = 20 * time.Millisecond
+
+func (that *MsgSess) getOrNewClientMap() *sync.Map {
+	if that.clientMap == nil {
+		that.grp.locker.Lock()
+		defer that.grp.locker.Unlock()
+		if that.clientMap == nil {
+			that.clientMap = new(sync.Map)
+		}
+	}
+
+	return that.clientMap
+}
+
+func (that *MsgSess) mdfyClientNum(num int) {
+	that.grp.locker.Lock()
+	defer that.grp.locker.Unlock()
+	that.clientNum = that.clientNum + num
+}
 
 // 消息发送返回处理
 func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {

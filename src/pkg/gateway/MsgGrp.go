@@ -111,7 +111,7 @@ func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 }
 
 // 关闭消息客户端
-func (that *MsgGrp) closeClient(lock bool, client *MsgClient, cid int64, unique string, kick bool) bool {
+func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kick bool) bool {
 	sess := that.sess
 	if sess == nil {
 		return false
@@ -121,20 +121,15 @@ func (that *MsgGrp) closeClient(lock bool, client *MsgClient, cid int64, unique 
 		return false
 	}
 
-	if lock {
-		that.locker.Lock()
-		defer that.locker.Unlock()
-	}
-
 	if unique == "" {
 		sess.client = nil
 
-	} else {
+	} else if sess.clientMap != nil {
 		sess.clientMap.Delete(unique)
 	}
 
 	client.connVer = 0
-	sess.clientNum--
+	sess.mdfyClientNum(-1)
 	if kick {
 		// 关闭通知
 		go client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid}, nil)
@@ -151,10 +146,14 @@ func (that *MsgGrp) checkClients() {
 		return
 	}
 
+	// 单线程 checkClientNum 保证
+	that.sess.checkClientNum = 0
 	that.checkClient(sess.client, "")
 	if sess.clientMap != nil {
 		sess.clientMap.Range(that.checkRange)
 	}
+
+	that.sess.clientNum = that.sess.checkClientNum
 }
 
 func (that *MsgGrp) checkRange(key, val interface{}) bool {
@@ -171,13 +170,17 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 
 	if client.idleTime > MsgMng.checkTime {
 		// 未空闲
+		that.sess.checkClientNum++
 		return
 	}
 
 	rep, _ := client.gatewayI.Alive(Server.Context, client.getCidReq())
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {
-		that.closeClient(true, client, client.cid, unique, false)
+		that.closeClient(client, client.cid, unique, false)
+
+	} else {
+		that.sess.checkClientNum++
 	}
 }
 
@@ -196,26 +199,21 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 			return nil
 		}
 
-		that.closeClient(true, client, client.cid, unique, kick)
+		that.closeClient(client, client.cid, unique, kick)
 	}
 
 	sess := that.getOrNewSess(true)
 	client = that.newMsgClient(cid)
 	client.connVer = MsgMng.newConnVer()
-	that.locker.Lock()
-	defer that.locker.Unlock()
+
 	if unique == "" {
 		sess.client = client
 
 	} else {
-		if sess.clientMap == nil {
-			sess.clientMap = new(sync.Map)
-		}
-
-		sess.clientMap.Store(unique, client)
+		sess.getOrNewClientMap().Store(unique, client)
 	}
 
-	sess.clientNum++
+	sess.mdfyClientNum(1)
 	AZap.Debug("Msg Conn %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return client
 }
@@ -224,7 +222,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 func (that *MsgGrp) Close(cid int64, unique string, connVer int32, kick bool) bool {
 	client := that.getClient(unique)
 	if client != nil && (connVer == 0 || connVer == client.connVer) {
-		return that.closeClient(true, client, cid, unique, kick)
+		return that.closeClient(client, cid, unique, kick)
 	}
 
 	return false
