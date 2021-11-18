@@ -86,7 +86,7 @@ func init() {
 	that.checkAsync = Util.NewNotifierAsync(that.check, that.locker)
 	that.list = new(list.List)
 	State = that
-	that.reset()
+	that.reset(false)
 	go func() {
 		for {
 			// 定时检查
@@ -96,7 +96,7 @@ func init() {
 	}()
 }
 
-func (that *clientsState) reset() {
+func (that *clientsState) reset(check bool) {
 	that.locker.Lock()
 	defer that.locker.Unlock()
 	that.log = false
@@ -111,7 +111,9 @@ func (that *clientsState) reset() {
 	that.recDlyMax = 0
 	that.recDlyNum = 0
 	that.recDlyTime = 0
-	that.checkAsync.Start(nil)
+	if check {
+		go that.checkAsync.Start(nil)
+	}
 }
 
 func (that *clientsState) clear() {
@@ -335,7 +337,7 @@ func main() {
 			cmd:  "reset",
 			help: "reset//重置客户端状态",
 			fun: func(str string) {
-				State.reset()
+				State.reset(true)
 			},
 		},
 		{
