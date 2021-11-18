@@ -377,50 +377,48 @@ func main() {
 		},
 	}
 
-	go func() {
-		input := bufio.NewScanner(os.Stdin)
-		// 逐行扫描
-		for input.Scan() && !APro.Stopped {
-			line := strings.TrimSpace(input.Text())
-			if line == "" {
+	// input需要放入主线程
+	go APro.Signal()
+	input := bufio.NewScanner(os.Stdin)
+	// 逐行扫描
+	for input.Scan() && !APro.Stopped {
+		line := strings.TrimSpace(input.Text())
+		if line == "" {
+			break
+		}
+
+		cmd := line
+		data := ""
+		idx := strings.IndexByte(line, ' ')
+		if idx > 0 {
+			cmd = strings.ToLower(line[0:idx])
+			data = strings.TrimSpace(line[idx+1:])
+
+		} else {
+			cmd = strings.ToLower(line)
+		}
+
+		did := false
+		for _, cer := range cmders {
+			if cer.cmd == cmd {
+				did = true
+				cer.fun(data)
 				break
 			}
+		}
 
-			cmd := line
-			data := ""
-			idx := strings.IndexByte(line, ' ')
-			if idx > 0 {
-				cmd = strings.ToLower(line[0:idx])
-				data = strings.TrimSpace(line[idx+1:])
+		if did {
+			fmt.Println(cmd + "[" + data + "] done")
+
+		} else {
+			if cmd == "help" || cmd == "-help" || cmd == "--help" {
+				for _, cer := range cmders {
+					fmt.Println(cer.help)
+				}
 
 			} else {
-				cmd = strings.ToLower(line)
-			}
-
-			did := false
-			for _, cer := range cmders {
-				if cer.cmd == cmd {
-					did = true
-					cer.fun(data)
-					break
-				}
-			}
-
-			if did {
-				fmt.Println(cmd + "[" + data + "] done")
-
-			} else {
-				if cmd == "help" || cmd == "-help" || cmd == "--help" {
-					for _, cer := range cmders {
-						fmt.Println(cer.help)
-					}
-
-				} else {
-					fmt.Println("cmder not found for " + cmd)
-				}
+				fmt.Println("cmder not found for " + cmd)
 			}
 		}
-	}()
-
-	APro.Signal()
+	}
 }
