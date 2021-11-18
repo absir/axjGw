@@ -109,8 +109,9 @@ func (that *clientsState) reset() {
 	that.recNum = 0
 	that.recDlyMin = 0
 	that.recDlyMax = 0
-	that.recNum = 0
+	that.recDlyNum = 0
 	that.recDlyTime = 0
+	that.checkAsync.Start(nil)
 }
 
 func (that *clientsState) clear() {
@@ -119,7 +120,7 @@ func (that *clientsState) clear() {
 	that.recNum = 0
 	that.recDlyMin = 0
 	that.recDlyMax = 0
-	that.recNum = 0
+	that.recDlyNum = 0
 	that.recDlyTime = 0
 }
 
