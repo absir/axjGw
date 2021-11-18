@@ -280,6 +280,8 @@ func (that *clientsState) onState(state int, data []byte) {
 func (that *clientsState) printStatus() {
 	fmt.Printf("addr: %s\n", that.addr)
 	fmt.Printf("log: %v\n", that.log)
+	fmt.Printf("out: %v\n", that.out)
+	fmt.Printf("encry: %v\n", that.encry)
 	fmt.Printf("num: %d\n", that.num)
 	fmt.Printf("loopedNum: %d\n", that.loopedNum)
 	fmt.Printf("errorNum: %d\n", that.errorNum)
