@@ -6,10 +6,12 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
+	"context"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 type Prod struct {
@@ -155,6 +157,13 @@ type Prods struct {
 	// 服务列表
 	prods map[int32]*Prod
 	ids   *Util.ArrayList
+	// 超时时间
+	timeout time.Duration
+}
+
+func (that *Prods) TimeoutCtx() context.Context {
+	ctx, _ := context.WithTimeout(Server.Context, that.timeout)
+	return ctx
 }
 
 func (that *Prods) Add(id int32, url string) *Prods {

@@ -42,6 +42,8 @@ var ERR_FAIL = errors.New("FAIL")
 
 var Result_IdNone = int32(gw.Result_IdNone)
 
+var SubLastSleep = 20 * time.Millisecond
+
 // 消息发送返回处理
 func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
 	ret := Server.Id32(rep)
@@ -143,8 +145,8 @@ func (that *MsgSess) queueRun() {
 
 // 队列消息获取
 func (that *MsgSess) queueGet() Msg {
-	that.grp.locker.RLock()
-	defer that.grp.locker.RUnlock()
+	that.grp.rwLocker.RLock()
+	defer that.grp.rwLocker.RUnlock()
 	for {
 		if that.queue.IsEmpty() {
 			return nil
@@ -162,8 +164,8 @@ func (that *MsgSess) queueGet() Msg {
 
 // 队列消息移除
 func (that *MsgSess) queueRemove(msg Msg) {
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	that.grp.rwLocker.Lock()
+	defer that.grp.rwLocker.Unlock()
 	that.queue.Remove(msg)
 }
 
@@ -198,8 +200,8 @@ func (that *MsgSess) QueuePush(msg Msg) (bool, error) {
 		return false, ERR_NOWAY
 	}
 
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	that.grp.rwLocker.Lock()
+	defer that.grp.rwLocker.Unlock()
 	unique := msg.Unique()
 	if unique != "" {
 		// 消息唯一标识去重
@@ -313,8 +315,8 @@ func (that *MsgSess) lastQueueLoad() {
 
 		msgDs := MsgMng.Db.Last(that.grp.gid, MsgMng.LastMax)
 		// 锁放在io之后
-		that.grp.locker.Lock()
-		defer that.grp.locker.Unlock()
+		that.grp.rwLocker.Lock()
+		defer that.grp.rwLocker.Unlock()
 		if that.lastQueueLoaded {
 			return
 		}
@@ -343,8 +345,8 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 	}
 
 	lastTime := time.Now().UnixNano()
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	// 保证lastTime递增
 	if client.lastTime < lastTime {
 		client.lastTime = lastTime
@@ -366,8 +368,8 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 
 // last消息通知客户端进入
 func (that *MsgSess) LastClientIn(client *MsgClient) bool {
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	if client.lasting {
 		return false
 	}
@@ -378,8 +380,8 @@ func (that *MsgSess) LastClientIn(client *MsgClient) bool {
 
 // last消息通知客户端退出
 func (that *MsgSess) LastClientOut(client *MsgClient, unique string, lastTime int64) {
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	client.lasting = false
 	if client.lastTime > lastTime {
 		// 漏掉重启
@@ -389,8 +391,8 @@ func (that *MsgSess) LastClientOut(client *MsgClient, unique string, lastTime in
 
 // last消息通知客户端完成
 func (that *MsgSess) LastClientDone(client *MsgClient, lastTime int64) bool {
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	return client.lastTime <= lastTime
 }
 
@@ -423,10 +425,10 @@ func (that *MsgSess) LastClientRun(client *MsgClient, unique string) {
 				Continuous: false,
 			})
 			that.OnResult(rep, err, ER_LAST, client, unique)
+			// 休眠一秒， 防止通知过于频繁|必需
+			time.Sleep(time.Second)
 		}
 
-		// 休眠一秒， 防止通知过于频繁|必需
-		time.Sleep(time.Second)
 		if that.LastClientDone(client, lastTime) {
 			break
 		}
@@ -456,8 +458,8 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 // last消息队列消息订阅进入
 func (that *MsgSess) subLastIn(client *MsgClient) int64 {
 	subLastTime := time.Now().UnixNano()
-	that.grp.locker.RLock()
-	defer that.grp.locker.RUnlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	// 保证lastTime递增
 	if client.subLastTime < subLastTime {
 		client.subLastTime = subLastTime
@@ -471,8 +473,8 @@ func (that *MsgSess) subLastIn(client *MsgClient) int64 {
 
 // last消息队列消息订阅退出
 func (that *MsgSess) subLastOut(client *MsgClient, unique string, subLastTime int64, lastTime int64) {
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	if client.subLastTime == subLastTime {
 		client.subLastTime = 0
 		if lastTime < client.lastTime {
@@ -484,8 +486,8 @@ func (that *MsgSess) subLastOut(client *MsgClient, unique string, subLastTime in
 
 // last消息队列消息订阅完成
 func (that *MsgSess) subLastDone(client *MsgClient, lastTime int64) bool {
-	that.grp.locker.Lock()
-	defer that.grp.locker.Unlock()
+	client.locker.Lock()
+	defer client.locker.Unlock()
 	return client.lastTime <= lastTime
 }
 
@@ -586,8 +588,8 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 // last消息队列消息lastId计算
 func (that *MsgSess) lastSubLastId(lastId int) int64 {
 	if lastId < MsgMng.LastMaxAll && lastId >= 0 && that.lastQueue != nil {
-		that.grp.locker.RLock()
-		defer that.grp.locker.RUnlock()
+		that.grp.rwLocker.RLock()
+		defer that.grp.rwLocker.RUnlock()
 		size := that.lastQueue.Size()
 		if size > lastId {
 			val, _ := that.lastQueue.Get(size - lastId - 1)
@@ -606,8 +608,8 @@ func (that *MsgSess) lastQueueGet(client *MsgClient, lastLoop int64, lastId int6
 	// lock锁提前初始化
 	that.getOrNewLastQueue()
 	// 锁查找
-	that.grp.locker.RLock()
-	defer that.grp.locker.RUnlock()
+	that.grp.rwLocker.RLock()
+	defer that.grp.rwLocker.RUnlock()
 	if client.subLastTime != lastLoop {
 		return nil, true
 	}

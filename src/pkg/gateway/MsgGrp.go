@@ -3,6 +3,7 @@ package gateway
 import (
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -12,8 +13,10 @@ type MsgGrp struct {
 	gid string
 	// 消息组hash
 	ghash int
+	// 管理锁
+	locker sync.Locker
 	// 消息组读写锁
-	locker *sync.RWMutex
+	rwLocker *sync.RWMutex
 	// 消息组db锁
 	dbLocker sync.Locker
 	// 过期时间
@@ -94,6 +97,13 @@ func (that *MsgGrp) getClient(unique string) *MsgClient {
 // 创建消息客户端
 func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 	client := new(MsgClient)
+	if MsgMng.OClientLocker {
+		client.locker = new(sync.Mutex)
+
+	} else {
+		client.locker = that.locker
+	}
+
 	client.cid = cid
 	client.gatewayI = Server.GetProdCid(cid).GetGWIClient()
 	client.idleTime = time.Now().UnixNano() + that.passTime
@@ -101,7 +111,7 @@ func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 }
 
 // 关闭消息客户端
-func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kick bool) bool {
+func (that *MsgGrp) closeClient(lock bool, client *MsgClient, cid int64, unique string, kick bool) bool {
 	sess := that.sess
 	if sess == nil {
 		return false
@@ -109,6 +119,11 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 
 	if client == nil || (cid > 0 && cid != client.cid) {
 		return false
+	}
+
+	if lock {
+		that.locker.Lock()
+		defer that.locker.Unlock()
 	}
 
 	if unique == "" {
@@ -162,9 +177,7 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 	rep, _ := client.gatewayI.Alive(Server.Context, client.getCidReq())
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {
-		that.locker.Lock()
-		defer that.locker.Unlock()
-		that.closeClient(client, client.cid, unique, false)
+		that.closeClient(true, client, client.cid, unique, false)
 	}
 }
 
@@ -183,12 +196,14 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 			return nil
 		}
 
-		that.closeClient(client, client.cid, unique, kick)
+		that.closeClient(true, client, client.cid, unique, kick)
 	}
 
 	sess := that.getOrNewSess(true)
 	client = that.newMsgClient(cid)
 	client.connVer = MsgMng.newConnVer()
+	that.locker.Lock()
+	defer that.locker.Unlock()
 	if unique == "" {
 		sess.client = client
 
@@ -207,11 +222,9 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 
 // 消息客户端关闭
 func (that *MsgGrp) Close(cid int64, unique string, connVer int32, kick bool) bool {
-	that.locker.Lock()
-	defer that.locker.Unlock()
 	client := that.getClient(unique)
 	if client != nil && (connVer == 0 || connVer == client.connVer) {
-		return that.closeClient(client, cid, unique, kick)
+		return that.closeClient(true, client, cid, unique, kick)
 	}
 
 	return false
@@ -225,8 +238,8 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 		if queue && sess.queue != nil {
 			if !locked {
 				locked = true
-				that.locker.Lock()
-				defer that.locker.Unlock()
+				that.rwLocker.Lock()
+				defer that.rwLocker.Unlock()
 			}
 
 			sess.queue.Clear()
@@ -235,8 +248,8 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 		if last && sess.lastQueue != nil {
 			if !locked {
 				locked = true
-				that.locker.Lock()
-				defer that.locker.Unlock()
+				that.rwLocker.Lock()
+				defer that.rwLocker.Unlock()
 			}
 
 			sess.lastQueue.Clear()
@@ -281,7 +294,18 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 			err = that.lastDbInsert(msgD)
 		}
 
-		if sess != nil && msg.Get().Id > 0 {
+		// 消息直写测试
+		if MsgMng.pushDrTest && sess != nil && sess.clientMap != nil {
+			sTime := time.Now().UnixNano() / 1000000
+			sess.clientMap.Range(func(key, value interface{}) bool {
+				client := value.(*MsgClient)
+				go sess.Push(msgD, client, key.(string), true)
+				return true
+			})
+
+			AZap.Logger.Debug("MsgMng pushDrTest span " + strconv.FormatInt(time.Now().UnixNano()/1000000-sTime, 10) + "ms")
+
+		} else if sess != nil && msg.Get().Id > 0 {
 			sess.LastStart()
 		}
 
@@ -303,8 +327,8 @@ func (that *MsgGrp) lastQueuePush(sess *MsgSess, msg Msg, fid int64) {
 	// last队列载入
 	sess.lastQueueLoad()
 	// 锁加入队列
-	that.locker.Lock()
-	defer that.locker.Unlock()
+	that.rwLocker.Lock()
+	defer that.rwLocker.Unlock()
 	msgD.Id = MsgMng.idWorkder.Generate()
 	sess.lastQueue.Push(msg, true)
 }

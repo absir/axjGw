@@ -24,13 +24,20 @@ func NewNotifierAsync(run func(), locker sync.Locker) *NotifierAsync {
 }
 
 func (that *NotifierAsync) Start(run func()) {
+	that.StartLock(run, true)
+}
+
+func (that *NotifierAsync) StartLock(run func(), lock bool) {
 	if run == nil && that.run == nil {
 		return
 	}
 
 	runTime := time.Now().UnixNano()
-	that.locker.Lock()
-	defer that.locker.Unlock()
+	if lock {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+	}
+
 	if run != nil {
 		that.run = run
 	}

@@ -4,7 +4,6 @@ import (
 	"axj/ANet"
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
-	"context"
 	"go.uber.org/zap"
 	"strings"
 	"time"
@@ -95,7 +94,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 	}
 
 	clientG := that.ClientG(client)
-	prod := clientG.GetProd(name, false)
+	prod, prods := clientG.GetProd(name, false)
 	if prod == nil {
 		if req > ANet.REQ_ONEWAY {
 			// 服务不存在
@@ -108,7 +107,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 
 	if req > ANet.REQ_ONEWAY {
 		// 请求返回
-		result, err := prod.GetPassClient().Req(context.Background(), &gw.PassReq{
+		result, err := prod.GetPassClient().Req(prods.TimeoutCtx(), &gw.PassReq{
 			Cid:  clientG.Id(),
 			Uid:  clientG.uid,
 			Sid:  clientG.sid,
@@ -138,7 +137,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 
 	} else {
 		// 单向发送
-		prod.GetPassClient().Send(context.Background(), &gw.PassReq{
+		prod.GetPassClient().Send(prods.TimeoutCtx(), &gw.PassReq{
 			Cid:  clientG.Id(),
 			Uid:  clientG.uid,
 			Sid:  clientG.sid,

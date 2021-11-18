@@ -322,7 +322,7 @@ func WorkId() int32 {
 				}
 
 				if KtStr.DigitStr(str) {
-					id = KtCvt.ToType(str, KtCvt.Int32).(int32)
+					id = KtCvt.ToInt32(str)
 				}
 
 				if id < 0 {

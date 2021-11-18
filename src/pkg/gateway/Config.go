@@ -18,6 +18,7 @@ type config struct {
 	GwProd      string        // 网关服务名
 	AclProd     string        // Acl服务名
 	PassProd    string        // Pass服务名
+	ProdTimeout time.Duration // 服务超时时间
 	TeamMax     int           // 群组最大缓存
 }
 
@@ -34,6 +35,7 @@ func initConfig(workId int32) {
 		KickDrt:     6000,
 		GwProd:      "gw",
 		AclProd:     "acl",
+		ProdTimeout: 30 * time.Second,
 		TeamMax:     65535,
 	}
 

@@ -141,22 +141,22 @@ func (that *ClientG) PutRIds(ids map[string]int32) {
 	}
 }
 
-func (that *ClientG) GetProd(name string, rand bool) *Prod {
+func (that *ClientG) GetProd(name string, rand bool) (*Prod, *Prods) {
 	prods := Server.GetProds(name)
 	if prods == nil {
-		return nil
+		return nil, prods
 	}
 
 	id := that.GetId(name)
 	if id > 0 {
-		return prods.GetProd(id)
+		return prods.GetProd(id), prods
 	}
 
 	if rand {
-		return prods.GetProdRand()
+		return prods.GetProdRand(), prods
 	}
 
-	return prods.GetProdHash(that.Hash())
+	return prods.GetProdHash(that.Hash()), prods
 }
 
 func (that *ClientG) ConnKeep() {

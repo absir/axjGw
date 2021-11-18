@@ -241,6 +241,10 @@ func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []b
 
 func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, data []byte, cData int32, isolate bool, encry bool, id int64) error {
 	handler := that.handler
+	if handler == nil {
+		return ERR_NOWAY
+	}
+
 	uriDict := handler.UriDict()
 	if uriI <= 0 {
 		// 路由压缩

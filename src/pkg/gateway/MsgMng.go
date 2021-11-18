@@ -15,25 +15,28 @@ import (
 )
 
 type msgMng struct {
-	QueueMax   int           // 主client消息队列大小
-	NextLimit  int           // last消息，单次读取列表数
-	LastLimit  int           // last消息队类，初始化载入列表数
-	LastMax    int           // last消息队列大小
-	LastMaxAll int           // 所有消息队列对打
-	LastLoad   bool          // 是否执行 last消息队类，初始化载入列表数
-	LastUri    string        // 消息持久化，数据库连接
-	ClearCron  string        // 消息清理，执行周期
-	ClearDay   int64         // 清理消息过期天数
-	CheckDrt   time.Duration // 执行检查逻辑，间隔
-	LiveDrt    int64         // 连接断开，存活时间
-	IdleDrt    int64         // 连接检查，间隔
-	checkLoop  int64
-	checkTime  int64
-	Db         MsgDb
-	idWorkder  *Util.IdWorker
-	locker     sync.Locker
-	connVer    int32
-	grpMap     *sync.Map
+	QueueMax      int           // 主client消息队列大小
+	NextLimit     int           // last消息，单次读取列表数
+	LastLimit     int           // last消息队类，初始化载入列表数
+	LastMax       int           // last消息队列大小
+	LastMaxAll    int           // 所有消息队列对打
+	LastLoad      bool          // 是否执行 last消息队类，初始化载入列表数
+	LastUri       string        // 消息持久化，数据库连接
+	ClearCron     string        // 消息清理，执行周期
+	ClearDay      int64         // 清理消息过期天数
+	CheckDrt      time.Duration // 执行检查逻辑，间隔
+	LiveDrt       int64         // 连接断开，存活时间
+	IdleDrt       int64         // 连接检查，间隔
+	ORwLocker     bool          // 独立Queue读写锁
+	OClientLocker bool          // 独立客户端锁
+	pushDrTest    bool          // 消息直写测试
+	checkLoop     int64
+	checkTime     int64
+	Db            MsgDb
+	idWorkder     *Util.IdWorker
+	locker        sync.Locker
+	connVer       int32
+	grpMap        *sync.Map
 }
 
 // 初始变量
@@ -44,16 +47,19 @@ const connVerMax = KtBytes.VINT_3_MAX - 1
 func initMsgMng() {
 	// 消息管理配置
 	MsgMng = &msgMng{
-		QueueMax:  20,
-		NextLimit: 10,
-		LastMax:   21, // over load cover msgs
-		LastLoad:  true,
-		LastUri:   "",
-		ClearCron: "0 0 3 * * *",
-		ClearDay:  30,
-		CheckDrt:  5000,
-		LiveDrt:   15000,
-		IdleDrt:   30000,
+		QueueMax:      20,
+		NextLimit:     10,
+		LastMax:       21, // over load cover msgs
+		LastLoad:      true,
+		LastUri:       "",
+		ClearCron:     "0 0 3 * * *",
+		ClearDay:      30,
+		CheckDrt:      5000,
+		LiveDrt:       15000,
+		IdleDrt:       30000,
+		ORwLocker:     true,
+		OClientLocker: true,
+		pushDrTest:    false,
 	}
 
 	// 配置处理
@@ -178,7 +184,14 @@ func (that *msgMng) GetOrNewMsgGrp(gid string) *MsgGrp {
 		grp = new(MsgGrp)
 		grp.gid = gid
 		grp.ghash = Kt.HashCode(KtUnsafe.StringToBytes(gid))
-		grp.locker = new(sync.RWMutex)
+		grp.rwLocker = new(sync.RWMutex)
+		if MsgMng.ORwLocker {
+			grp.locker = new(sync.Mutex)
+
+		} else {
+			grp.locker = grp.rwLocker
+		}
+
 		grp.retain()
 		that.grpMap.Store(gid, grp)
 	}

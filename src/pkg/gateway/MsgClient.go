@@ -1,8 +1,12 @@
 package gateway
 
-import "axjGW/gen/gw"
+import (
+	"axjGW/gen/gw"
+	"sync"
+)
 
 type MsgClient struct {
+	locker        sync.Locker
 	cid           int64
 	gatewayI      gw.GatewayIClient
 	connVer       int32

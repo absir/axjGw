@@ -139,6 +139,7 @@ func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, 
 	}
 
 	that.checkDrt = time.Duration(checkDrt) * time.Second
+	// 检查异步执行
 	that.checksAsync = Util.NewNotifierAsync(that.doChecks, that.locker)
 
 	// 最大请求编号
@@ -202,7 +203,7 @@ func (that *Client) Conn() *Adapter {
 	var aConn ANet.Conn
 	if that.ws {
 		conn, err := websocket.Dial(that.addr, "", that.addr)
-		if that.onError(nil, err) {
+		if that.onError(nil, err, false) {
 			return that.adapter
 		}
 
@@ -210,7 +211,7 @@ func (that *Client) Conn() *Adapter {
 
 	} else {
 		conn, err := net.Dial("tcp", that.addr)
-		if that.onError(nil, err) {
+		if that.onError(nil, err, false) {
 			return that.adapter
 		}
 
@@ -230,7 +231,7 @@ func (that *Client) Close() {
 	// 关闭check线程
 	that.checkTime = 0
 	// 关闭连接
-	go that.onError(that.adapter, ANet.ERR_CLOSED)
+	go that.onError(that.adapter, ANet.ERR_CLOSED, true)
 }
 
 func (that *Client) Loop(timeout int32, back func(string, []byte)) {
@@ -424,7 +425,7 @@ func (that *Client) rqSend(rq *rqDt) {
 
 	err := that.processor.Rep(adapter.locker, that.out, adapter.conn, decryKey, that.compress, rq.rqI, rq.uri, 0, rq.data, false, 0)
 	// 发送错误处理
-	that.onError(adapter, err)
+	that.onError(adapter, err, true)
 }
 
 func (that *Client) checkStart() {
@@ -462,9 +463,12 @@ func (that *Client) checkLoop() {
 	}
 }
 
-func (that *Client) closeAdapter(adapter *Adapter) bool {
-	that.locker.Lock()
-	defer that.locker.Unlock()
+func (that *Client) closeAdapter(adapter *Adapter, lock bool) bool {
+	if lock {
+		that.locker.Lock()
+		defer that.locker.Unlock()
+	}
+
 	if that.adapter == adapter {
 		that.adapter = nil
 		return true
@@ -473,7 +477,7 @@ func (that *Client) closeAdapter(adapter *Adapter) bool {
 	return false
 }
 
-func (that *Client) onError(adapter *Adapter, err error) bool {
+func (that *Client) onError(adapter *Adapter, err error, lock bool) bool {
 	if err == nil {
 		return false
 	}
@@ -485,16 +489,16 @@ func (that *Client) onError(adapter *Adapter, err error) bool {
 	} else {
 		// 关闭连接
 		adapter.conn.Close()
-		if that.closeAdapter(adapter) {
+		if that.closeAdapter(adapter, lock) {
 			if !adapter.kicked {
 				// 未踢开，CLOSE状态通知
 				that.opt.OnState(adapter, CLOSE, err.Error(), nil)
 			}
+
+			that.checksAsync.StartLock(nil, lock)
 		}
 	}
 
-	// 请求检查
-	that.checksAsync.Start(nil)
 	return true
 }
 
@@ -511,7 +515,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		}
 
 		err := that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, "", flag, nil, false, 0)
-		if that.onError(adapter, err) {
+		if that.onError(adapter, err, true) {
 			return
 		}
 
@@ -520,7 +524,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 
 	for adapter == that.adapter {
 		err, req, uri, uriI, pid, data := that.processor.ReqPId(adapter.conn, adapter.decryKey)
-		if that.onError(adapter, err) {
+		if that.onError(adapter, err, true) {
 			break
 		}
 
@@ -551,7 +555,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			// 登录请求
 			data = that.opt.LoginData(adapter)
 			err = that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, that.uriMapHash, 1, data, false, 0)
-			that.onError(adapter, err)
+			that.onError(adapter, err, true)
 			break
 		case ANet.REQ_LOOP:
 			// 连接完成

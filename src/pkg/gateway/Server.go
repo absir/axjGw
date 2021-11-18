@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"axj/ANet"
+	"axj/APro"
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
@@ -107,10 +108,13 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 					if pMp, _ := mp.Get(key).(*Kt.LinkedMap); pMp != nil {
 						pProds := new(Prods)
 						for pEl := pMp.Front(); pEl != nil; pEl = pEl.Next() {
-							pProds.Add(KtCvt.ToType(pEl.Value, KtCvt.Int32).(int32), KtCvt.ToType(pMp.Get(pEl.Value), KtCvt.String).(string))
+							id := KtCvt.ToString(pEl.Value)
+							if id != "" && id[0] >= '0' && id[0] <= '9' {
+								pProds.Add(KtCvt.ToInt32(pEl.Value), KtCvt.ToString(pMp.Get(pEl.Value)))
+							}
 						}
 
-						that.prodsMap.Store(key, pProds)
+						that.PutProds(key, pProds)
 					}
 				}
 			}
@@ -182,8 +186,9 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 
 	// 登录Acl处理
 	cid := that.CidGen(compress)
-	aclClient := that.GetProds(Config.AclProd).GetProdHash(Config.WorkHash).GetAclClient()
-	login, err := aclClient.Login(that.Context, &gw.LoginReq{
+	aclProds := that.GetProds(Config.AclProd)
+	aclClient := aclProds.GetProdHash(Config.WorkHash).GetAclClient()
+	login, err := aclClient.Login(aclProds.TimeoutCtx(), &gw.LoginReq{
 		Cid:  cid,
 		Data: loginData,
 		Addr: conn.RemoteAddr(),
@@ -262,7 +267,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 
 	// 注册成功回调
 	if login.Back {
-		rep, err := aclClient.LoginBack(that.Context, &gw.LoginBack{
+		rep, err := aclClient.LoginBack(aclProds.TimeoutCtx(), &gw.LoginBack{
 			Cid:    clientG.Id(),
 			Unique: clientG.unique,
 			Uid:    clientG.uid,
@@ -361,6 +366,14 @@ func (that *server) PutProds(name string, prods *Prods) {
 		that.prodsMap.Delete(name)
 
 	} else {
+		timeout := APro.GetCfg(name+".timeout", KtCvt.Int32, 0).(int32)
+		if timeout > 0 {
+			prods.timeout = time.Duration(timeout) * time.Second
+
+		} else {
+			prods.timeout = Config.ProdTimeout
+		}
+
 		that.prodsMap.Store(name, prods)
 	}
 }

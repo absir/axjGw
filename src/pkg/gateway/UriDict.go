@@ -40,8 +40,8 @@ func initUriDict() {
 		UriDict.uriMapUriI = map[string]int32{}
 		UriDict.uriIMapUri = map[int32]string{}
 		for key, val := range cfg {
-			uriI := KtCvt.ToType(key, KtCvt.Int32).(int32)
-			uri := KtCvt.ToType(val, KtCvt.String).(string)
+			uriI := KtCvt.ToInt32(key)
+			uri := KtCvt.ToString(val)
 			if uri == "" || uriI <= 0 {
 				continue
 			}
