@@ -83,7 +83,9 @@ func (that *ConnSocket) Write(bs []byte) error {
 }
 
 func (that *ConnSocket) Close() {
-	that.Conn().Close()
+	conn := that.Conn()
+	conn.SetLinger(0)
+	conn.Close()
 }
 
 func (that *ConnSocket) RemoteAddr() string {
