@@ -16,3 +16,36 @@ wss://gw.dev.yiyiny.com/gw
 
 - 1、下载 android studio
 - 2、安装sdk
+
+## 调用GRPC
+
+1、 Java 实现
+
+```java
+@Bean
+public class GRpcPassImpl extends PassGrpcServer {
+
+}
+```
+
+2、GO增加配置
+
+```yml
+prods:
+  store:
+    1: ms-store.ms:8083
+```
+
+3、服务调用
+
+> 假设 store 服务上存在路由: `/test/sendU` 即可如下调用
+
+```go
+client.Req("test/sendU", data, false, 30, func(s string, data []byte) {
+	fmt.Println("send Back === " + s + KtUnsafe.BytesToString(data))
+})
+```
+
+## 字典压缩
+
+同级目录下增加 `uriDict.properties` 文件
