@@ -326,6 +326,7 @@ func (that *MsgSess) lastQueueLoad() {
 			// 保证写入线程执行执行完成后才载入
 			dbLocker.Lock()
 			dbLocker.Unlock()
+			that.grp.dbLocker = nil
 		}
 
 		if that.lastQueueLoaded {
