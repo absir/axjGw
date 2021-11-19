@@ -364,7 +364,7 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 	}
 
 	if client.subLastId == 0 {
-		// 尚未loop监听
+		// 还未sub监听
 		return
 	}
 
@@ -430,11 +430,11 @@ func (that *MsgSess) lastClientRun(client *MsgClient, unique string) {
 	defer that.lastClientOut(client, unique, lastTime)
 	for {
 		if client.subLastTime > 0 {
-			// lastSubRun执行中, 在结束后，会再启动LastClient
+			// lastSubRun执行中, 在结束后，会Async启动LastClient
 			return
 		}
 
-		// 不执行lastLoop才通知
+		// 执行lastTime
 		lastTime = client.lastTime
 		if client.subLastId >= MSD_ID_MIN {
 			// 执行LastSubRun
@@ -471,7 +471,7 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 
 	// lastId <= 0 && lastId <= 0
 	if continuous <= 0 && lastId <= 0 {
-		// 只监听last通知，不接受last消息推送
+		// 只监听last通知，不接受subLast消息推送
 		client.subLastId = MSD_ID_SUB
 		return
 	}
@@ -626,7 +626,7 @@ func (that *MsgSess) lastSubLastId(lastId int) int64 {
 }
 
 // last消息队列获取 return bool lastIn, 为true 则内存缓存已覆盖lastId，不需要从db读取列表
-func (that *MsgSess) lastQueueGet(client *MsgClient, lastLoop int64, lastId int64) (Msg, bool) {
+func (that *MsgSess) lastQueueGet(client *MsgClient, subLastTime int64, lastId int64) (Msg, bool) {
 	// 预加载
 	that.lastQueueLoad()
 	// lock锁提前初始化
@@ -634,7 +634,7 @@ func (that *MsgSess) lastQueueGet(client *MsgClient, lastLoop int64, lastId int6
 	// 锁查找
 	that.grp.rwLocker.RLock()
 	defer that.grp.rwLocker.RUnlock()
-	if client.subLastTime != lastLoop {
+	if client.subLastTime != subLastTime {
 		return nil, true
 	}
 
@@ -661,8 +661,8 @@ func (that *MsgSess) lastQueueGet(client *MsgClient, lastLoop int64, lastId int6
 }
 
 // last消息队列消息推送执行
-func (that *MsgSess) lastQueuePush(lastLoop int64, client *MsgClient, msg Msg, lastId *int64, unique string, isolate bool, continuous int32, pushNum *int32) bool {
-	if lastLoop != client.subLastTime {
+func (that *MsgSess) lastQueuePush(subLastTime int64, client *MsgClient, msg Msg, lastId *int64, unique string, isolate bool, continuous int32, pushNum *int32) bool {
+	if subLastTime != client.subLastTime {
 		return false
 	}
 
