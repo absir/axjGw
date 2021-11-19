@@ -30,6 +30,10 @@ const (
 var SUCC = make([]byte, 0)
 
 type Opt interface {
+	// 载入缓存，路由压缩字典
+	LoadStorage(name string) string
+	// 保存缓存
+	SaveStorage(name string, value string)
 	// 授权数据
 	LoginData(adapter *Adapter) []byte
 	// 推送数据处理 !uri && !data && tid 为 fid编号消息发送失败
@@ -50,10 +54,8 @@ type Opt interface {
 	   },
 	*/
 	OnState(adapter *Adapter, state int, err string, data []byte)
-	// 载入缓存，路由压缩字典
-	LoadStorage(name string) string
-	// 保存缓存
-	SaveStorage(name string, value string)
+	// 保留通道消息处理
+	OnReserve(req int32, uri string, uriI int32, data []byte)
 }
 
 type Client struct {
@@ -144,8 +146,8 @@ func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, 
 
 	// 最大请求编号
 	that.rqIMax = int32(rqIMax)
-	if that.rqIMax < KtBytes.VINT_1_MAX {
-		that.rqIMax = KtBytes.VINT_1_MAX
+	if that.rqIMax < KtBytes.VINT_2_MAX {
+		that.rqIMax = KtBytes.VINT_2_MAX
 	}
 
 	processor := &ANet.Processor{
@@ -540,51 +542,51 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		}
 
 		switch req {
-		case ANet.REQ_BEAT:
-			// 心跳
-			break
-		case ANet.REQ_KEY:
-			// 传输秘钥
-			adapter.decryKey = data
-			break
-		case ANet.REQ_ROUTE:
-			// 路由压缩
-			that.setUriMapUriI(KtUnsafe.BytesToString(data), uri, true)
-			break
-		case ANet.REQ_ACL:
-			// 登录请求
-			data = that.opt.LoginData(adapter)
-			err = that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, that.uriMapHash, 1, data, false, 0)
-			that.onError(adapter, err, true)
-			break
-		case ANet.REQ_LOOP:
-			// 连接完成
-			that.onLoop(adapter, uri)
-			that.opt.OnState(adapter, LOOP, "", data)
-			break
+		case ANet.REQ_PUSH:
+			// 推送消息
+			that.opt.OnPush(uri, data, 0)
+			return
+		case ANet.REQ_PUSHI:
+			// 推送消息I
+			that.opt.OnPush(uri, data, pid)
+			return
 		case ANet.REQ_KICK:
 			// 被踢
 			adapter.kicked = true
 			that.adapter = nil
 			adapter.conn.Close()
 			that.opt.OnState(adapter, KICK, "", data)
-			break
-		case ANet.REQ_PUSH:
-			// 推送消息
-			that.opt.OnPush(uri, data, 0)
-			break
-		case ANet.REQ_PUSHI:
-			// 推送消息I
-			that.opt.OnPush(uri, data, pid)
-			break
+			return
 		case ANet.REQ_LAST:
 			// 推送状态
 			that.opt.OnLast(uri, uriI, false)
-			break
+			return
 		case ANet.REQ_LASTC:
 			// 推送状态C
 			that.opt.OnLast(uri, uriI, true)
-			break
+			return
+		case ANet.REQ_KEY:
+			// 传输秘钥
+			adapter.decryKey = data
+			return
+		case ANet.REQ_ACL:
+			// 登录请求
+			data = that.opt.LoginData(adapter)
+			err = that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, that.uriMapHash, 1, data, false, 0)
+			that.onError(adapter, err, true)
+			return
+		case ANet.REQ_BEAT:
+			// 心跳
+			return
+		case ANet.REQ_ROUTE:
+			// 路由压缩
+			that.setUriMapUriI(KtUnsafe.BytesToString(data), uri, true)
+			return
+		case ANet.REQ_LOOP:
+			// 连接完成
+			that.onLoop(adapter, uri)
+			that.opt.OnState(adapter, LOOP, "", data)
+			return
 		}
 
 		if req > ANet.REQ_ONEWAY {
@@ -604,6 +606,9 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			}
 
 			that.onRep(req, nil, errS, data)
+
+		} else {
+			that.opt.OnReserve(req, uri, uriI, data)
 		}
 	}
 }

@@ -20,6 +20,13 @@ import (
 type Opt struct {
 }
 
+func (o Opt) LoadStorage(name string) string {
+	return ""
+}
+
+func (o Opt) SaveStorage(name string, value string) {
+}
+
 func (o Opt) LoginData(adapter *asdk.Adapter) []byte {
 	return KtUnsafe.StringToBytes(strconv.FormatInt(time.Now().UnixNano(), 10))
 }
@@ -48,11 +55,7 @@ func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte) 
 	State.onState(state, data)
 }
 
-func (o Opt) LoadStorage(name string) string {
-	return ""
-}
-
-func (o Opt) SaveStorage(name string, value string) {
+func (o Opt) OnReserve(req int32, uri string, uriI int32, data []byte) {
 }
 
 type clientsState struct {
