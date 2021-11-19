@@ -2,14 +2,14 @@ package proxy
 
 import (
 	"axj/Thrd/Util"
-	"github.com/lrita/cmap"
+	"gitee.com/absir_admin/cmap"
 	"sync"
 )
 
 type prxMng struct {
 	locker   sync.Locker
 	idWorker *Util.IdWorker
-	connMap  *cmap.Cmap
+	connMap  *cmap.CMap
 }
 
 var PrxMng *prxMng

@@ -7,7 +7,7 @@ import (
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"github.com/lrita/cmap"
+	"gitee.com/absir_admin/cmap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -37,7 +37,7 @@ type msgMng struct {
 	idWorkder     *Util.IdWorker
 	locker        sync.Locker
 	connVer       int32
-	grpMap        *cmap.Cmap
+	grpMap        *cmap.CMap
 }
 
 // 初始变量
@@ -77,7 +77,7 @@ func initMsgMng() {
 	// 属性初始化
 	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
 	that.locker = new(sync.Mutex)
-	that.grpMap = new(cmap.Cmap)
+	that.grpMap = new(cmap.CMap)
 
 	// 消息持久化
 	if that.LastUri != "" {

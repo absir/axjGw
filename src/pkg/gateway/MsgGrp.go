@@ -154,7 +154,7 @@ func (that *MsgGrp) checkClients() {
 
 	if sess.clientMap != nil {
 		sess.clientMap.Range(that.checkRange)
-		clientNum += sess.clientMap.Count()
+		clientNum += int(sess.clientMap.Count())
 	}
 
 	sess.clientNum = clientNum

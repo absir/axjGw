@@ -2,7 +2,7 @@ package ANet
 
 import (
 	"axj/Thrd/Util"
-	"github.com/lrita/cmap"
+	"gitee.com/absir_admin/cmap"
 	"time"
 )
 
@@ -43,7 +43,7 @@ type HandlerM interface {
 type Manager struct {
 	idWorker  *Util.IdWorker
 	handlerM  HandlerM
-	clientMap *cmap.Cmap
+	clientMap *cmap.CMap
 	idleDrt   int64
 	checkDrt  time.Duration
 	checkLoop int64
@@ -55,7 +55,7 @@ func (that *Manager) HandlerM() HandlerM {
 	return that.handlerM
 }
 
-func (that *Manager) ClientMap() *cmap.Cmap {
+func (that *Manager) ClientMap() *cmap.CMap {
 	return that.clientMap
 }
 
@@ -76,7 +76,7 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkD
 	that := new(Manager)
 	that.idWorker = Util.NewIdWorkerPanic(workerId)
 	that.handlerM = handlerM
-	that.clientMap = new(cmap.Cmap)
+	that.clientMap = new(cmap.CMap)
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
 	that.beatBytes = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0, 0)

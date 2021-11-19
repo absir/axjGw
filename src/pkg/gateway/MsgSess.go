@@ -5,7 +5,7 @@ import (
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"errors"
-	"github.com/lrita/cmap"
+	"gitee.com/absir_admin/cmap"
 	"time"
 )
 
@@ -25,7 +25,7 @@ type MsgSess struct {
 	// 主客户端
 	client *MsgClient
 	// 多客户端
-	clientMap *cmap.Cmap
+	clientMap *cmap.CMap
 	// 客户端数
 	clientNum int
 }
@@ -44,12 +44,12 @@ var Result_IdNone = int32(gw.Result_IdNone)
 
 var SubLastSleep = 20 * time.Millisecond
 
-func (that *MsgSess) getOrNewClientMap() *cmap.Cmap {
+func (that *MsgSess) getOrNewClientMap() *cmap.CMap {
 	if that.clientMap == nil {
 		that.grp.locker.Lock()
 		defer that.grp.locker.Unlock()
 		if that.clientMap == nil {
-			that.clientMap = new(cmap.Cmap)
+			that.clientMap = new(cmap.CMap)
 		}
 	}
 
