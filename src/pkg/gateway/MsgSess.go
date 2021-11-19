@@ -5,7 +5,7 @@ import (
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"errors"
-	"sync"
+	"github.com/lrita/cmap"
 	"time"
 )
 
@@ -25,10 +25,9 @@ type MsgSess struct {
 	// 主客户端
 	client *MsgClient
 	// 多客户端
-	clientMap *sync.Map
+	clientMap *cmap.Cmap
 	// 客户端数
-	clientNum      int
-	checkClientNum int
+	clientNum int
 }
 
 type ERpc int
@@ -45,12 +44,12 @@ var Result_IdNone = int32(gw.Result_IdNone)
 
 var SubLastSleep = 20 * time.Millisecond
 
-func (that *MsgSess) getOrNewClientMap() *sync.Map {
+func (that *MsgSess) getOrNewClientMap() *cmap.Cmap {
 	if that.clientMap == nil {
 		that.grp.locker.Lock()
 		defer that.grp.locker.Unlock()
 		if that.clientMap == nil {
-			that.clientMap = new(sync.Map)
+			that.clientMap = new(cmap.Cmap)
 		}
 	}
 

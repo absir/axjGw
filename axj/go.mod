@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/json-iterator/go v1.1.11
+	github.com/lrita/cmap v0.0.0-20200818170753-e987cd3dfa73
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pkg/errors v0.9.1 // indirect
 	go.uber.org/zap v1.19.1

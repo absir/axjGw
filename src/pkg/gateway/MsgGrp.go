@@ -146,14 +146,18 @@ func (that *MsgGrp) checkClients() {
 		return
 	}
 
-	// 单线程 checkClientNum 保证
-	that.sess.checkClientNum = 0
-	that.checkClient(sess.client, "")
-	if sess.clientMap != nil {
-		sess.clientMap.Range(that.checkRange)
+	clientNum := 0
+	if sess.client != nil {
+		that.checkClient(sess.client, "")
+		clientNum += 1
 	}
 
-	that.sess.clientNum = that.sess.checkClientNum
+	if sess.clientMap != nil {
+		sess.clientMap.Range(that.checkRange)
+		clientNum += sess.clientMap.Count()
+	}
+
+	sess.clientNum = clientNum
 }
 
 func (that *MsgGrp) checkRange(key, val interface{}) bool {
@@ -170,7 +174,6 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 
 	if client.idleTime > MsgMng.checkTime {
 		// 未空闲
-		that.sess.checkClientNum++
 		return
 	}
 
@@ -178,9 +181,6 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {
 		that.closeClient(client, client.cid, unique, false)
-
-	} else {
-		that.sess.checkClientNum++
 	}
 }
 

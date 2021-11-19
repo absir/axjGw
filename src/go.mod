@@ -6,6 +6,7 @@ require (
 	axj v0.0.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.11
+	github.com/lrita/cmap v0.0.0-20200818170753-e987cd3dfa73 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1
