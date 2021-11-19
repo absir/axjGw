@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	MSD_ID_SUB int64 = -1
+	MSD_ID_MIN int64 = 65535
+)
+
 type MsgSess struct {
 	// 消息组
 	grp *MsgGrp
@@ -358,7 +363,7 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 		return
 	}
 
-	if client.subLastId <= 0 {
+	if client.subLastId == 0 {
 		// 尚未loop监听
 		return
 	}
@@ -431,7 +436,7 @@ func (that *MsgSess) LastClientRun(client *MsgClient, unique string) {
 
 		// 不执行lastLoop才通知
 		lastTime = client.lastTime
-		if client.subLastId > 1 {
+		if client.subLastId >= MSD_ID_MIN {
 			// 执行LastSubRun
 			that.subLastRun(client.subLastId, client, unique, client.subContinuous)
 
@@ -467,7 +472,7 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 	// lastId <= 0 && lastId <= 0
 	if continuous <= 0 && lastId <= 0 {
 		// 只监听last通知，不接受last消息推送
-		client.subLastId = 1
+		client.subLastId = MSD_ID_SUB
 		return
 	}
 
@@ -520,7 +525,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 	lastTime := client.lastTime
 	subLastTime := that.subLastIn(client)
 	defer that.subLastOut(client, unique, subLastTime, lastTime)
-	if lastId < 65535 {
+	if lastId > 0 && lastId < MSD_ID_MIN {
 		subLastId := that.lastSubLastId(int(lastId))
 		if lastId == subLastId && MsgMng.Db != nil {
 			// 从最近多少条开始
@@ -534,16 +539,16 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 	client.subContinuous = continuous
 	if continuous <= 0 {
 		// sub监听下不为0
-		client.subLastId = 1
+		client.subLastId = MSD_ID_SUB
 
-	} else if client.subLastId < 2 {
+	} else if client.subLastId < MSD_ID_MIN {
 		// 监听连续发送subLastId最小为2
-		client.subLastId = 2
+		client.subLastId = MSD_ID_MIN
 	}
 
 	var pushNum int32 = 0
 	// 修复 lastQueue 中有可能会有qs=2的内存消息
-	var dbNexted = false
+	var dbNexted = lastId <= MSD_ID_MIN
 	for subLastTime == client.subLastTime && connVer == client.connVer {
 		lastTime = client.lastTime
 		msg, lastIn := that.lastQueueGet(client, subLastTime, lastId)
@@ -552,7 +557,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 		}
 
 		if msg == nil {
-			if lastIn || MsgMng.Db == nil {
+			if lastIn || MsgMng.Db == nil || dbNexted {
 				// 消息已读取完毕
 				if !that.subLastDone(client, lastTime) {
 					continue
