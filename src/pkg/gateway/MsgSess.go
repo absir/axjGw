@@ -386,12 +386,12 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 
 	if !client.lasting {
 		// 启动通知线程，包含会执行LastSubRun
-		go that.LastClientRun(client, unique)
+		go that.lastClientRun(client, unique)
 	}
 }
 
 // last消息通知客户端进入
-func (that *MsgSess) LastClientIn(client *MsgClient) bool {
+func (that *MsgSess) lastClientIn(client *MsgClient) bool {
 	client.locker.Lock()
 	defer client.locker.Unlock()
 	if client.lasting {
@@ -403,31 +403,31 @@ func (that *MsgSess) LastClientIn(client *MsgClient) bool {
 }
 
 // last消息通知客户端退出
-func (that *MsgSess) LastClientOut(client *MsgClient, unique string, lastTime int64) {
+func (that *MsgSess) lastClientOut(client *MsgClient, unique string, lastTime int64) {
 	client.locker.Lock()
 	defer client.locker.Unlock()
 	client.lasting = false
 	if client.lastTime > lastTime {
 		// 漏掉重启
-		go that.LastClientRun(client, unique)
+		go that.lastClientRun(client, unique)
 	}
 }
 
 // last消息通知客户端完成
-func (that *MsgSess) LastClientDone(client *MsgClient, lastTime int64) bool {
+func (that *MsgSess) lastClientDone(client *MsgClient, lastTime int64) bool {
 	client.locker.Lock()
 	defer client.locker.Unlock()
 	return client.lastTime <= lastTime
 }
 
 // last消息通知客户端执行
-func (that *MsgSess) LastClientRun(client *MsgClient, unique string) {
-	if !that.LastClientIn(client) {
+func (that *MsgSess) lastClientRun(client *MsgClient, unique string) {
+	if !that.lastClientIn(client) {
 		return
 	}
 
 	lastTime := client.lastTime
-	defer that.LastClientOut(client, unique, lastTime)
+	defer that.lastClientOut(client, unique, lastTime)
 	for {
 		if client.subLastTime > 0 {
 			// lastSubRun执行中, 在结束后，会再启动LastClient
@@ -453,7 +453,7 @@ func (that *MsgSess) LastClientRun(client *MsgClient, unique string) {
 			time.Sleep(time.Second)
 		}
 
-		if that.LastClientDone(client, lastTime) {
+		if that.lastClientDone(client, lastTime) {
 			break
 		}
 	}
@@ -503,7 +503,7 @@ func (that *MsgSess) subLastOut(client *MsgClient, unique string, subLastTime in
 		client.subLastTime = 0
 		if lastTime < client.lastTime {
 			// last通知触发，last通知或lastSubRun由LastClient负责
-			go that.LastClientRun(client, unique)
+			go that.lastClientRun(client, unique)
 		}
 	}
 }
