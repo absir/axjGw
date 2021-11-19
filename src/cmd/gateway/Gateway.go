@@ -103,6 +103,7 @@ func main() {
 
 	// 启动完成
 	AZap.Logger.Info("Gateway all AXJ started")
+	// 日志配置
 	AZapIst.InitCfg(true)
 	// 等待关闭
 	APro.Signal()

@@ -545,48 +545,48 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		case ANet.REQ_PUSH:
 			// 推送消息
 			that.opt.OnPush(uri, data, 0)
-			return
+			continue
 		case ANet.REQ_PUSHI:
 			// 推送消息I
 			that.opt.OnPush(uri, data, pid)
-			return
+			continue
 		case ANet.REQ_KICK:
 			// 被踢
 			adapter.kicked = true
 			that.adapter = nil
 			adapter.conn.Close()
 			that.opt.OnState(adapter, KICK, "", data)
-			return
+			continue
 		case ANet.REQ_LAST:
 			// 推送状态
 			that.opt.OnLast(uri, uriI, false)
-			return
+			continue
 		case ANet.REQ_LASTC:
 			// 推送状态C
 			that.opt.OnLast(uri, uriI, true)
-			return
+			continue
 		case ANet.REQ_KEY:
 			// 传输秘钥
 			adapter.decryKey = data
-			return
+			continue
 		case ANet.REQ_ACL:
 			// 登录请求
 			data = that.opt.LoginData(adapter)
 			err = that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, that.uriMapHash, 1, data, false, 0)
 			that.onError(adapter, err, true)
-			return
+			continue
 		case ANet.REQ_BEAT:
 			// 心跳
-			return
+			continue
 		case ANet.REQ_ROUTE:
 			// 路由压缩
 			that.setUriMapUriI(KtUnsafe.BytesToString(data), uri, true)
-			return
+			continue
 		case ANet.REQ_LOOP:
 			// 连接完成
 			that.onLoop(adapter, uri)
 			that.opt.OnState(adapter, LOOP, "", data)
-			return
+			continue
 		}
 
 		if req > ANet.REQ_ONEWAY {

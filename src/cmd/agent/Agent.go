@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	Proxy string // 代理地址
+	Proxy     string // 代理地址
+	ClientKey string // 客户端Key
 }
 
 func main() {
@@ -16,6 +17,5 @@ func main() {
 	}, "../../agent")
 	APro.Load(nil, "config.ini")
 	APro.Load(nil, "config.yml")
-
 
 }
