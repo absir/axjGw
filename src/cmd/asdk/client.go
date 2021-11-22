@@ -101,7 +101,6 @@ func init() {
 
 func (that *clientsState) reset(check bool) {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.log = false
 	that.out = true
 	that.encry = true
@@ -114,6 +113,7 @@ func (that *clientsState) reset(check bool) {
 	that.recDlyMax = 0
 	that.recDlyNum = 0
 	that.recDlyTime = 0
+	that.locker.Unlock()
 	if check {
 		go that.checkAsync.Start(nil)
 	}
@@ -121,12 +121,12 @@ func (that *clientsState) reset(check bool) {
 
 func (that *clientsState) clear() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.recNum = 0
 	that.recDlyMin = 0
 	that.recDlyMax = 0
 	that.recDlyNum = 0
 	that.recDlyTime = 0
+	that.locker.Unlock()
 }
 
 func (that *clientsState) next(el *list.Element) *list.Element {

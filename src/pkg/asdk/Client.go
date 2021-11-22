@@ -276,8 +276,9 @@ func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, ba
 
 func (that *Client) rqGet(rqI int32) *rqDt {
 	that.locker.Lock()
-	defer that.locker.Unlock()
-	return that.rqDict[rqI]
+	dt := that.rqDict[rqI]
+	that.locker.Unlock()
+	return dt
 }
 
 func (that *Client) rqDelDict(rqI int32) {
@@ -286,8 +287,8 @@ func (that *Client) rqDelDict(rqI int32) {
 	}
 
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	delete(that.rqDict, rqI)
+	that.locker.Unlock()
 }
 
 func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte) {
@@ -321,7 +322,6 @@ func (that *Client) onRepRcvr() {
 func (that *Client) rqAdd(rq *rqDt) {
 	// 加入请求唯一rqI，需要锁保持唯一
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if rq.back == nil {
 		rq.rqI = ANet.REQ_ONEWAY
 
@@ -344,22 +344,26 @@ func (that *Client) rqAdd(rq *rqDt) {
 	}
 
 	that.rqAry.PushBack(rq)
+	that.locker.Unlock()
 }
 
 func (that *Client) rqNext(el *list.Element) *list.Element {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if el == nil {
-		return that.rqAry.Front()
+		el = that.rqAry.Front()
+
+	} else {
+		el = el.Next()
 	}
 
-	return el.Next()
+	that.locker.Unlock()
+	return el
 }
 
 func (that *Client) rqDelAry(el *list.Element) {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.rqAry.Remove(el)
+	that.locker.Unlock()
 }
 
 func (that *Client) doChecks() {
@@ -438,13 +442,18 @@ func (that *Client) checkStart() {
 
 func (that *Client) checkIn() int64 {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if that.checkTime == 0 {
 		checkTime := time.Now().UnixNano()
+		if that.checkTime >= checkTime {
+			checkTime = that.checkTime + 1
+		}
+
 		that.checkTime = checkTime
+		that.locker.Unlock()
 		return checkTime
 	}
 
+	that.locker.Unlock()
 	return 0
 }
 
@@ -468,12 +477,19 @@ func (that *Client) checkLoop() {
 func (that *Client) closeAdapter(adapter *Adapter, lock bool) bool {
 	if lock {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 	}
 
 	if that.adapter == adapter {
 		that.adapter = nil
+		if lock {
+			that.locker.Unlock()
+		}
+
 		return true
+	}
+
+	if lock {
+		that.locker.Unlock()
 	}
 
 	return false
