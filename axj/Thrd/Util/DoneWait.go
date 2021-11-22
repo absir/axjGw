@@ -10,25 +10,27 @@ type DoneWait struct {
 
 func (that *DoneWait) Add() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.wait++
+	that.locker.Unlock()
 }
 
 func (that *DoneWait) Done() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.wait--
 	if that.wait <= 0 {
 		that.cond.Signal()
 	}
+
+	that.locker.Unlock()
 }
 
 func (that *DoneWait) Wait() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if that.wait > 0 {
 		that.cond.Wait()
 	}
+
+	that.locker.Unlock()
 }
 
 func NewWaitDone(locker sync.Locker) *DoneWait {

@@ -23,26 +23,26 @@ func (that *LimiterLocker) Lock() sync.Locker {
 
 func (that *LimiterLocker) Add() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if that.add >= that.limit {
 		that.cond.Wait()
 	}
 
 	that.add++
+	that.locker.Unlock()
 }
 
 func (that *LimiterLocker) Done() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.add--
 	if that.add <= 0 {
 		that.cond.Signal()
 	}
+
+	that.locker.Unlock()
 }
 
 func (that *LimiterLocker) Wait() {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	for {
 		if that.add > 0 {
 			that.cond.Wait()
@@ -50,6 +50,8 @@ func (that *LimiterLocker) Wait() {
 
 		break
 	}
+
+	that.locker.Unlock()
 }
 
 func (that *LimiterLocker) Limit() int {

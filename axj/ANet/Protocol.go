@@ -296,7 +296,6 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 	// 写入锁
 	if locker != nil {
 		locker.Lock()
-		defer locker.Unlock()
 	}
 
 	// buff准备
@@ -311,6 +310,10 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 	_buff[0] = head
 	err = conn.Write(_buff[0:1])
 	if err != nil {
+		// 写入锁释放
+		if locker != nil {
+			locker.Unlock()
+		}
 		return
 	}
 
@@ -320,6 +323,10 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 		KtBytes.SetVInt(_buff, 0, req, &off)
 		err = conn.Write(_buff[0:off])
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 	}
@@ -329,11 +336,19 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 		KtBytes.SetVInt(_buff, 0, uLen, &off)
 		err = conn.Write(_buff[0:off])
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 
 		err = conn.Write(KtUnsafe.StringToBytes(uri))
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 	}
@@ -343,6 +358,10 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 		KtBytes.SetVInt(_buff, 0, uriI, &off)
 		err = conn.Write(_buff[0:off])
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 	}
@@ -352,12 +371,20 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 		KtBytes.SetInt32(_buff, 0, int32(id), &off)
 		err = conn.Write(_buff[0:off])
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 
 		KtBytes.SetInt32(_buff, 0, int32(id>>32), &off)
 		err = conn.Write(_buff[0:off])
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 	}
@@ -369,16 +396,28 @@ func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req i
 			KtBytes.SetVInt(_buff, 0, dLen, &off)
 			err = conn.Write(_buff[0:off])
 			if err != nil {
+				// 写入锁释放
+				if locker != nil {
+					locker.Unlock()
+				}
 				return
 			}
 		}
 
 		err = conn.Write(data)
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 	}
 
+	// 写入锁释放
+	if locker != nil {
+		locker.Unlock()
+	}
 	return
 }
 
@@ -451,7 +490,6 @@ func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh 
 	// 写入锁
 	if locker != nil {
 		locker.Lock()
-		defer locker.Unlock()
 	}
 
 	// buff准备
@@ -465,12 +503,20 @@ func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh 
 	_buff[0] = head
 	err = conn.Write(_buff[0:1])
 	if err != nil {
+		// 写入锁释放
+		if locker != nil {
+			locker.Unlock()
+		}
 		return
 	}
 
 	// 写入批量头
 	err = conn.Write(bh[1:])
 	if err != nil {
+		// 写入锁释放
+		if locker != nil {
+			locker.Unlock()
+		}
 		return
 	}
 
@@ -481,6 +527,10 @@ func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh 
 			KtBytes.SetVInt(_buff, 0, dLen, &off)
 			err = conn.Write(_buff[0:off])
 			if err != nil {
+				// 写入锁释放
+				if locker != nil {
+					locker.Unlock()
+				}
 				return
 			}
 		}
@@ -488,9 +538,17 @@ func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh 
 		// 写入数据
 		err = conn.Write(data)
 		if err != nil {
+			// 写入锁释放
+			if locker != nil {
+				locker.Unlock()
+			}
 			return
 		}
 	}
 
+	// 写入锁释放
+	if locker != nil {
+		locker.Unlock()
+	}
 	return
 }

@@ -34,14 +34,15 @@ func (that *NotifierAsync) StartLock(run func(), lock bool) {
 
 	runTime := time.Now().UnixNano()
 	if lock {
+		// 加锁
 		that.locker.Lock()
-		defer that.locker.Unlock()
 	}
 
 	if run != nil {
 		that.run = run
 	}
 
+	// 保证runTime递增
 	if that.runTime < runTime {
 		that.runTime = runTime
 
@@ -52,32 +53,42 @@ func (that *NotifierAsync) StartLock(run func(), lock bool) {
 	if !that.running {
 		go that.runDo()
 	}
+
+	if lock {
+		// 解锁
+		that.locker.Unlock()
+	}
 }
 
 func (that *NotifierAsync) runIn() bool {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if that.running {
+		that.locker.Unlock()
 		return false
 	}
 
 	that.running = true
+	that.locker.Unlock()
 	return true
 }
 
 func (that *NotifierAsync) runOut(runTime int64) {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	that.running = false
 	if that.runTime > runTime {
 		go that.runDo()
+		that.locker.Unlock()
+
+	} else {
+		that.locker.Unlock()
 	}
 }
 
 func (that *NotifierAsync) runDone(runTime int64) bool {
 	that.locker.Lock()
-	defer that.locker.Unlock()
-	return that.runTime <= runTime
+	done := that.runTime <= runTime
+	that.locker.Unlock()
+	return done
 }
 
 func (that *NotifierAsync) runDo() {
