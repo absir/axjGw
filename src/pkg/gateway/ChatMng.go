@@ -1,9 +1,11 @@
 package gateway
 
 import (
+	"axj/ANet"
 	"axj/APro"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -312,7 +314,8 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 	// 已执行索引
 	indexDid := index
 	for ; index < mLen; index++ {
-		member := members[index]
+		// Rand随机发送顺序
+		member := members[(index+msgTeam.Rand)%mLen]
 		gid := member.Gid
 		if member.Nofeed {
 			// 不推送到gid， 需要主动拉去tid_gid
@@ -417,7 +420,20 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 		}
 
 		team := TeamMng.GetTeam(tid)
+		if team == nil {
+			return false, ANet.ERR_NOWAY
+		}
+
 		if !team.ReadFeed {
+			mLen := 0
+			if team.Members != nil {
+				mLen = len(team.Members)
+			}
+
+			if mLen <= 0 {
+				return false, ANet.ERR_NOWAY
+			}
+
 			// 写扩散
 			fClient := Server.GetProdGid(fromId).GetGWIClient()
 			rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
@@ -441,6 +457,7 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 				Tid:     tid,
 				Members: team.Members,
 				Index:   0,
+				Rand:    int(rand.Int31n(int32(mLen))),
 				Uri:     uri,
 				Data:    data,
 			}

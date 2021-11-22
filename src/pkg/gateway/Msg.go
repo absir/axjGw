@@ -100,6 +100,7 @@ type MsgTeam struct {
 	Tid     string       `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
 	Members []*gw.Member `gorm:"type:json"`                            // 消息会员
 	Index   int          `gorm:""`                                     // 发送进度
+	Rand    int          `gorm:""`                                     // 发送顺序随机
 	Uri     string       `gorm:"type:varchar(255);"`
 	Data    []byte       `gorm:""`
 }
