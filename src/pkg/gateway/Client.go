@@ -161,7 +161,7 @@ func (that *ClientG) GetProd(name string, rand bool) (*Prod, *Prods) {
 	return prods.GetProdHash(that.Hash()), prods
 }
 
-func (that *ClientG) ConnKeep() {
+func (that *ClientG) connKeep() {
 	that.connTime = time.Now().Unix() + Config.ConnDrt
 }
 
@@ -169,7 +169,7 @@ func (that *ClientG) connOut() {
 	that.conning = false
 }
 
-func (that *ClientG) ConnCheck(limiter Util.Limiter) {
+func (that *ClientG) connCheck(limiter Util.Limiter) {
 	if limiter != nil {
 		defer limiter.Done()
 	}

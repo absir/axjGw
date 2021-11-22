@@ -265,8 +265,8 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
 	if clientG.Gid() != "" {
 		// 用户连接保持
-		clientG.ConnKeep()
-		clientG.ConnCheck(nil)
+		clientG.connKeep()
+		clientG.connCheck(nil)
 		if clientG.IsClosed() {
 			return nil
 		}

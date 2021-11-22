@@ -4,6 +4,7 @@ import (
 	"axj/ANet"
 	"axj/APro"
 	"axj/Thrd/Util"
+	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
 	"math/rand"
 	"sync"
@@ -25,7 +26,8 @@ type chatMng struct {
 	checkTime    int64
 	tStartTime   int64
 	locker       sync.Locker
-	teamMap      *sync.Map
+	teamMap      *cmap.CMap
+	teamBuff     []interface{}
 }
 
 var ChatMng *chatMng
@@ -52,7 +54,7 @@ func initChatMng() {
 	that.TStartsDrt = that.TStartsDrt * int64(time.Millisecond)
 	that.TIdleLive = that.TIdleLive * int64(time.Millisecond)
 	that.locker = new(sync.Mutex)
-	that.teamMap = new(sync.Map)
+	that.teamMap = cmap.NewCMapInit()
 }
 
 // 空闲检测
@@ -86,7 +88,8 @@ func (that *chatMng) CheckLoop() {
 				}
 			}
 
-			that.teamMap.Range(that.checkChatTeam)
+			// RangeBuff内存复用、快速、安全
+			that.teamMap.RangeBuff(that.checkChatTeam, &that.teamBuff, that.TStartsLimit)
 		}
 	}
 }

@@ -45,7 +45,7 @@ func (that *handler) ClientG(client ANet.Client) *ClientG {
 
 func (that *handler) OnOpen(client ANet.Client) {
 	clientG := that.ClientG(client)
-	clientG.ConnKeep()
+	clientG.connKeep()
 }
 
 func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) {
@@ -178,17 +178,17 @@ func (that *handler) New(conn ANet.Conn) ANet.ClientM {
 func (that *handler) Check(time int64, client ANet.Client) {
 	clientG := that.ClientG(client)
 	if clientG.gid != "" && clientG.connTime < time {
-		clientG.ConnKeep()
+		clientG.connKeep()
 		if clientG.conning {
 			return
 		}
 
 		limiter := Server.getConnLimiter()
 		if limiter == nil {
-			clientG.ConnCheck(nil)
+			clientG.connCheck(nil)
 
 		} else {
-			clientG.ConnCheck(limiter)
+			clientG.connCheck(limiter)
 			limiter.Add()
 		}
 	}
