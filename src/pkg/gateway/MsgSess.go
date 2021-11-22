@@ -531,7 +531,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 	lastTime := client.lastTime
 	subLastTime := that.subLastIn(client)
 	defer that.subLastOut(client, unique, subLastTime, lastTime)
-	if lastId > 0 && lastId < MSD_ID_MIN {
+	if lastId >= 0 && lastId < MSD_ID_MIN {
 		subLastId := that.lastSubLastId(int(lastId))
 		if lastId == subLastId && MsgMng.Db != nil {
 			// 从最近多少条开始
