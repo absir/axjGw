@@ -30,16 +30,34 @@ func (that *CMap) RangeLock(f func(k, v interface{}) bool) bool {
 	return true
 }
 
-func (that *CMap) RangeBuff(f func(k, v interface{}) bool, buff *[]interface{}, buffPSizeMax int) bool {
+func (that *CMap) RangeBuff(f func(k, v interface{}) bool, pBuff *[]interface{}, buffPSizeMax int) bool {
 	n := that.getNode()
+	buffGcMax := 0
 	for i := range n.buckets {
 		b := n.getBucket(uintptr(i))
-		if !b.walkBuff(f, buff, buffPSizeMax) {
+		if !b.walkBuff(f, pBuff, buffPSizeMax, &buffGcMax) {
 			return false
 		}
 	}
 
+	that.rangeBuffGc(pBuff, buffPSizeMax, buffGcMax)
 	return true
+}
+
+func (that *CMap) rangeBuffGc(pBuff *[]interface{}, buffPSizeMax int, buffGcMax int) {
+	if pBuff == nil {
+		return
+	}
+
+	buff := *pBuff
+	if buff == nil {
+		return
+	}
+
+	bLen := len(*pBuff)
+	if bLen > (buffGcMax<<1) && bLen > (buffGcMax+buffPSizeMax) {
+		*pBuff = nil
+	}
 }
 
 func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pWait **Util.DoneWait, pBuffs *[][]interface{}, buffPSizeMax int) {
@@ -63,7 +81,17 @@ func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pWait **Util.DoneWai
 	n := that.getNode()
 	nLen := len(n.buckets)
 	buffs := *pBuffs
-	if buffs == nil || len(buffs) != nLen {
+	if buffs != nil {
+		bLen := len(buffs)
+		if bLen < nLen {
+			buffs = nil
+
+		} else if bLen > (nLen << 1) {
+			buffs = nil
+		}
+	}
+
+	if buffs == nil {
 		buffs = make([][]interface{}, nLen)
 		*pBuffs = buffs
 	}
@@ -71,7 +99,7 @@ func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pWait **Util.DoneWai
 	for i := nLen - 1; i >= 0; i-- {
 		b := n.getBucket(uintptr(i))
 		if i == 0 {
-			b.walkBuff(f, &buffs[i], buffPSizeMax)
+			b.walkBuff(f, &buffs[i], buffPSizeMax, nil)
 
 		} else {
 			go b.walkWait(wait, f, &buffs[i], buffPSizeMax)
@@ -84,7 +112,7 @@ func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pWait **Util.DoneWai
 
 func (that *bucket) walkWait(wait *Util.DoneWait, f func(k, v interface{}) bool, buff *[]interface{}, buffPSizeMax int) {
 	defer wait.Done()
-	that.walkBuff(f, buff, buffPSizeMax)
+	that.walkBuff(f, buff, buffPSizeMax, nil)
 }
 
 func (that *bucket) walkLock(f func(k, v interface{}) bool) bool {
@@ -105,7 +133,7 @@ func (that *bucket) walkBuffClear(buff []interface{}, mLen2 int) {
 	}
 }
 
-func (that *bucket) walkBuff(f func(k, v interface{}) bool, pBuff *[]interface{}, buffPSizeMax int) bool {
+func (that *bucket) walkBuff(f func(k, v interface{}) bool, pBuff *[]interface{}, buffPSizeMax int, buffGcMax *int) bool {
 	if pBuff == nil {
 		return that.walk(f)
 	}
@@ -126,8 +154,15 @@ func (that *bucket) walkBuff(f func(k, v interface{}) bool, pBuff *[]interface{}
 			if bLen < mLen2 {
 				buff = nil
 
-			} else if bLen > (mLen2<<1) && bLen > (mLen2+buffPSizeMax) {
-				buff = nil
+			} else {
+				if buffGcMax == nil {
+					if bLen > (mLen2<<1) && bLen > (mLen2+buffPSizeMax) {
+						buff = nil
+					}
+
+				} else if *buffGcMax < mLen2 {
+					*buffGcMax = mLen2
+				}
 			}
 		}
 
