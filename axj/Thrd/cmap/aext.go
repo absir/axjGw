@@ -156,57 +156,65 @@ func (that *bucket) walkBuff(f func(k, v interface{}) bool, pBuff *[]interface{}
 
 	// buff
 	buff := *pBuff
-	var mLen2 int
+	// buffPSizeMax 不能小于1
 	if buffPSizeMax < 1 {
 		buffPSizeMax = 1
 	}
 
+	var kvLen int // key,val数 = len(that.m) * 2
 	// 读锁，获取对象
 	{
 		that.mu.RLock()
-		mLen2 = len(that.m) << 1
+		kvLen = len(that.m) << 1
 		if buff != nil {
 			bLen := len(buff)
-			if bLen < mLen2 {
+			if bLen < kvLen {
 				buff = nil
 
 			} else {
 				if buffGcMax == nil {
-					if bLen > (mLen2<<1) && bLen > (mLen2+buffPSizeMax) {
+					if bLen > (kvLen<<1) && bLen > (kvLen+buffPSizeMax) {
 						buff = nil
 					}
 
-				} else if *buffGcMax < mLen2 {
-					*buffGcMax = mLen2
+				} else if *buffGcMax < kvLen {
+					*buffGcMax = kvLen
 				}
 			}
 		}
 
 		if buff == nil {
-			if mLen2 < buffPSizeMax {
-				buff = make([]interface{}, mLen2<<1)
+			if kvLen > 0 && kvLen < buffPSizeMax {
+				buff = make([]interface{}, kvLen<<1)
 
 			} else {
-				buff = make([]interface{}, mLen2+buffPSizeMax)
+				buff = make([]interface{}, kvLen+buffPSizeMax)
 			}
 
 			*pBuff = buff
 		}
 
-		i := 0
-		for k, v := range that.m {
-			buff[i] = k
-			i++
-			buff[i] = v
-			i++
+		if kvLen > 0 {
+			i := 0
+			for k, v := range that.m {
+				buff[i] = k
+				i++
+				buff[i] = v
+				i++
+			}
 		}
 
 		that.mu.RUnlock()
 	}
 
+	// bucket.map为空值
+	if kvLen <= 0 {
+		return true
+	}
+
 	// 释放key,val,可以gc
-	defer that.walkBuffClear(buff, mLen2)
-	for i := 1; i < mLen2; i += 2 {
+	defer that.walkBuffClear(buff, kvLen)
+	for i := 1; i < kvLen; i += 2 {
 		if !f(buff[i-1], buff[i]) {
 			return false
 		}
