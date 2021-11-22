@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"axj/Thrd/Util"
-	"gitee.com/absir_admin/cmap"
+	"axj/Thrd/cmap"
 	"sync"
 )
 
