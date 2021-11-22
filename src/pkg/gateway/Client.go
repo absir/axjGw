@@ -105,10 +105,11 @@ func (that *ClientG) initRidMap() {
 	if that.ridMap == nil {
 		clientC := that.Get()
 		clientC.Locker().Lock()
-		defer clientC.Locker().Unlock()
 		if that.ridMap == nil {
 			that.ridMap = new(sync.Map)
 		}
+
+		clientC.Locker().Unlock()
 	}
 }
 

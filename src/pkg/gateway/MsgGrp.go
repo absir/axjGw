@@ -50,12 +50,13 @@ func (that *MsgGrp) GetSess() *MsgSess {
 func (that *MsgGrp) getOrNewSess(force bool) *MsgSess {
 	if that.sess == nil && force {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		if that.sess == nil {
 			sess := new(MsgSess)
 			sess.grp = that
 			that.sess = sess
 		}
+
+		that.locker.Unlock()
 	}
 
 	return that.sess
@@ -65,10 +66,11 @@ func (that *MsgGrp) getOrNewSess(force bool) *MsgSess {
 func (that *MsgGrp) getOrNewDbLocker() sync.Locker {
 	if that.dbLocker == nil {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		if that.dbLocker == nil {
 			that.dbLocker = new(sync.Mutex)
 		}
+
+		that.locker.Unlock()
 	}
 
 	return that.dbLocker
@@ -267,7 +269,6 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 			if !locked {
 				locked = true
 				that.rwLocker.Lock()
-				defer that.rwLocker.Unlock()
 			}
 
 			sess.queue.Clear()
@@ -277,11 +278,14 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 			if !locked {
 				locked = true
 				that.rwLocker.Lock()
-				defer that.rwLocker.Unlock()
 			}
 
 			sess.lastQueue.Clear()
 			sess.lastQueueLoaded = false
+		}
+
+		if locked {
+			that.rwLocker.Unlock()
 		}
 	}
 }
@@ -356,9 +360,9 @@ func (that *MsgGrp) lastQueuePush(sess *MsgSess, msg Msg, fid int64) {
 	sess.lastQueueLoad()
 	// 锁加入队列
 	that.rwLocker.Lock()
-	defer that.rwLocker.Unlock()
 	msgD.Id = MsgMng.idWorkder.Generate()
 	sess.lastQueue.Push(msg, true)
+	that.rwLocker.Unlock()
 }
 
 // 消息插入到DB
@@ -369,15 +373,18 @@ func (that *MsgGrp) lastDbInsert(msgD *MsgD) error {
 
 	} else {
 		// db锁加强消息顺序写入
-		that.getOrNewDbLocker().Lock()
-		defer that.getOrNewDbLocker().Unlock()
+		dbLocker := that.getOrNewDbLocker()
+		dbLocker.Lock()
 		if that.sess != nil && that.sess.lastQueue != nil {
+			dbLocker.Unlock()
 			// 插入到队列
 			that.lastQueuePush(that.sess, msgD, msgD.Id)
 			return MsgMng.Db.Insert(msgD)
 		}
 
 		msgD.Id = MsgMng.idWorkder.Generate()
-		return MsgMng.Db.Insert(msgD)
+		err := MsgMng.Db.Insert(msgD)
+		dbLocker.Unlock()
+		return err
 	}
 }

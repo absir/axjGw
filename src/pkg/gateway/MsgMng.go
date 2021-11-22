@@ -152,14 +152,16 @@ func (that *msgMng) checkGrp(key interface{}, grp *MsgGrp) {
 		}
 
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		grp.locker.Lock()
-		defer grp.locker.Unlock()
 		if grp.passTime > time {
+			grp.locker.Unlock()
+			that.locker.Unlock()
 			return
 		}
 
 		that.grpMap.Delete(key)
+		grp.locker.Unlock()
+		that.locker.Unlock()
 		AZap.Debug("Grp Pass Del %s", grp.gid)
 	}
 }
@@ -174,7 +176,6 @@ func (that *msgMng) GetMsgGrp(gid string) *MsgGrp {
 // 获取或创建管理组
 func (that *msgMng) GetOrNewMsgGrp(gid string) *MsgGrp {
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	val, _ := that.grpMap.Load(gid)
 	grp, _ := val.(*MsgGrp)
 	if grp != nil {
@@ -198,19 +199,22 @@ func (that *msgMng) GetOrNewMsgGrp(gid string) *MsgGrp {
 		that.grpMap.Store(gid, grp)
 	}
 
+	that.locker.Unlock()
 	return grp
 }
 
 // 新连接版本
 func (that *msgMng) newConnVer() int32 {
 	that.locker.Lock()
-	defer that.locker.Unlock()
-	if that.connVer < R_SUCC_MIN || that.connVer >= connVerMax {
-		that.connVer = R_SUCC_MIN
+	connVer := that.connVer
+	if connVer < R_SUCC_MIN || connVer >= connVerMax {
+		connVer = R_SUCC_MIN
 
 	} else {
-		that.connVer++
+		connVer++
 	}
 
-	return that.connVer
+	that.connVer = connVer
+	that.locker.Unlock()
+	return connVer
 }

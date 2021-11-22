@@ -96,12 +96,13 @@ func (that *server) getLimiter(pLimiter *Util.Limiter, aclSize int) Util.Limiter
 	limiter := *pLimiter
 	if limiter == nil || limiter.Limit() != aclSize {
 		that.Locker.Lock()
-		defer that.Locker.Unlock()
 		limiter = *pLimiter
 		if limiter == nil || limiter.Limit() != aclSize {
 			limiter = Util.NewLimiterLocker(aclSize, nil)
 			*pLimiter = limiter
 		}
+
+		that.Locker.Unlock()
 	}
 
 	return limiter

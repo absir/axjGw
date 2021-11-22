@@ -163,7 +163,6 @@ func (that *chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 	chatTeam, _ := val.(*ChatTeam)
 	if chatTeam == nil {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		val, _ = that.teamMap.Load(tid)
 		chatTeam, _ = val.(*ChatTeam)
 		if chatTeam == nil {
@@ -173,6 +172,8 @@ func (that *chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 
 			that.teamMap.Store(tid, chatTeam)
 		}
+
+		that.locker.Unlock()
 	}
 
 	chatTeam.Start(msgTeam)
@@ -184,12 +185,12 @@ func (that *ChatTeam) addMsgTeam(msgTeam *MsgTeam) {
 	}
 
 	MsgMng.locker.Lock()
-	defer MsgMng.locker.Unlock()
 	if that.msgQueue == nil {
 		that.msgQueue = Util.NewCircleQueue(ChatMng.TPushQueue)
 	}
 
 	that.msgQueue.Push(msgTeam, true)
+	MsgMng.locker.Unlock()
 }
 
 func (that *ChatTeam) getMsgTeam() *MsgTeam {
@@ -198,12 +199,13 @@ func (that *ChatTeam) getMsgTeam() *MsgTeam {
 	}
 
 	MsgMng.locker.Lock()
-	defer MsgMng.locker.Unlock()
 	if that.msgQueue == nil {
+		MsgMng.locker.Unlock()
 		return nil
 	}
 
 	val, _ := that.msgQueue.Get(0)
+	MsgMng.locker.Unlock()
 	msgTeam, _ := val.(*MsgTeam)
 	return msgTeam
 }
@@ -214,12 +216,13 @@ func (that *ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
 	}
 
 	MsgMng.locker.Lock()
-	defer MsgMng.locker.Unlock()
 	if that.msgQueue == nil {
+		MsgMng.locker.Unlock()
 		return
 	}
 
 	that.msgQueue.Remove(msgTeam)
+	MsgMng.locker.Unlock()
 }
 
 func (that *ChatTeam) Start(msgTeam *MsgTeam) {
@@ -233,17 +236,20 @@ func (that *ChatTeam) Start(msgTeam *MsgTeam) {
 
 func (that *ChatTeam) startIn() bool {
 	ChatMng.locker.Lock()
-	defer ChatMng.locker.Unlock()
 	if that.starting != 1 {
 		that.starting = 1
+		ChatMng.locker.Unlock()
 		return true
 	}
 
+	ChatMng.locker.Unlock()
 	return false
 }
 
 func (that *ChatTeam) startOut() {
+	ChatMng.locker.Lock()
 	that.starting = time.Now().UnixNano() + ChatMng.TIdleLive
+	ChatMng.locker.Unlock()
 }
 
 func (that *ChatTeam) startRun() {

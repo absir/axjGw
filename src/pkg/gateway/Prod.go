@@ -100,10 +100,9 @@ func (that *Prod) GetGWIClient() gw.GatewayIClient {
 
 	if that.gwIClient == nil {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		if that.gwIClient == nil {
 			if Server.gatewayISC != nil {
-				if that.id == Config.WorkId || that.url == "" {
+				if that.url == "" {
 					that.gwIClient = Server.gatewayISC
 				}
 			}
@@ -112,6 +111,8 @@ func (that *Prod) GetGWIClient() gw.GatewayIClient {
 				that.gwIClient = gw.NewGatewayIClient(that.client)
 			}
 		}
+
+		that.locker.Unlock()
 	}
 
 	return that.gwIClient
@@ -126,10 +127,11 @@ func (that *Prod) GetAclClient() gw.AclClient {
 
 	if that.aclClient == nil {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		if that.aclClient == nil {
 			that.aclClient = gw.NewAclClient(that.client)
 		}
+
+		that.locker.Unlock()
 	}
 
 	return that.aclClient
@@ -144,10 +146,11 @@ func (that *Prod) GetPassClient() gw.PassClient {
 
 	if that.passClient == nil {
 		that.locker.Lock()
-		defer that.locker.Unlock()
 		if that.passClient == nil {
 			that.passClient = gw.NewPassClient(that.client)
 		}
+
+		that.locker.Unlock()
 	}
 
 	return that.passClient
