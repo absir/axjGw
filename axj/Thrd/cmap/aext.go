@@ -62,22 +62,10 @@ func (that *CMap) rangeBuffGc(pBuff *[]interface{}, buffPSizeMax int, buffGcMax 
 	}
 }
 
-func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pWait **Util.DoneWait, pBuffs *[][]interface{}, buffPSizeMax int) {
+func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pBuffs *[][]interface{}, buffPSizeMax int, pWait **Util.DoneWait) {
 	if pBuffs == nil {
 		that.RangeBuff(f, nil, buffPSizeMax)
 		return
-	}
-
-	var wait *Util.DoneWait
-	if pWait == nil {
-		wait = Util.NewWaitDone(nil)
-
-	} else {
-		wait = *pWait
-		if wait == nil {
-			wait = Util.NewWaitDone(nil)
-			*pWait = wait
-		}
 	}
 
 	n := that.getNode()
@@ -98,23 +86,49 @@ func (that *CMap) RangeBuffs(f func(k, v interface{}) bool, pWait **Util.DoneWai
 		*pBuffs = buffs
 	}
 
-	for i := nLen - 1; i >= 0; i-- {
-		b := n.getBucket(uintptr(i))
-		if i == 0 {
-			b.walkBuff(f, &buffs[i], buffPSizeMax, nil)
+	var wait *Util.DoneWait = nil
+	for idx := nLen; idx > 0; idx -= mInitSize {
+		if idx <= mInitSize {
+			n.walkWait(nil, f, idx, buffs, buffPSizeMax)
 
 		} else {
-			go b.walkWait(wait, f, &buffs[i], buffPSizeMax)
+			if wait == nil {
+				if pWait == nil {
+					wait = Util.NewWaitDone(nil)
+
+				} else {
+					wait = *pWait
+					if wait == nil {
+						wait = Util.NewWaitDone(nil)
+						*pWait = wait
+					}
+				}
+			}
+
+			go n.walkWait(wait, f, idx, buffs, buffPSizeMax)
 			wait.Add()
 		}
 	}
 
-	wait.Wait()
+	if wait != nil {
+		wait.Wait()
+	}
 }
 
-func (that *bucket) walkWait(wait *Util.DoneWait, f func(k, v interface{}) bool, buff *[]interface{}, buffPSizeMax int) {
-	defer wait.Done()
-	that.walkBuff(f, buff, buffPSizeMax, nil)
+func (that *node) walkWait(wait *Util.DoneWait, f func(k, v interface{}) bool, idx int, buffs [][]interface{}, buffPSizeMax int) {
+	if wait != nil {
+		defer wait.Done()
+	}
+
+	for i := 0; i < mInitSize; i++ {
+		idx--
+		if idx < 0 {
+			break
+		}
+
+		b := that.getBucket(uintptr(idx))
+		b.walkBuff(f, &buffs[idx], buffPSizeMax, nil)
+	}
 }
 
 func (that *bucket) walkLock(f func(k, v interface{}) bool) bool {

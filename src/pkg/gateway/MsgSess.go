@@ -23,10 +23,10 @@ type MsgSess struct {
 	queueAsync *Util.NotifierAsync
 	// last通知异步执行
 	lastAsync *Util.NotifierAsync
-	// 客户端lastWait
-	lastWait *Util.DoneWait
 	// 客户端lastBuffs
 	lastBuffs [][]interface{}
+	// 客户端lastWait
+	lastWait *Util.DoneWait
 	// last消息队列
 	lastQueue *Util.CircleQueue
 	// last消息已载入
@@ -278,7 +278,16 @@ func (that *MsgSess) lastRun() {
 	}
 
 	if that.clientMap != nil {
-		that.clientMap.RangeBuffs(that.lastRange, &that.lastWait, &that.lastBuffs, Config.ClientPMax)
+		if Config.LastRangeWait {
+			that.clientMap.RangeBuffs(that.lastRange, &that.lastBuffs, Config.ClientPMax, &that.lastWait)
+
+		} else {
+			if that.lastBuffs == nil {
+				that.lastBuffs = make([][]interface{}, 1)
+			}
+
+			that.clientMap.RangeBuff(that.lastRange, &that.lastBuffs[0], Config.ClientPMax)
+		}
 	}
 }
 
