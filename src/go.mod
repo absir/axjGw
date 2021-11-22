@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	axj v0.0.0
-	gitee.com/absir_admin/cmap v1.0.7
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.12
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

@@ -2,7 +2,7 @@ package ANet
 
 import (
 	"axj/Thrd/Util"
-	"gitee.com/absir_admin/cmap"
+	"axj/Thrd/cmap"
 	"time"
 )
 
@@ -38,17 +38,19 @@ type HandlerM interface {
 	Handler
 	New(conn Conn) ClientM
 	Check(time int64, client Client) // nio
+	CheckDone(time int64)            // nio
 }
 
 type Manager struct {
-	idWorker  *Util.IdWorker
-	handlerM  HandlerM
-	clientMap *cmap.CMap
-	idleDrt   int64
-	checkDrt  time.Duration
-	checkLoop int64
-	checkTime int64
-	beatBytes []byte
+	idWorker   *Util.IdWorker
+	handlerM   HandlerM
+	clientMap  *cmap.CMap
+	clientBuff []interface{}
+	idleDrt    int64
+	checkDrt   time.Duration
+	checkLoop  int64
+	checkTime  int64
+	beatBytes  []byte
 }
 
 func (that *Manager) HandlerM() HandlerM {
@@ -76,7 +78,7 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkD
 	that := new(Manager)
 	that.idWorker = Util.NewIdWorkerPanic(workerId)
 	that.handlerM = handlerM
-	that.clientMap = new(cmap.CMap)
+	that.clientMap = cmap.NewCMapInit()
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
 	that.beatBytes = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0, 0)
@@ -143,7 +145,8 @@ func (that *Manager) CheckLoop() {
 	for loopTime == that.checkLoop {
 		time.Sleep(that.checkDrt)
 		that.checkTime = time.Now().UnixNano()
-		that.clientMap.Range(that.checkRange)
+		that.clientMap.RangeBuff(that.checkRange, &that.clientBuff, 1024)
+		that.handlerM.CheckDone(that.checkTime)
 	}
 }
 
@@ -154,7 +157,6 @@ func (that *Manager) checkRange(key interface{}, val interface{}) bool {
 
 func (that *Manager) checkClient(key interface{}, val interface{}) {
 	client, _ := val.(Client)
-	clientM := that.ClientM(client)
 	if client == nil {
 		that.clientMap.Delete(key)
 		return
@@ -162,12 +164,14 @@ func (that *Manager) checkClient(key interface{}, val interface{}) {
 
 	clientC := client.Get()
 	// 已关闭链接
-	if client.Get().IsClosed() {
+	if clientC.IsClosed() {
 		that.clientMap.Delete(key)
 		return
 	}
 
-	if clientM.GetM().idleTime <= that.checkTime {
+	clientM := that.ClientM(client)
+	// 超时检测
+	if clientM.idleTime <= that.checkTime {
 		// 直接心跳
 		that.OnKeep(client, false)
 		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)

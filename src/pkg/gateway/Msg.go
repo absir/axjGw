@@ -56,7 +56,7 @@ func (that *MsgD) CData() ([]byte, bool) {
 	if cData == nil || err != nil || len(cData) >= dLen {
 		if err != nil {
 			// 压缩错误
-			AZap.Logger.Warn("msg CData err", zap.Error(err))
+			AZap.Logger.Warn("Msg CData Err", zap.Error(err))
 		}
 
 		that.cData = that.Data

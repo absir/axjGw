@@ -7,6 +7,7 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
 	"github.com/robfig/cron/v3"
@@ -20,14 +21,16 @@ import (
 )
 
 type server struct {
-	Locker     sync.Locker
-	Manager    *ANet.Manager
-	Context    context.Context
-	prodsMap   *sync.Map
-	prodsGw    *Prods
-	gatewayISC *gatewayISC
-	cron       *cron.Cron
-	started    bool
+	Locker      sync.Locker
+	Manager     *ANet.Manager
+	Context     context.Context
+	prodsMap    *sync.Map
+	prodsGw     *Prods
+	gatewayISC  *gatewayISC
+	cron        *cron.Cron
+	started     bool
+	connLimiter Util.Limiter
+	liveLimiter Util.Limiter
 }
 
 var Server = new(server)
@@ -74,6 +77,42 @@ func (that *server) Cron() *cron.Cron {
 	}
 
 	return that.cron
+}
+
+func (that *server) getLimiter(pLimiter *Util.Limiter, aclSize int) Util.Limiter {
+	if aclSize < 0 {
+		return nil
+	}
+
+	if aclSize == 0 {
+		aclSize = that.GetProds(Config.AclProd).ids.Size()
+	}
+
+	if aclSize <= 1 {
+		// 单节点，单协程
+		return nil
+	}
+
+	limiter := *pLimiter
+	if limiter == nil || limiter.Limit() != aclSize {
+		that.Locker.Lock()
+		defer that.Locker.Unlock()
+		limiter = *pLimiter
+		if limiter == nil || limiter.Limit() != aclSize {
+			limiter = Util.NewLimiterLocker(aclSize, nil)
+			*pLimiter = limiter
+		}
+	}
+
+	return limiter
+}
+
+func (that *server) getConnLimiter() Util.Limiter {
+	return that.getLimiter(&that.connLimiter, Config.ConnLimit)
+}
+
+func (that *server) getLiveLimiter() Util.Limiter {
+	return that.getLimiter(&that.liveLimiter, Config.LiveLimit)
 }
 
 func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayIServer) {
@@ -175,10 +214,10 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	err, _, uriHash, uriRoute, loginData := processor.Req(conn, encryptKey)
 	if err != nil {
 		if err == io.EOF {
-			AZap.Logger.Debug("serv acl Req EOF")
+			AZap.Logger.Debug("Serv Login Req EOF")
 
 		} else {
-			AZap.Logger.Warn("serv acl Req ERR", zap.Error(err))
+			AZap.Logger.Warn("Serv Login Req ERR", zap.Error(err))
 		}
 
 		return nil
@@ -196,14 +235,14 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 
 	if err != nil || login == nil {
 		if err == io.EOF {
-			AZap.Logger.Debug("serv acl Login EOF")
+			AZap.Logger.Debug("Serv Login Acl EOF")
 
 		} else {
 			if err == nil {
-				AZap.Logger.Debug("serv acl Login Fail nil")
+				AZap.Logger.Debug("Serv Login Acl Fail nil")
 
 			} else {
-				AZap.Debug("serv acl Login Fail %s", err.Error())
+				AZap.Debug("Serv Login Acl Fail %s", err.Error())
 			}
 		}
 
@@ -227,7 +266,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	if clientG.Gid() != "" {
 		// 用户连接保持
 		clientG.ConnKeep()
-		clientG.ConnCheck()
+		clientG.ConnCheck(nil)
 		if clientG.IsClosed() {
 			return nil
 		}
@@ -300,7 +339,7 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 	Kt.Panic(err)
 	recoverFun := func() {
 		if err := recover(); err != nil {
-			AZap.LoggerS.Warn("grpc stream err", zap.Reflect("err", err))
+			AZap.LoggerS.Warn("Grpc Recover Err", zap.Reflect("err", err))
 		}
 	}
 	serv := grpc.NewServer(
@@ -317,7 +356,7 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 	})
 	go func() {
 		if err := serv.Serve(lisIps); err != nil {
-			AZap.Logger.Error("grpc server err "+addr, zap.Error(err))
+			AZap.Logger.Error("Grpc Serve Err "+addr, zap.Error(err))
 		}
 	}()
 }

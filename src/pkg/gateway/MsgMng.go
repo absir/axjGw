@@ -7,7 +7,7 @@ import (
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"gitee.com/absir_admin/cmap"
+	"axj/Thrd/cmap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -33,6 +33,7 @@ type msgMng struct {
 	pushDrTest    bool          // 消息直写测试
 	checkLoop     int64
 	checkTime     int64
+	checkBuff     []interface{}
 	Db            MsgDb
 	idWorkder     *Util.IdWorker
 	locker        sync.Locker
@@ -77,7 +78,7 @@ func initMsgMng() {
 	// 属性初始化
 	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
 	that.locker = new(sync.Mutex)
-	that.grpMap = new(cmap.CMap)
+	that.grpMap = cmap.NewCMapInit()
 
 	// 消息持久化
 	if that.LastUri != "" {
@@ -116,7 +117,7 @@ func (that *msgMng) CheckLoop() {
 	for loopTime == that.checkLoop {
 		time.Sleep(that.CheckDrt)
 		that.checkTime = time.Now().UnixNano()
-		that.grpMap.Range(that.checkRange)
+		that.grpMap.RangeBuff(that.checkRange, &that.checkBuff, 1024)
 	}
 }
 
@@ -159,7 +160,7 @@ func (that *msgMng) checkGrp(key interface{}, grp *MsgGrp) {
 		}
 
 		that.grpMap.Delete(key)
-		AZap.Debug("Msg Check Release %s", grp.gid)
+		AZap.Debug("Grp Pass Del %s", grp.gid)
 	}
 }
 

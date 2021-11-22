@@ -25,7 +25,7 @@ type Config struct {
 }
 
 var PCfg = Config{
-	SocketAddr: ":8683",
+	SocketAddr:  ":8683",
 	CompressMin: 256,
 	DataMax:     256 << 10,
 	Encrypt:     true,
@@ -69,7 +69,7 @@ func main() {
 						return
 					}
 
-					AZap.Logger.Warn("serv Accept err", zap.Error(err))
+					AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
 					continue
 				}
 

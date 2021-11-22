@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"strconv"
 	"sync"
@@ -135,7 +136,7 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 		go client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid}, nil)
 	}
 
-	AZap.Debug("Msg Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
+	AZap.Debug("Grp Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return true
 }
 
@@ -153,8 +154,8 @@ func (that *MsgGrp) checkClients() {
 	}
 
 	if sess.clientMap != nil {
-		sess.clientMap.Range(that.checkRange)
-		clientNum += int(sess.clientMap.Count())
+		sess.clientMap.RangeBuff(that.checkRange, &sess.checkBuff, Config.ClientPMax)
+		clientNum += int(sess.clientMap.CountFast())
 	}
 
 	sess.clientNum = clientNum
@@ -177,6 +178,35 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 		return
 	}
 
+	if client.checking {
+		return
+	}
+
+	limiter := Server.getLiveLimiter()
+	if limiter == nil {
+		that.checkClientRun(client, unique, nil)
+
+	} else {
+		go that.checkClientRun(client, unique, limiter)
+		limiter.Add()
+	}
+}
+
+func (that *MsgGrp) checkClientOut(client *MsgClient) {
+	client.checking = false
+}
+
+func (that *MsgGrp) checkClientRun(client *MsgClient, unique string, limiter Util.Limiter) {
+	if limiter != nil {
+		defer limiter.Done()
+	}
+
+	if client.checking {
+		return
+	}
+
+	client.checking = true
+	defer that.checkClientOut(client)
 	rep, _ := client.gatewayI.Alive(Server.Context, client.getCidReq())
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {
@@ -214,7 +244,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 	}
 
 	sess.mdfyClientNum(1)
-	AZap.Debug("Msg Conn %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
+	AZap.Debug("Grp Conn %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return client
 }
 
@@ -301,7 +331,7 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 				return true
 			})
 
-			AZap.Logger.Debug("MsgMng pushDrTest span " + strconv.FormatInt(time.Now().UnixNano()/1000000-sTime, 10) + "ms")
+			AZap.Logger.Debug("Msg PushDrTest span " + strconv.FormatInt(time.Now().UnixNano()/1000000-sTime, 10) + "ms")
 
 		} else if sess != nil && msg.Get().Id > 0 {
 			sess.LastStart()

@@ -15,11 +15,14 @@ type config struct {
 	IdleDrt     int64         // 空闲检测间隔
 	ConnDrt     int64         // 连接检查间隔
 	KickDrt     time.Duration // 踢出间隔
+	ConnLimit   int           // 连接检查协程限制
+	LiveLimit   int           // 存活检查协程限制
 	GwProd      string        // 网关服务名
 	AclProd     string        // Acl服务名
 	PassProd    string        // Pass服务名
 	ProdTimeout time.Duration // 服务超时时间
 	TeamMax     int           // 群组最大缓存
+	ClientPMax  int           // 客户端Map遍历最大预增缓冲
 }
 
 var Config *config
@@ -37,6 +40,7 @@ func initConfig(workId int32) {
 		AclProd:     "acl",
 		ProdTimeout: 30 * time.Second,
 		TeamMax:     65535,
+		ClientPMax:  16,
 	}
 
 	Config.PassProd = Config.AclProd

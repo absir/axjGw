@@ -38,7 +38,7 @@ func NewProd(id int32, url string) (*Prod, error) {
 	err := prod.initClient(false)
 	prod.locker = new(sync.Mutex)
 	if err != nil {
-		AZap.Debug("NewProd init err %d, %s : %s", id, url, err.Error())
+		AZap.Debug("Prod Init Err %d, %s : %s", id, url, err.Error())
 	}
 
 	return prod, nil
@@ -79,20 +79,20 @@ func (that *Prod) initClient(locker bool) error {
 }
 
 func (that *Prod) GetGWIClient() gw.GatewayIClient {
+	if Server.gatewayISC != nil {
+		if that.id == Config.WorkId {
+			that.gwIClient = Server.gatewayISC
+			return that.gwIClient
+		}
+	}
+
 	err := that.initClient(true)
 	if that.client == nil {
-		if Server.gatewayISC != nil {
-			if that.id == Config.WorkId {
-				that.gwIClient = Server.gatewayISC
-				return that.gwIClient
-			}
-		}
-
 		if err == nil {
-			AZap.Logger.Warn("initClient err nil")
+			AZap.Logger.Warn("InitClient Err nil")
 
 		} else {
-			AZap.Logger.Warn("initClient err " + err.Error())
+			AZap.Logger.Warn("InitClient Err " + err.Error())
 		}
 
 		return nil
@@ -120,7 +120,7 @@ func (that *Prod) GetGWIClient() gw.GatewayIClient {
 func (that *Prod) GetAclClient() gw.AclClient {
 	err := that.initClient(true)
 	if that.client == nil {
-		AZap.Logger.Warn("initClient err " + err.Error())
+		AZap.Logger.Warn("GetAclClient ERR " + err.Error())
 		return nil
 	}
 
@@ -138,7 +138,7 @@ func (that *Prod) GetAclClient() gw.AclClient {
 func (that *Prod) GetPassClient() gw.PassClient {
 	err := that.initClient(true)
 	if that.client == nil {
-		AZap.Logger.Warn("initClient err " + err.Error())
+		AZap.Logger.Warn("GetPassClient ERR " + err.Error())
 		return nil
 	}
 
@@ -186,7 +186,7 @@ func (that *Prods) Add(id int32, url string) *Prods {
 		prods.prods[id] = prod
 
 	} else if err != nil {
-		AZap.Logger.Info("NewProd err", zap.Error(err))
+		AZap.Logger.Info("NewProd Err", zap.Error(err))
 	}
 
 	return prods

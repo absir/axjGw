@@ -4,6 +4,7 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtUnsafe"
+	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"strconv"
 	"sync"
@@ -21,6 +22,7 @@ type ClientG struct {
 	rid      int32     // 请求编号
 	ridMap   *sync.Map // 请求字典
 	connTime int64     // 最后连接时间
+	conning  bool      // 连接中
 	connReq  *gw.GConnReq
 	uidRep   *gw.UIdRep
 }
@@ -163,7 +165,19 @@ func (that *ClientG) ConnKeep() {
 	that.connTime = time.Now().Unix() + Config.ConnDrt
 }
 
-func (that *ClientG) ConnCheck() {
+func (that *ClientG) connOut() {
+	that.conning = false
+}
+
+func (that *ClientG) ConnCheck(limiter Util.Limiter) {
+	if limiter != nil {
+		defer limiter.Done()
+	}
+
+	if that.conning {
+		return
+	}
+
 	if that.connReq == nil {
 		that.connReq = &gw.GConnReq{
 			Cid:    that.Id(),
@@ -173,6 +187,8 @@ func (that *ClientG) ConnCheck() {
 		}
 	}
 
+	that.conning = true
+	defer that.connOut()
 	rep, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.connReq)
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {

@@ -6,6 +6,7 @@ type Limiter interface {
 	Add()
 	Done()
 	Wait()
+	Limit() int
 	StrictAs(limit int) bool
 }
 
@@ -51,21 +52,23 @@ func (that *LimiterLocker) Wait() {
 	}
 }
 
+func (that *LimiterLocker) Limit() int {
+	return that.limit
+}
+
 func (that *LimiterLocker) StrictAs(limit int) bool {
 	return that.add == 0 && that.limit == limit
 }
 
 func NewLimiterLocker(limit int, locker sync.Locker) *LimiterLocker {
-	pl := new(LimiterLocker)
-	pl.limit = limit
-	pl.add = 0
+	that := new(LimiterLocker)
+	that.limit = limit
+	that.add = 0
 	if locker == nil {
 		locker = new(sync.Mutex)
 	}
 
-	pl.locker = locker
-	pl.cond = sync.NewCond(pl.locker)
-	return pl
+	that.locker = locker
+	that.cond = sync.NewCond(that.locker)
+	return that
 }
-
-var LimiterOne = NewLimiterLocker(1, nil)

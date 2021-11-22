@@ -116,10 +116,10 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 		})
 		if err != nil || result == nil {
 			if err == nil {
-				AZap.Logger.Warn("Req err " + uri + " nil")
+				AZap.Logger.Warn("Pass Err " + uri + " nil")
 
 			} else {
-				AZap.Logger.Warn("Req err " + uri + " " + err.Error())
+				AZap.Logger.Warn("Pass Err " + uri + " " + err.Error())
 			}
 
 			reped = true
@@ -149,7 +149,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 
 func (that *handler) reqRcvr(client ANet.Client, req int32, reped bool) {
 	if err := recover(); err != nil {
-		AZap.LoggerS.Warn("rep err", zap.Reflect("err", err))
+		AZap.LoggerS.Warn("Rep Err", zap.Reflect("err", err))
 	}
 
 	if !reped && req > ANet.REQ_ONEWAY {
@@ -179,6 +179,20 @@ func (that *handler) Check(time int64, client ANet.Client) {
 	clientG := that.ClientG(client)
 	if clientG.gid != "" && clientG.connTime < time {
 		clientG.ConnKeep()
-		go clientG.ConnCheck()
+		if clientG.conning {
+			return
+		}
+
+		limiter := Server.getConnLimiter()
+		if limiter == nil {
+			clientG.ConnCheck(nil)
+
+		} else {
+			clientG.ConnCheck(limiter)
+			limiter.Add()
+		}
 	}
+}
+
+func (that *handler) CheckDone(time int64) {
 }

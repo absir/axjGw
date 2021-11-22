@@ -308,7 +308,7 @@ func (g GatewayIs) GLasts(ctx context.Context, req *gw.GLastsReq) (*gw.Id32Rep, 
 	}
 
 	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
-	client := grp.Conn(req.Cid, req.Unique, false, false)
+	client := grp.Conn(req.Cid, req.Unique, false, true)
 	if client == nil {
 		return Result_IdNone_Rep, nil
 	}

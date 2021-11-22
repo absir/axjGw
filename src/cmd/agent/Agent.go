@@ -2,6 +2,7 @@ package main
 
 import (
 	"axj/APro"
+	"axj/Thrd/cmap"
 	"runtime"
 )
 
@@ -18,4 +19,9 @@ func main() {
 	APro.Load(nil, "config.ini")
 	APro.Load(nil, "config.yml")
 
+	cmap := cmap.NewCMapInit()
+	for i := 0; i < 1000; i++ {
+		cmap.Store(i, i)
+		println(cmap.SizeBuckets())
+	}
 }

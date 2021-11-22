@@ -91,10 +91,8 @@ func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey 
 }
 
 func (that *ClientCnn) SetLimiter(limit int) {
-	if limit == 0 {
-		that.limiter = Util.LimiterOne
-
-	} else if limit > 0 {
+	if limit > 1 {
+		// > 1 才能limiter
 		that.limiter = Util.NewLimiterLocker(limit, nil)
 
 	} else {
@@ -142,7 +140,7 @@ func (that *ClientCnn) close(err error, reason interface{}, inner bool) {
 	limiter := that.limiter
 	if limiter != nil {
 		that.limiter = nil
-		if limiter != Util.LimiterOne && !limiter.StrictAs(1) {
+		if limiter != nil {
 			limiter.Done()
 		}
 	}
@@ -173,17 +171,17 @@ func (that *ClientCnn) closeLog(err error, reason interface{}) {
 	}
 
 	if err == nil {
-		AZap.LoggerS.Debug(fmt.Sprintf("Conn close %v, %v", reason, that.client.CId()))
+		AZap.LoggerS.Debug(fmt.Sprintf("Conn Close %v, %v", reason, that.client.CId()))
 
 	} else if err == io.EOF {
-		AZap.LoggerS.Debug(fmt.Sprintf("Conn close EOF %v, %v", reason, that.client.CId()))
+		AZap.LoggerS.Debug(fmt.Sprintf("Conn Close EOF %v, %v", reason, that.client.CId()))
 
 	} else {
 		if nErr, ok := err.(*net.OpError); ok {
-			AZap.LoggerS.Debug(fmt.Sprintf("Conn close %v %v, %v", nErr.Error(), reason, that.client.CId()))
+			AZap.LoggerS.Debug(fmt.Sprintf("Conn Close %v %v, %v", nErr.Error(), reason, that.client.CId()))
 
 		} else {
-			AZap.LoggerS.Debug(fmt.Sprintf("Conn close ERR %v, %v", reason, that.client.CId()), zap.Error(err))
+			AZap.LoggerS.Debug(fmt.Sprintf("Conn Close Err %v, %v", reason, that.client.CId()), zap.Error(err))
 		}
 	}
 }
@@ -201,10 +199,10 @@ func (that *ClientCnn) closeRcvr() error {
 		}
 
 		if reason == nil {
-			AZap.LoggerS.Warn("Conn crash", zap.Error(err))
+			AZap.LoggerS.Warn("Conn Crash", zap.Error(err))
 
 		} else {
-			AZap.LoggerS.Warn("Conn crash", zap.Error(err), zap.Reflect("reason", reason))
+			AZap.LoggerS.Warn("Conn Crash", zap.Error(err), zap.Reflect("reason", reason))
 		}
 
 		return err
@@ -339,7 +337,7 @@ func (that *ClientCnn) ReqLoop() {
 
 		if !that.handler.OnReq(that, req, uri, uriI, data) {
 			limiter := that.limiter
-			if limiter == nil || limiter == Util.LimiterOne || (limiter != nil && limiter.StrictAs(1)) {
+			if limiter == nil {
 				that.poolReqIO(nil, req, uri, uriI, data)
 
 			} else {

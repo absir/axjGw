@@ -314,7 +314,7 @@ func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte) {
 
 func (that *Client) onRepRcvr() {
 	if err := recover(); err != nil {
-		AZap.LoggerS.Warn("onRep err", zap.Reflect("err", err))
+		AZap.LoggerS.Warn("OnRep Err", zap.Reflect("err", err))
 	}
 }
 
@@ -615,7 +615,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 
 func (that *Client) reqLoopRcvr(adapter *Adapter) {
 	if err := recover(); err != nil {
-		AZap.LoggerS.Warn("reqLoop err", zap.Reflect("err", err))
+		AZap.LoggerS.Warn("ReqLoop Err", zap.Reflect("err", err))
 	}
 }
 

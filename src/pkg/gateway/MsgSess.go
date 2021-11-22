@@ -3,9 +3,9 @@ package gateway
 import (
 	"axj/ANet"
 	"axj/Thrd/Util"
+	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
 	"errors"
-	"gitee.com/absir_admin/cmap"
 	"time"
 )
 
@@ -23,6 +23,10 @@ type MsgSess struct {
 	queueAsync *Util.NotifierAsync
 	// last通知异步执行
 	lastAsync *Util.NotifierAsync
+	// 客户端lastWait
+	lastWait *Util.DoneWait
+	// 客户端lastBuffs
+	lastBuffs [][]interface{}
 	// last消息队列
 	lastQueue *Util.CircleQueue
 	// last消息已载入
@@ -33,6 +37,8 @@ type MsgSess struct {
 	clientMap *cmap.CMap
 	// 客户端数
 	clientNum int
+	// 客户端checkBuff
+	checkBuff []interface{}
 }
 
 type ERpc int
@@ -54,7 +60,7 @@ func (that *MsgSess) getOrNewClientMap() *cmap.CMap {
 		that.grp.locker.Lock()
 		defer that.grp.locker.Unlock()
 		if that.clientMap == nil {
-			that.clientMap = new(cmap.CMap)
+			that.clientMap = cmap.NewCMapInit()
 		}
 	}
 
@@ -272,7 +278,7 @@ func (that *MsgSess) lastRun() {
 	}
 
 	if that.clientMap != nil {
-		that.clientMap.Range(that.lastRange)
+		that.clientMap.RangeBuffs(that.lastRange, &that.lastWait, &that.lastBuffs, Config.ClientPMax)
 	}
 }
 

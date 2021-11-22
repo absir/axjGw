@@ -16,6 +16,7 @@ type MsgClient struct {
 	subLastTime   int64
 	subLastId     int64
 	subContinuous int32
+	checking      bool //checkClient中
 	cidReq        *gw.CidReq
 }
 
