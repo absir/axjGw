@@ -246,12 +246,14 @@ func (b *bucket) walk(f func(k, v interface{}) bool) (done bool) {
 	type entry struct {
 		key, value interface{}
 	}
-	b.mu.Lock()
+	b.mu.RLock()
 	entries := make([]entry, 0, len(b.m))
+	i := 0
 	for k, v := range b.m {
-		entries = append(entries, entry{key: k, value: v})
+		entries[i] = entry{key: k, value: v}
+		i++
 	}
-	b.mu.Unlock()
+	b.mu.RUnlock()
 
 	for _, e := range entries {
 		if !f(e.key, e.value) {

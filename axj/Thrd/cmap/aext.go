@@ -20,7 +20,8 @@ func (that *CMap) SizeBuckets() int {
 
 func (that *CMap) RangeLock(f func(k, v interface{}) bool) bool {
 	n := that.getNode()
-	for i := range n.buckets {
+	nLen := len(n.buckets)
+	for i := 0; i < nLen; i++ {
 		b := n.getBucket(uintptr(i))
 		if !b.walkLock(f) {
 			return false
@@ -32,8 +33,9 @@ func (that *CMap) RangeLock(f func(k, v interface{}) bool) bool {
 
 func (that *CMap) RangeBuff(f func(k, v interface{}) bool, pBuff *[]interface{}, buffPSizeMax int) bool {
 	n := that.getNode()
+	nLen := len(n.buckets)
 	buffGcMax := 0
-	for i := range n.buckets {
+	for i := 0; i < nLen; i++ {
 		b := n.getBucket(uintptr(i))
 		if !b.walkBuff(f, pBuff, buffPSizeMax, &buffGcMax) {
 			return false
@@ -147,7 +149,7 @@ func (that *bucket) walkBuff(f func(k, v interface{}) bool, pBuff *[]interface{}
 
 	// 读锁，获取对象
 	{
-		that.mu.Lock()
+		that.mu.RLock()
 		mLen2 = len(that.m) << 1
 		if buff != nil {
 			bLen := len(buff)
@@ -185,10 +187,10 @@ func (that *bucket) walkBuff(f func(k, v interface{}) bool, pBuff *[]interface{}
 			i++
 		}
 
-		that.mu.Unlock()
+		that.mu.RUnlock()
 	}
 
-	// gc清理
+	// 释放key,val,可以gc
 	defer that.walkBuffClear(buff, mLen2)
 	for i := 1; i < mLen2; i += 2 {
 		if !f(buff[i-1], buff[i]) {
