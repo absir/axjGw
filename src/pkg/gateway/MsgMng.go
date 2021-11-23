@@ -31,6 +31,7 @@ type msgMng struct {
 	ORwLocker     bool          // 独立Queue读写锁
 	OClientLocker bool          // 独立客户端锁
 	pushDrTest    bool          // 消息直写测试
+	LastRangeWait bool          // Last通知RangeWait遍历
 	checkLoop     int64
 	checkTime     int64
 	checkBuff     []interface{}
@@ -62,6 +63,7 @@ func initMsgMng() {
 		ORwLocker:     true,
 		OClientLocker: true,
 		pushDrTest:    false,
+		LastRangeWait: false,
 	}
 
 	// 配置处理

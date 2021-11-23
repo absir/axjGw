@@ -982,7 +982,7 @@ func BindMap(target *reflect.Value, from map[interface{}]interface{}) {
 		target = &value
 	}
 
-	if target.Kind() != reflect.Struct {
+	if target.Kind() != reflect.Struct && target.Kind() != reflect.Map {
 		return
 	}
 
@@ -992,11 +992,38 @@ func BindMap(target *reflect.Value, from map[interface{}]interface{}) {
 }
 
 func BindKeyVal(target *reflect.Value, key interface{}, val interface{}) {
+	if target.Kind() == reflect.Map {
+		vType := target.Type().Elem()
+		if vType.Kind() == reflect.Ptr {
+			vType = vType.Elem()
+		}
+
+		key = ToSafe(key, target.Type().Key(), true)
+		rKey := reflect.ValueOf(key)
+		if vType.Kind() == reflect.Struct || vType.Kind() == reflect.Map {
+			rVal := target.MapIndex(rKey)
+			if !rVal.IsValid() || rVal.IsNil() {
+				rVal = reflect.New(vType)
+				target.SetMapIndex(rKey, rVal)
+			}
+
+			// 绑定val值
+			BindInterface(rVal, val)
+
+		} else {
+			target.SetMapIndex(rKey, reflect.ValueOf(ToSafe(val, target.Type().Elem(), false)))
+		}
+
+		return
+	}
+
 	name := ToString(key)
 	if name == "" {
 		return
 	}
 
+	// 首字母自动大写
+	// name = KtStr.Cap(name)
 	field := target.FieldByName(name)
 	if !field.CanSet() {
 		return
@@ -1019,6 +1046,10 @@ func BindKeyVal(target *reflect.Value, key interface{}, val interface{}) {
 			field.Set(rVal)
 		}
 
+		BindInterface(field, val)
+		return
+
+	} else if fType.Kind() == reflect.Map {
 		BindInterface(field, val)
 		return
 	}
@@ -1051,7 +1082,7 @@ func BindKtMap(target *reflect.Value, from Kt.Map) {
 		target = &value
 	}
 
-	if target.Kind() != reflect.Struct {
+	if target.Kind() != reflect.Struct && target.Kind() != reflect.Map {
 		return
 	}
 

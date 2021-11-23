@@ -286,7 +286,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			return
 		}
 
-		if sLen < 3 {
+		if sLen < 3 && !(sLen == 2 && name[1] == ':') {
 			return
 		}
 

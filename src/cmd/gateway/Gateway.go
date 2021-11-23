@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-type Config struct {
+type config struct {
 	HttpAddr   string   // http服务地址
 	HttpWs     bool     // 启用ws网关
 	HttpWsPath string   // ws连接地址
@@ -28,7 +28,7 @@ type Config struct {
 	LastUrl    string   // 消息持久化，数据库连接
 }
 
-var GCfg = Config{
+var Config = &config{
 	HttpAddr:   ":8682",
 	HttpWs:     true,
 	HttpWsPath: "/gw",
@@ -37,7 +37,7 @@ var GCfg = Config{
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
 
-var GwWorkHash int
+var WorkHash int
 
 func main() {
 	// 初始化配置
@@ -48,8 +48,8 @@ func main() {
 
 	// 默认配置
 	{
-		KtCvt.BindInterface(&GCfg, APro.Cfg)
-		GwWorkHash = int(APro.WorkId())
+		KtCvt.BindInterface(Config, APro.Cfg)
+		WorkHash = int(APro.WorkId())
 	}
 
 	// Gw服务初始化
@@ -57,13 +57,13 @@ func main() {
 	// Gw服务开启
 	gateway.Server.StartGw()
 	// Grpc服务开启
-	gateway.Server.StartGrpc(GCfg.GrpcAddr, GCfg.GrpcIps, new(gws.GatewayS))
+	gateway.Server.StartGrpc(Config.GrpcAddr, Config.GrpcIps, new(gws.GatewayS))
 
 	// socket连接
-	if GCfg.SocketAddr != "" && !strings.HasPrefix(GCfg.SocketAddr, "!") {
+	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
 		// socket服务
-		AZap.Logger.Info("StartSocket: " + GCfg.SocketAddr)
-		serv, err := net.Listen("tcp", GCfg.SocketAddr)
+		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
+		serv, err := net.Listen("tcp", Config.SocketAddr)
 		Kt.Panic(err)
 		defer serv.Close()
 		go func() {
@@ -84,19 +84,19 @@ func main() {
 	}
 
 	// websocket连接
-	if GCfg.HttpAddr != "" && !strings.HasPrefix(GCfg.SocketAddr, "!") {
+	if Config.HttpAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
 		// http服务
-		AZap.Logger.Info("StartHttp: " + GCfg.HttpAddr)
-		if GCfg.HttpWs {
-			AZap.Logger.Info("StartHttpWs: " + GCfg.HttpWsPath)
+		AZap.Logger.Info("StartHttp: " + Config.HttpAddr)
+		if Config.HttpWs {
+			AZap.Logger.Info("StartHttpWs: " + Config.HttpWsPath)
 			// websocket连接
-			http.Handle(GCfg.HttpWsPath, websocket.Handler(func(conn *websocket.Conn) {
+			http.Handle(Config.HttpWsPath, websocket.Handler(func(conn *websocket.Conn) {
 				gateway.Server.ConnLoop(ANet.NewConnWebsocket(conn))
 			}))
 		}
 
 		go func() {
-			err := http.ListenAndServe(GCfg.HttpAddr, nil)
+			err := http.ListenAndServe(Config.HttpAddr, nil)
 			Kt.Panic(err)
 		}()
 	}

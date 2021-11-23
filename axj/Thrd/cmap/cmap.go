@@ -247,7 +247,7 @@ func (b *bucket) walk(f func(k, v interface{}) bool) (done bool) {
 		key, value interface{}
 	}
 	b.mu.RLock()
-	entries := make([]entry, 0, len(b.m))
+	entries := make([]entry, len(b.m))
 	i := 0
 	for k, v := range b.m {
 		entries[i] = entry{key: k, value: v}

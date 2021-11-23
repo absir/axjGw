@@ -282,7 +282,7 @@ func (that *MsgSess) lastRun() {
 	}
 
 	if that.clientMap != nil {
-		if Config.LastRangeWait {
+		if MsgMng.LastRangeWait {
 			that.clientMap.RangeBuffs(that.lastRange, &that.lastBuffs, Config.ClientPMax, &that.lastWait)
 
 		} else {

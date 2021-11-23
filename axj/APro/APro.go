@@ -4,6 +4,7 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
+	"axj/Kt/KtFile"
 	"axj/Kt/KtStr"
 	"bufio"
 	"container/list"
@@ -282,20 +283,21 @@ func SubCfgBind(sub string, bind interface{}) interface{} {
 	return bind
 }
 
+func Open(file string) *os.File {
+	return KtFile.Open(filepath.Join(Path(), file))
+}
+
+func Create(file string, append bool) *os.File {
+	return KtFile.Create(filepath.Join(Path(), file), append)
+}
+
 func FileCfg(file string) KtCfg.Cfg {
-	file = filepath.Join(Path(), file)
-	f, err := os.Open(file)
-	if os.IsNotExist(err) {
+	f := Open(file)
+	if f == nil {
 		return nil
 	}
 
-	Kt.Err(err, true)
-	if f != nil {
-		return KtCfg.ReadIn(bufio.NewReader(f), nil, nil).(KtCfg.Cfg)
-
-	} else {
-		return nil
-	}
+	return KtCfg.ReadIn(bufio.NewReader(f), nil, nil).(KtCfg.Cfg)
 }
 
 func GetCfg(name string, typ reflect.Type, dVal interface{}) interface{} {

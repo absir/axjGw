@@ -55,7 +55,10 @@ func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte) 
 	State.onState(state, data)
 }
 
-func (o Opt) OnReserve(req int32, uri string, uriI int32, data []byte) {
+func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32, data []byte) {
+	if State.log {
+		fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
+	}
 }
 
 type clientsState struct {

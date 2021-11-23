@@ -55,7 +55,7 @@ type Opt interface {
 	*/
 	OnState(adapter *Adapter, state int, err string, data []byte)
 	// 保留通道消息处理
-	OnReserve(req int32, uri string, uriI int32, data []byte)
+	OnReserve(adapter *Adapter, req int32, uri string, uriI int32, data []byte)
 }
 
 type Client struct {
@@ -116,6 +116,10 @@ func (that *Adapter) IsKicked() bool {
 	return that.kicked
 }
 
+func (that *Adapter) Rep(client *Client, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
+	return client.processor.Rep(that.locker, client.out, that.conn, that.decryKey, client.compress, req, uri, uriI, data, isolate, id)
+}
+
 type rqDt struct {
 	adapter *Adapter
 	timeout int64
@@ -168,6 +172,31 @@ func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, 
 	return that
 }
 
+// interface{}保护，避免sdk导出类型复杂
+func (that *Client) GetProcessor() interface{} {
+	return that.processor
+}
+
+// interface{}保护，避免sdk导出类型复杂
+func (that *Client) DialConn() (interface{}, error) {
+	if that.ws {
+		conn, err := websocket.Dial(that.addr, "", that.addr)
+		if conn == nil || err != nil {
+			return nil, err
+		}
+
+		return ANet.NewConnWebsocket(conn), err
+
+	} else {
+		conn, err := net.Dial("tcp", that.addr)
+		if conn == nil || err != nil {
+			return nil, err
+		}
+
+		return ANet.NewConnSocket(conn.(*net.TCPConn)), err
+	}
+}
+
 func (that *Client) loadUriMapUriI() {
 	uriRoute := that.opt.LoadStorage("uriRoute")
 	idx := KtStr.IndexByte(uriRoute, ',', 0)
@@ -202,22 +231,10 @@ func (that *Client) Conn() *Adapter {
 		return that.adapter
 	}
 
-	var aConn ANet.Conn
-	if that.ws {
-		conn, err := websocket.Dial(that.addr, "", that.addr)
-		if that.onError(nil, err, false) {
-			return that.adapter
-		}
-
-		aConn = ANet.NewConnWebsocket(conn)
-
-	} else {
-		conn, err := net.Dial("tcp", that.addr)
-		if that.onError(nil, err, false) {
-			return that.adapter
-		}
-
-		aConn = ANet.NewConnSocket(conn.(*net.TCPConn))
+	conn, err := that.DialConn()
+	aConn, _ := conn.(ANet.Conn)
+	if that.onError(nil, err, false) || aConn == nil {
+		return that.adapter
 	}
 
 	adapter := new(Adapter)
@@ -624,7 +641,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			that.onRep(req, nil, errS, data)
 
 		} else {
-			that.opt.OnReserve(req, uri, uriI, data)
+			that.opt.OnReserve(adapter, req, uri, uriI, data)
 		}
 	}
 }
