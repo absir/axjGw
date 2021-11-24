@@ -39,6 +39,7 @@ const (
 const (
 	FLG_ENCRYPT  int32 = 1      // 加密
 	FLG_COMPRESS int32 = 1 << 2 // 压缩
+	FLG_OUT      int32 = 1 << 3 // 流写入
 )
 
 type Client interface {
@@ -52,6 +53,7 @@ type ClientCnn struct {
 	handler  Handler
 	encryKey []byte
 	compress bool
+	out      bool
 	locker   sync.Locker
 	closed   int8
 	limiter  Util.Limiter
@@ -77,7 +79,7 @@ func (that *ClientCnn) IsClosed() bool {
 	return that.closed != 0
 }
 
-func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey []byte, compress bool) {
+func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey []byte, compress bool, out bool) {
 	if client == nil {
 		client = that
 	}
@@ -87,6 +89,7 @@ func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey 
 	that.handler = handler
 	that.encryKey = encryKey
 	that.compress = compress
+	that.out = out
 	that.locker = new(sync.Mutex)
 }
 
@@ -270,6 +273,7 @@ func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, dat
 		return ERR_CLOSED
 	}
 
+	out = out && that.out
 	var err error
 	if cData > 0 {
 		if cData == 1 {
@@ -320,7 +324,7 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 
 		go CloseDelay(conn, drt)
 		that.conn = nil
-		that.handler.Processor().Rep(nil, true, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
+		that.handler.Processor().Rep(nil, that.out, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
 	}
 
 	that.Close(nil, nil)

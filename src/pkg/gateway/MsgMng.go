@@ -62,7 +62,7 @@ func MsgMng() *msgMng {
 
 func initMsgMng() {
 	// 消息管理配置
-	_msgMng = &msgMng{
+	that := &msgMng{
 		QueueMax:      20,
 		NextLimit:     10,
 		LastMax:       21, // over load cover msgs
@@ -81,7 +81,6 @@ func initMsgMng() {
 
 	// 配置处理
 	APro.SubCfgBind("msg", _msgMng)
-	that := _msgMng
 	that.LastLoad = that.LastLoad && that.LastMax > 0
 	that.CheckDrt = that.CheckDrt * time.Millisecond
 	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
@@ -111,6 +110,8 @@ func initMsgMng() {
 			that.ClearPass()
 		}
 	}
+
+	_msgMng = that
 }
 
 // 清理过期消息

@@ -25,10 +25,11 @@ func TeamMng() *teamMng {
 }
 
 func initTeamMng() {
-	_teamMng = new(teamMng)
+	that := new(teamMng)
 	var err error
-	_teamMng.teamMap, err = lru.New(Config.TeamMax)
+	that.teamMap, err = lru.New(Config.TeamMax)
 	Kt.Panic(err)
+	_teamMng = that
 }
 
 func (that *teamMng) Dirty(tid string) {

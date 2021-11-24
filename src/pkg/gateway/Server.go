@@ -315,7 +315,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	}
 
 	// 客户端注册
-	client := manager.Open(conn, encryptKey, compress, cid)
+	client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
 	clientG := Handler.ClientG(client)
 	// clientG.Kick()
 	// 用户状态设置

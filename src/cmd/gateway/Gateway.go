@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/websocket"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"runtime"
 	"strings"
 )

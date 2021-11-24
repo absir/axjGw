@@ -46,7 +46,7 @@ func ChatMng() *chatMng {
 }
 
 func initChatMng() {
-	_chatMng = &chatMng{
+	that := &chatMng{
 		FDrt:         3000,
 		FStep:        20,
 		FTimeout:     9000,
@@ -60,7 +60,6 @@ func initChatMng() {
 
 	// 配置处理
 	APro.SubCfgBind("chat", _chatMng)
-	that := _chatMng
 	that.FDrt = that.FDrt * time.Millisecond
 	that.FTimeout = that.FTimeout * int64(time.Millisecond)
 	that.FTimeoutD = that.FTimeoutD * int64(time.Millisecond)
@@ -68,6 +67,7 @@ func initChatMng() {
 	that.TIdleLive = that.TIdleLive * int64(time.Millisecond)
 	that.locker = new(sync.Mutex)
 	that.teamMap = cmap.NewCMapInit()
+	_chatMng = that
 }
 
 // 空闲检测

@@ -106,7 +106,7 @@ func (that *clientsState) reset(check bool) {
 	that.locker.Lock()
 	that.log = false
 	that.out = true
-	that.encry = false
+	that.encry = true
 	that.num = 0
 	that.loopedNum = 0
 	that.errorNum = 0

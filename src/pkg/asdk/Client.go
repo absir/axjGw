@@ -549,6 +549,10 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			flag |= ANet.FLG_COMPRESS
 		}
 
+		if that.out {
+			flag |= ANet.FLG_OUT
+		}
+
 		err := that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, "", flag, nil, false, 0)
 		if that.onError(adapter, err, true) {
 			return
