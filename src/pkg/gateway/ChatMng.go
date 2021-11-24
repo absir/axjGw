@@ -30,10 +30,23 @@ type chatMng struct {
 	teamBuff     []interface{}
 }
 
-var ChatMng *chatMng
+var _chatMng *chatMng
+
+func ChatMng() *chatMng {
+	if _chatMng == nil {
+		Server.Locker.Lock()
+		defer Server.Locker.Unlock()
+		if _chatMng == nil {
+			initChatMng()
+			go _chatMng.CheckLoop()
+		}
+	}
+
+	return _chatMng
+}
 
 func initChatMng() {
-	ChatMng = &chatMng{
+	_chatMng = &chatMng{
 		FDrt:         3000,
 		FStep:        20,
 		FTimeout:     9000,
@@ -46,8 +59,8 @@ func initChatMng() {
 	}
 
 	// 配置处理
-	APro.SubCfgBind("chat", ChatMng)
-	that := ChatMng
+	APro.SubCfgBind("chat", _chatMng)
+	that := _chatMng
 	that.FDrt = that.FDrt * time.Millisecond
 	that.FTimeout = that.FTimeout * int64(time.Millisecond)
 	that.FTimeoutD = that.FTimeoutD * int64(time.Millisecond)
@@ -63,7 +76,7 @@ func (that *chatMng) CheckStop() {
 }
 
 func (that *chatMng) CheckLoop() {
-	if MsgMng.Db == nil {
+	if MsgMng().Db == nil {
 		return
 	}
 
@@ -73,10 +86,10 @@ func (that *chatMng) CheckLoop() {
 		time.Sleep(that.FDrt)
 		checkTime := time.Now().UnixNano()
 		that.checkTime = checkTime
-		MsgMng.Db.FidRange(F_FAIL, that.FStep, MsgMng.idWorkder.Timestamp(checkTime-that.FTimeout), MsgMng.idWorkder.Timestamp(checkTime-that.FTimeoutD), that.checkMsgD)
+		MsgMng().Db.FidRange(F_FAIL, that.FStep, MsgMng().idWorkder.Timestamp(checkTime-that.FTimeout), MsgMng().idWorkder.Timestamp(checkTime-that.FTimeoutD), that.checkMsgD)
 		if that.tStartTime < checkTime {
 			that.tStartTime = checkTime + that.TStartsDrt
-			tIds := MsgMng.Db.TeamStarts(Config.WorkId, that.TStartsLimit)
+			tIds := MsgMng().Db.TeamStarts(Config.WorkId, that.TStartsLimit)
 			if tIds != nil {
 				tLen := len(tIds)
 				for i := 0; i < tLen; i++ {
@@ -117,15 +130,15 @@ const (
 )
 
 func (that *chatMng) MsgSucc(id int64) error {
-	if MsgMng.Db == nil {
+	if MsgMng().Db == nil {
 		return ERR_NOWAY
 	}
 
-	return MsgMng.Db.UpdateF(id, F_SUCC)
+	return MsgMng().Db.UpdateF(id, F_SUCC)
 }
 
 func (that *chatMng) MsgFail(id int64, gid string) error {
-	if MsgMng.Db == nil {
+	if MsgMng().Db == nil {
 		return ERR_NOWAY
 	}
 
@@ -149,7 +162,7 @@ func (that *chatMng) MsgFail(id int64, gid string) error {
 		return ERR_FAIL
 	}
 
-	return MsgMng.Db.Delete(id)
+	return MsgMng().Db.Delete(id)
 }
 
 type ChatTeam struct {
@@ -180,17 +193,17 @@ func (that *chatMng) TeamStart(tid string, msgTeam *MsgTeam) {
 }
 
 func (that *ChatTeam) addMsgTeam(msgTeam *MsgTeam) {
-	if msgTeam == nil || ChatMng.TPushQueue <= 0 {
+	if msgTeam == nil || _chatMng.TPushQueue <= 0 {
 		return
 	}
 
-	MsgMng.locker.Lock()
+	MsgMng().locker.Lock()
 	if that.msgQueue == nil {
-		that.msgQueue = Util.NewCircleQueue(ChatMng.TPushQueue)
+		that.msgQueue = Util.NewCircleQueue(_chatMng.TPushQueue)
 	}
 
 	that.msgQueue.Push(msgTeam, true)
-	MsgMng.locker.Unlock()
+	MsgMng().locker.Unlock()
 }
 
 func (that *ChatTeam) getMsgTeam() *MsgTeam {
@@ -198,14 +211,14 @@ func (that *ChatTeam) getMsgTeam() *MsgTeam {
 		return nil
 	}
 
-	MsgMng.locker.Lock()
+	MsgMng().locker.Lock()
 	if that.msgQueue == nil {
-		MsgMng.locker.Unlock()
+		MsgMng().locker.Unlock()
 		return nil
 	}
 
 	val, _ := that.msgQueue.Get(0)
-	MsgMng.locker.Unlock()
+	MsgMng().locker.Unlock()
 	msgTeam, _ := val.(*MsgTeam)
 	return msgTeam
 }
@@ -215,14 +228,14 @@ func (that *ChatTeam) removeMsgTeam(msgTeam *MsgTeam) {
 		return
 	}
 
-	MsgMng.locker.Lock()
+	MsgMng().locker.Lock()
 	if that.msgQueue == nil {
-		MsgMng.locker.Unlock()
+		MsgMng().locker.Unlock()
 		return
 	}
 
 	that.msgQueue.Remove(msgTeam)
-	MsgMng.locker.Unlock()
+	MsgMng().locker.Unlock()
 }
 
 func (that *ChatTeam) Start(msgTeam *MsgTeam) {
@@ -235,21 +248,21 @@ func (that *ChatTeam) Start(msgTeam *MsgTeam) {
 }
 
 func (that *ChatTeam) startIn() bool {
-	ChatMng.locker.Lock()
+	_chatMng.locker.Lock()
 	if that.starting != 1 {
 		that.starting = 1
-		ChatMng.locker.Unlock()
+		_chatMng.locker.Unlock()
 		return true
 	}
 
-	ChatMng.locker.Unlock()
+	_chatMng.locker.Unlock()
 	return false
 }
 
 func (that *ChatTeam) startOut() {
-	ChatMng.locker.Lock()
-	that.starting = time.Now().UnixNano() + ChatMng.TIdleLive
-	ChatMng.locker.Unlock()
+	_chatMng.locker.Lock()
+	that.starting = time.Now().UnixNano() + _chatMng.TIdleLive
+	_chatMng.locker.Unlock()
 }
 
 func (that *ChatTeam) startRun() {
@@ -273,7 +286,7 @@ func (that *ChatTeam) startRun() {
 			that.removeMsgTeam(msgTeam)
 		}
 
-		msgTeams := MsgMng.Db.TeamList(that.tid, ChatMng.TStartLimit)
+		msgTeams := MsgMng().Db.TeamList(that.tid, _chatMng.TStartLimit)
 		if msgTeams == nil {
 			return
 		}
@@ -300,7 +313,7 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 	members := msgTeam.Members
 	if members == nil {
 		if db {
-			MsgMng.Db.TeamUpdate(msgTeam, 1)
+			MsgMng().Db.TeamUpdate(msgTeam, 1)
 		}
 
 		return true
@@ -314,7 +327,7 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 
 	if index >= mLen {
 		if db {
-			MsgMng.Db.TeamUpdate(msgTeam, index)
+			MsgMng().Db.TeamUpdate(msgTeam, index)
 		}
 
 		return true
@@ -343,7 +356,7 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 		if fid < R_SUCC_MIN {
 			// 已执行索引
 			if db {
-				MsgMng.Db.TeamUpdate(msgTeam, indexDid)
+				MsgMng().Db.TeamUpdate(msgTeam, indexDid)
 			}
 
 			return false
@@ -356,7 +369,7 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 	}
 
 	if db {
-		return MsgMng.Db.TeamUpdate(msgTeam, -1) == nil
+		return MsgMng().Db.TeamUpdate(msgTeam, -1) == nil
 	}
 
 	return true
@@ -424,11 +437,11 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 	}
 
 	if !readfeed {
-		if MsgMng.Db == nil {
+		if MsgMng().Db == nil {
 			qs = 2
 		}
 
-		team := TeamMng.GetTeam(tid)
+		team := TeamMng().GetTeam(tid)
 		if team == nil {
 			return false, ANet.ERR_NOWAY
 		}
@@ -471,10 +484,10 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 				Data:    data,
 			}
 
-			msgDb := MsgMng.Db != nil && qs == 3
+			msgDb := MsgMng().Db != nil && qs == 3
 
 			if msgDb {
-				err = MsgMng.Db.TeamInsert(msgTeam)
+				err = MsgMng().Db.TeamInsert(msgTeam)
 				if err != nil {
 					if db {
 						fClient.GPushA(Server.Context, &gw.IGPushAReq{

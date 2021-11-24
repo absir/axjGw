@@ -45,8 +45,17 @@ func (that *LinkedMap) Range(fun func(key interface{}, val interface{}) bool) {
 	}
 
 	for front := that.lst.Front(); front != nil; front = front.Next() {
-		if !fun(front.Value, that.mp[front.Value]) {
-			break
+		key := front.Value
+		el := that.mp[front.Value]
+		if el == nil {
+			rm := front
+			front = front.Next()
+			that.lst.Remove(rm)
+
+		} else {
+			if !fun(key, el.val) {
+				break
+			}
 		}
 	}
 }

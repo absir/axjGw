@@ -43,13 +43,26 @@ type msgMng struct {
 }
 
 // 初始变量
-var MsgMng *msgMng
+var _msgMng *msgMng
 
 const connVerMax = KtBytes.VINT_3_MAX - 1
 
+func MsgMng() *msgMng {
+	if _msgMng == nil {
+		Server.Locker.Lock()
+		defer Server.Locker.Unlock()
+		if _msgMng == nil {
+			initMsgMng()
+			go _msgMng.CheckLoop()
+		}
+	}
+
+	return _msgMng
+}
+
 func initMsgMng() {
 	// 消息管理配置
-	MsgMng = &msgMng{
+	_msgMng = &msgMng{
 		QueueMax:      20,
 		NextLimit:     10,
 		LastMax:       21, // over load cover msgs
@@ -67,8 +80,8 @@ func initMsgMng() {
 	}
 
 	// 配置处理
-	APro.SubCfgBind("msg", MsgMng)
-	that := MsgMng
+	APro.SubCfgBind("msg", _msgMng)
+	that := _msgMng
 	that.LastLoad = that.LastLoad && that.LastMax > 0
 	that.CheckDrt = that.CheckDrt * time.Millisecond
 	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
@@ -190,7 +203,7 @@ func (that *msgMng) GetOrNewMsgGrp(gid string) *MsgGrp {
 		grp.gid = gid
 		grp.ghash = Kt.HashCode(KtUnsafe.StringToBytes(gid))
 		grp.rwLocker = new(sync.RWMutex)
-		if MsgMng.ORwLocker {
+		if _msgMng.ORwLocker {
 			grp.locker = new(sync.Mutex)
 
 		} else {

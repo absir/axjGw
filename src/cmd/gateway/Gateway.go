@@ -54,6 +54,10 @@ func main() {
 
 	// Gw服务初始化
 	gateway.Server.Init(APro.WorkId(), APro.Cfg, new(gws.GatewayIs))
+	if APro.Cfg.Get("msg") != nil {
+		// 初始化MsgMng
+		gateway.MsgMng()
+	}
 	// Gw服务开启
 	gateway.Server.StartGw()
 	// Grpc服务开启

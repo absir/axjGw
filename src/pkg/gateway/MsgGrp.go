@@ -28,7 +28,7 @@ type MsgGrp struct {
 
 // 延长过期时间
 func (that *MsgGrp) retain() {
-	that.passTime = time.Now().UnixNano() + MsgMng.LiveDrt
+	that.passTime = time.Now().UnixNano() + _msgMng.LiveDrt
 }
 
 // 获取消息管理场客户端数量
@@ -100,7 +100,7 @@ func (that *MsgGrp) getClient(unique string) *MsgClient {
 // 创建消息客户端
 func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 	client := new(MsgClient)
-	if MsgMng.OClientLocker {
+	if _msgMng.OClientLocker {
 		client.locker = new(sync.Mutex)
 
 	} else {
@@ -175,7 +175,7 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 		return
 	}
 
-	if client.idleTime > MsgMng.checkTime {
+	if client.idleTime > _msgMng.checkTime {
 		// 未空闲
 		return
 	}
@@ -222,7 +222,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 	if client != nil {
 		if client.cid == cid {
 			if newVer {
-				client.connVer = MsgMng.newConnVer()
+				client.connVer = _msgMng.newConnVer()
 			}
 
 			return client
@@ -236,7 +236,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 
 	sess := that.getOrNewSess(true)
 	client = that.newMsgClient(cid)
-	client.connVer = MsgMng.newConnVer()
+	client.connVer = _msgMng.newConnVer()
 
 	if unique == "" {
 		sess.client = client
@@ -294,7 +294,7 @@ func (that *MsgGrp) Clear(queue bool, last bool) {
 func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue bool, unique string, fid int64) (int64, bool, error) {
 	AZap.Debug("Msg Push %s %s,%d", that.gid, uri, qs)
 	if qs >= 2 {
-		if MsgMng.LastMax <= 0 {
+		if _msgMng.LastMax <= 0 {
 			qs = 1
 		}
 	}
@@ -310,9 +310,9 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 		return msg.Get().Id, succ, err
 
 	} else {
-		if qs >= 0 && fid > 0 && MsgMng.Db != nil {
+		if qs >= 0 && fid > 0 && _msgMng.Db != nil {
 			// 唯一性校验
-			id := MsgMng.Db.FidGet(fid, that.gid)
+			id := _msgMng.Db.FidGet(fid, that.gid)
 			if id > 0 {
 				return id, true, nil
 			}
@@ -322,12 +322,12 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 		msg := NewMsg(uri, data, unique)
 		that.lastQueuePush(sess, msg, fid)
 		msgD := msg.Get()
-		if qs >= 3 && MsgMng.Db != nil {
+		if qs >= 3 && _msgMng.Db != nil {
 			err = that.lastDbInsert(msgD)
 		}
 
 		// 消息直写测试
-		if MsgMng.pushDrTest && sess != nil && sess.clientMap != nil {
+		if _msgMng.pushDrTest && sess != nil && sess.clientMap != nil {
 			sTime := time.Now().UnixNano() / 1000000
 			sess.clientMap.Range(func(key, value interface{}) bool {
 				client := value.(*MsgClient)
@@ -360,7 +360,7 @@ func (that *MsgGrp) lastQueuePush(sess *MsgSess, msg Msg, fid int64) {
 	sess.lastQueueLoad()
 	// 锁加入队列
 	that.rwLocker.Lock()
-	msgD.Id = MsgMng.idWorkder.Generate()
+	msgD.Id = _msgMng.idWorkder.Generate()
 	sess.lastQueue.Push(msg, true)
 	that.rwLocker.Unlock()
 }
@@ -369,7 +369,7 @@ func (that *MsgGrp) lastQueuePush(sess *MsgSess, msg Msg, fid int64) {
 func (that *MsgGrp) lastDbInsert(msgD *MsgD) error {
 	if msgD.Id > 0 {
 		// sess.lastQueue加强不漏消息
-		return MsgMng.Db.Insert(msgD)
+		return _msgMng.Db.Insert(msgD)
 
 	} else {
 		// db锁加强消息顺序写入
@@ -379,11 +379,11 @@ func (that *MsgGrp) lastDbInsert(msgD *MsgD) error {
 			dbLocker.Unlock()
 			// 插入到队列
 			that.lastQueuePush(that.sess, msgD, msgD.Id)
-			return MsgMng.Db.Insert(msgD)
+			return _msgMng.Db.Insert(msgD)
 		}
 
-		msgD.Id = MsgMng.idWorkder.Generate()
-		err := MsgMng.Db.Insert(msgD)
+		msgD.Id = _msgMng.idWorkder.Generate()
+		err := _msgMng.Db.Insert(msgD)
 		dbLocker.Unlock()
 		return err
 	}

@@ -150,17 +150,26 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 		return obj
 	case reflect.Ptr:
 		// 转换指针
-		val := reflect.New(typ.Elem())
-		ptr := ToSafe(obj, typ.Elem(), safe)
-		val.Elem().Set(reflect.ValueOf(ptr))
-		return val.Interface()
+		if typ.Elem().Kind() == reflect.Struct {
+			val := toStruct(typ.Elem(), oTyp, obj)
+			if val != nil {
+				return val.Interface()
+			}
+
+		} else {
+			val := ToSafe(obj, typ.Elem(), safe)
+			return &val
+		}
+		break
 	case reflect.Struct:
 		// struct转化
-		if oTyp != nil && oTyp.Kind() == reflect.Map {
-			val := reflect.New(typ)
-			BindMapVal(&val, reflect.ValueOf(obj))
-			return val.Interface()
+		if oTyp != nil {
+			val := toStruct(typ, oTyp, obj)
+			if val != nil {
+				return *(val.Interface().(*interface{}))
+			}
 		}
+		break
 	default:
 		break
 	}
@@ -215,12 +224,6 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 			}
 
 			return val.Elem().Interface()
-
-		} else if typ.Kind() == reflect.Struct {
-			// 转换对象
-			val := reflect.New(typ)
-			BindMapVal(&val, reflect.ValueOf(obj))
-			return val.Elem().Interface()
 		}
 	}
 
@@ -234,6 +237,21 @@ func ToSafe(obj interface{}, typ reflect.Type, safe bool) interface{} {
 	}
 
 	return &pVal
+}
+
+func toStruct(typ reflect.Type, oTyp reflect.Type, obj interface{}) *reflect.Value {
+	if oTyp.Kind() == reflect.Map {
+		val := reflect.New(typ)
+		BindInterface(val, obj)
+		return &val
+
+	} else if mp, ok := obj.(Kt.Map); ok {
+		val := reflect.New(typ)
+		BindKtMap(&val, mp)
+		return &val
+	}
+
+	return nil
 }
 
 func ToBool(obj interface{}) bool {
@@ -993,30 +1011,26 @@ func BindMap(target *reflect.Value, from map[interface{}]interface{}) {
 
 func BindKeyVal(target *reflect.Value, key interface{}, val interface{}) {
 	if target.Kind() == reflect.Map {
-		vType := target.Type().Elem()
-		if vType.Kind() == reflect.Ptr {
-			vType = vType.Elem()
-		}
-
 		key = ToSafe(key, target.Type().Key(), true)
 		rKey := reflect.ValueOf(key)
-		if vType.Kind() == reflect.Struct || vType.Kind() == reflect.Map {
-			rVal := target.MapIndex(rKey)
-			if !rVal.IsValid() || rVal.IsNil() {
-				rVal = reflect.New(vType)
-				target.SetMapIndex(rKey, rVal)
+		if target.Type().Kind() == reflect.Ptr {
+			vType := target.Type().Elem()
+			if vType.Kind() == reflect.Struct || vType.Kind() == reflect.Map {
+				rVal := target.MapIndex(rKey)
+				if rVal.IsValid() && !rVal.IsNil() {
+					// 绑定原val值
+					BindInterface(rVal, val)
+					return
+				}
 			}
-
-			// 绑定val值
-			BindInterface(rVal, val)
-
-		} else {
-			target.SetMapIndex(rKey, reflect.ValueOf(ToSafe(val, target.Type().Elem(), false)))
 		}
 
+		// key设置
+		target.SetMapIndex(rKey, reflect.ValueOf(ToSafe(val, target.Type().Elem(), false)))
 		return
 	}
 
+	// field name
 	name := ToString(key)
 	if name == "" {
 		return

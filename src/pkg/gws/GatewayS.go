@@ -131,11 +131,11 @@ func (g GatewayS) TDirty(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, erro
 }
 
 func (g GatewayS) Revoke(ctx context.Context, req *gw.RevokeReq) (*gw.BoolRep, error) {
-	if gateway.MsgMng.Db == nil {
+	if gateway.MsgMng().Db == nil {
 		return Result_Fasle, nil
 	}
 
-	err := gateway.MsgMng.Db.Revoke(req.Id, req.Gid)
+	err := gateway.MsgMng().Db.Revoke(req.Id, req.Gid)
 	if err != nil {
 		return Result_Fasle, err
 	}

@@ -78,7 +78,7 @@ func (that *MsgSess) mdfyClientNum(num int) {
 func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
 	ret := Server.Id32(rep)
 	if ret >= R_SUCC_MIN {
-		client.idleTime = time.Now().UnixNano() + MsgMng.IdleDrt
+		client.idleTime = time.Now().UnixNano() + _msgMng.IdleDrt
 		return true
 
 	} else if ret == Result_IdNone {
@@ -140,11 +140,11 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string, isolate 
 
 // 获取或创建队列
 func (that *MsgSess) getOrNewQueue() *Util.CircleQueue {
-	if that.queue == nil && MsgMng.QueueMax > 0 {
+	if that.queue == nil && _msgMng.QueueMax > 0 {
 		that.grp.locker.Lock()
 		if that.queue == nil {
 			that.queueAsync = Util.NewNotifierAsync(that.queueRun, that.grp.locker)
-			that.queue = Util.NewCircleQueue(MsgMng.QueueMax)
+			that.queue = Util.NewCircleQueue(_msgMng.QueueMax)
 		}
 
 		that.grp.locker.Unlock()
@@ -282,7 +282,7 @@ func (that *MsgSess) lastRun() {
 	}
 
 	if that.clientMap != nil {
-		if MsgMng.LastRangeWait {
+		if _msgMng.LastRangeWait {
 			that.clientMap.RangeBuffs(that.lastRange, &that.lastBuffs, Config.ClientPMax, &that.lastWait)
 
 		} else {
@@ -320,10 +320,10 @@ func (that *MsgSess) lastRange(key, val interface{}) bool {
 
 // 获取或创建last队列
 func (that *MsgSess) getOrNewLastQueue() *Util.CircleQueue {
-	if that.lastQueue == nil && MsgMng.LastMax > 0 {
+	if that.lastQueue == nil && _msgMng.LastMax > 0 {
 		that.grp.locker.Lock()
 		if that.lastQueue == nil {
-			that.lastQueue = Util.NewCircleQueue(MsgMng.LastMax)
+			that.lastQueue = Util.NewCircleQueue(_msgMng.LastMax)
 		}
 
 		that.grp.locker.Unlock()
@@ -334,7 +334,7 @@ func (that *MsgSess) getOrNewLastQueue() *Util.CircleQueue {
 
 // last消息队列载入
 func (that *MsgSess) lastQueueLoad() {
-	if !MsgMng.LastLoad || MsgMng.Db == nil || that.lastQueueLoaded {
+	if !_msgMng.LastLoad || _msgMng.Db == nil || that.lastQueueLoaded {
 		return
 	}
 
@@ -357,7 +357,7 @@ func (that *MsgSess) lastQueueLoad() {
 			return
 		}
 
-		msgDs := MsgMng.Db.Last(that.grp.gid, MsgMng.LastMax)
+		msgDs := _msgMng.Db.Last(that.grp.gid, _msgMng.LastMax)
 		// 锁放在io之后
 		that.grp.rwLocker.Lock()
 		if that.lastQueueLoaded {
@@ -562,9 +562,9 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 	defer that.subLastOut(client, unique, subLastTime, lastTime)
 	if lastId >= 0 && lastId < MSD_ID_MIN {
 		subLastId := that.lastSubLastId(int(lastId))
-		if lastId == subLastId && MsgMng.Db != nil {
+		if lastId == subLastId && _msgMng.Db != nil {
 			// 从最近多少条开始
-			subLastId = MsgMng.Db.LastId(that.grp.gid, int(lastId))
+			subLastId = _msgMng.Db.LastId(that.grp.gid, int(lastId))
 		}
 
 		lastId = subLastId
@@ -587,12 +587,12 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 	for subLastTime == client.subLastTime && connVer == client.connVer {
 		lastTime = client.lastTime
 		msg, lastIn := that.lastQueueGet(client, subLastTime, lastId)
-		if !lastIn && MsgMng.Db != nil && !dbNexted {
+		if !lastIn && _msgMng.Db != nil && !dbNexted {
 			msg = nil
 		}
 
 		if msg == nil {
-			if lastIn || MsgMng.Db == nil || dbNexted {
+			if lastIn || _msgMng.Db == nil || dbNexted {
 				// 消息已读取完毕
 				if !that.subLastDone(client, lastTime) {
 					continue
@@ -602,7 +602,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 
 			} else {
 				// 缓冲消息
-				msgDs := MsgMng.Db.Next(that.grp.gid, lastId, MsgMng.NextLimit)
+				msgDs := _msgMng.Db.Next(that.grp.gid, lastId, _msgMng.NextLimit)
 				mLen := len(msgDs)
 				if mLen <= 0 {
 					if !dbNexted {
@@ -646,7 +646,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 
 // last消息队列消息lastId计算
 func (that *MsgSess) lastSubLastId(lastId int) int64 {
-	if lastId < MsgMng.LastMaxAll && lastId >= 0 && that.lastQueue != nil {
+	if lastId < _msgMng.LastMaxAll && lastId >= 0 && that.lastQueue != nil {
 		that.grp.rwLocker.RLock()
 		size := that.lastQueue.Size()
 		if size > lastId {

@@ -76,7 +76,7 @@ func (g GatewayIs) Online(ctx context.Context, req *gw.GidReq) (*gw.BoolRep, err
 		return nil, Result_ProdErr
 	}
 
-	msgGrp := gateway.MsgMng.GetMsgGrp(req.Gid)
+	msgGrp := gateway.MsgMng().GetMsgGrp(req.Gid)
 	if msgGrp == nil || msgGrp.ClientNum() <= 0 {
 		return Result_Fasle, nil
 	}
@@ -102,7 +102,7 @@ func (g GatewayIs) Onlines(ctx context.Context, req *gw.GidsReq) (*gw.BoolsRep, 
 			return nil, Result_ProdErr
 		}
 
-		msgGrp := gateway.MsgMng.GetMsgGrp(gid)
+		msgGrp := gateway.MsgMng().GetMsgGrp(gid)
 		if msgGrp == nil || msgGrp.ClientNum() <= 0 {
 			continue
 		}
@@ -187,7 +187,7 @@ func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	client := gateway.MsgMng.GetOrNewMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer)
+	client := gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer)
 	if client == nil {
 		return Result_Fail_Rep, nil
 	}
@@ -202,7 +202,7 @@ func (g GatewayIs) Disc(ctx context.Context, req *gw.GDiscReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	if !gateway.MsgMng.GetOrNewMsgGrp(req.Gid).Close(req.Cid, req.Unique, req.ConnVer, req.Kick) {
+	if !gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Close(req.Cid, req.Unique, req.ConnVer, req.Kick) {
 		return Result_Fail_Rep, nil
 	}
 
@@ -273,7 +273,7 @@ func (g GatewayIs) GQueue(ctx context.Context, req *gw.IGQueueReq) (*gw.Id32Rep,
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
+	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
 	client := grp.Conn(req.Cid, req.Unique, false, false)
 	if client == nil {
 		return Result_IdNone_Rep, nil
@@ -294,7 +294,7 @@ func (g GatewayIs) GClear(ctx context.Context, req *gw.IGClearReq) (*gw.Id32Rep,
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
+	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
 	if grp != nil {
 		grp.Clear(req.Queue, req.Last)
 	}
@@ -307,7 +307,7 @@ func (g GatewayIs) GLasts(ctx context.Context, req *gw.GLastsReq) (*gw.Id32Rep, 
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
+	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
 	client := grp.Conn(req.Cid, req.Unique, false, true)
 	if client == nil {
 		return Result_IdNone_Rep, nil
@@ -323,7 +323,7 @@ func (g GatewayIs) GLast(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, erro
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng.GetMsgGrp(req.Gid)
+	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
 	if grp != nil {
 		sess := grp.GetSess()
 		if sess != nil {
@@ -343,7 +343,7 @@ func (g GatewayIs) GPush(ctx context.Context, req *gw.GPushReq) (*gw.Id64Rep, er
 		req.Isolate = false
 	}
 
-	grp := gateway.MsgMng.GetOrNewMsgGrp(req.Gid)
+	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
 	id, succ, err := grp.Push(req.Uri, req.Data, req.Isolate, req.Qs, req.Queue, req.Unique, req.Fid)
 	if !succ {
 		return Result_Fail_Rep64, err
@@ -359,10 +359,10 @@ func (g GatewayIs) GPushA(ctx context.Context, req *gw.IGPushAReq) (*gw.Id32Rep,
 
 	var err error = nil
 	if req.Succ {
-		err = gateway.ChatMng.MsgSucc(req.Id)
+		err = gateway.ChatMng().MsgSucc(req.Id)
 
 	} else {
-		err = gateway.ChatMng.MsgFail(req.Id, req.Gid)
+		err = gateway.ChatMng().MsgFail(req.Id, req.Gid)
 	}
 
 	if err != nil {
@@ -377,7 +377,7 @@ func (g GatewayIs) Send(ctx context.Context, req *gw.SendReq) (*gw.Id32Rep, erro
 		return Result_ProdErr_Rep, nil
 	}
 
-	succ, err := gateway.ChatMng.Send(req.FromId, req.ToId, req.Uri, req.Data, req.Db)
+	succ, err := gateway.ChatMng().Send(req.FromId, req.ToId, req.Uri, req.Data, req.Db)
 	if !succ || err != nil {
 		return Result_Fail_Rep, err
 	}
@@ -390,7 +390,7 @@ func (g GatewayIs) TPush(ctx context.Context, req *gw.TPushReq) (*gw.Id32Rep, er
 		return Result_ProdErr_Rep, nil
 	}
 
-	succ, err := gateway.ChatMng.TeamPush(req.FromId, req.Tid, req.ReadFeed, req.Uri, req.Data, req.Queue, req.Db)
+	succ, err := gateway.ChatMng().TeamPush(req.FromId, req.Tid, req.ReadFeed, req.Uri, req.Data, req.Queue, req.Db)
 	if !succ || err != nil {
 		return Result_Fail_Rep, err
 	}
@@ -403,7 +403,7 @@ func (g GatewayIs) TDirty(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	gateway.TeamMng.Dirty(req.Gid)
+	gateway.TeamMng().Dirty(req.Gid)
 	return Result_Succ_Rep, nil
 }
 
@@ -412,6 +412,6 @@ func (g GatewayIs) TStarts(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, er
 		return Result_ProdErr_Rep, nil
 	}
 
-	gateway.ChatMng.TeamStart(req.Gid, nil)
+	gateway.ChatMng().TeamStart(req.Gid, nil)
 	return Result_Succ_Rep, nil
 }

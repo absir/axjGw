@@ -10,12 +10,24 @@ type teamMng struct {
 	teamMap *lru.Cache
 }
 
-var TeamMng *teamMng
+var _teamMng *teamMng
+
+func TeamMng() *teamMng {
+	if _teamMng == nil {
+		Server.Locker.Lock()
+		defer Server.Locker.Unlock()
+		if _teamMng == nil {
+			initTeamMng()
+		}
+	}
+
+	return _teamMng
+}
 
 func initTeamMng() {
-	TeamMng = new(teamMng)
+	_teamMng = new(teamMng)
 	var err error
-	TeamMng.teamMap, err = lru.New(Config.TeamMax)
+	_teamMng.teamMap, err = lru.New(Config.TeamMax)
 	Kt.Panic(err)
 }
 

@@ -7,6 +7,7 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Disc"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
@@ -21,16 +22,17 @@ import (
 )
 
 type server struct {
-	Locker      sync.Locker
-	Manager     *ANet.Manager
-	Context     context.Context
-	prodsMap    *sync.Map
-	prodsGw     *Prods
-	gatewayISC  *gatewayISC
-	cron        *cron.Cron
-	started     bool
-	connLimiter Util.Limiter
-	liveLimiter Util.Limiter
+	Locker       sync.Locker
+	Manager      *ANet.Manager
+	Context      context.Context
+	prodsMap     map[string]*Prods
+	prodsDiscMng *Disc.DiscoveryMng
+	prodsGw      *Prods
+	gatewayISC   *gatewayISC
+	cron         *cron.Cron
+	started      bool
+	connLimiter  Util.Limiter
+	liveLimiter  Util.Limiter
 }
 
 var Server = new(server)
@@ -127,45 +129,99 @@ func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI
 	initHandler()
 	// 路由字典初始化
 	initUriDict()
-	// 消息管理初始化
-	initMsgMng()
-	// 群组管理器
-	initTeamMng()
-	// 聊天管理
-	initChatMng()
 	that.Manager = ANet.NewManager(Handler, workId, time.Duration(Config.IdleDrt)*time.Millisecond, time.Duration(Config.CheckDrt)*time.Millisecond)
 	that.Context = context.Background()
 	that.gatewayISC = &gatewayISC{Server: gatewayI}
 }
 
 func (that *server) initProds(cfg map[interface{}]interface{}) {
-	that.prodsMap = new(sync.Map)
-	prods := cfg["prods"]
-	if prods != nil {
-		if mp, _ := prods.(*Kt.LinkedMap); mp != nil {
-			for el := mp.Front(); el != nil; el = el.Next() {
-				if key, ok := el.Value.(string); ok {
-					if pMp, _ := mp.Get(key).(*Kt.LinkedMap); pMp != nil {
-						pProds := new(Prods)
-						for pEl := pMp.Front(); pEl != nil; pEl = pEl.Next() {
-							id := KtCvt.ToString(pEl.Value)
-							if id != "" && id[0] >= '0' && id[0] <= '9' {
-								pProds.Add(KtCvt.ToInt32(pEl.Value), KtCvt.ToString(pMp.Get(pEl.Value)))
-							}
-						}
+	that.prodsMap = map[string]*Prods{}
+	if mp, _ := cfg["prods"].(*Kt.LinkedMap); mp != nil {
+		mp.Range(func(key interface{}, val interface{}) bool {
+			name, _ := key.(string)
+			if name == "" {
+				return true
+			}
 
-						that.PutProds(key, pProds)
+			if pMp, _ := val.(*Kt.LinkedMap); pMp != nil {
+				prods := new(Prods)
+				KtCvt.BindInterface(prods, pMp)
+				pMp.Range(func(key interface{}, val interface{}) bool {
+					id := KtCvt.ToString(key)
+					if id == "" {
+						return true
 					}
+
+					if id[0] >= '0' && id[0] <= '9' {
+						prods.Add(KtCvt.ToInt32(id), KtCvt.ToString(val))
+					}
+
+					return true
+				})
+
+				if prods != nil {
+					that.initProdsReg(name, prods)
 				}
 			}
+
+			return true
+		})
+
+		// 服务发现启动发现线程
+		if that.prodsDiscMng != nil && !that.prodsDiscMng.CheckEmpty() {
+			go that.prodsDiscMng.CheckLoop(Config.ProdCheckDrt)
 		}
+	}
+
+	// 无服务配置
+	if len(that.prodsMap) <= 0 {
+		Config.zDevAcl = true
+		prods := new(Prods)
+		prods.Add(0, "")
+		that.initProdsReg(Config.AclProd, prods)
+	}
+
+	// Gw服务默认配置
+	if that.prodsMap[Config.GwProd] == nil {
+		prods := new(Prods)
+		prods.Add(APro.WorkId(), "")
+		that.initProdsReg(Config.GwProd, prods)
+	}
+}
+
+func (that *server) initProdsDiscMng() {
+	that.prodsDiscMng = new(Disc.DiscoveryMng).Init()
+	that.prodsDiscMng.RegDefs()
+}
+
+func (that *server) initProdsReg(name string, prods *Prods) {
+	if prods == nil {
+		delete(that.prodsMap, name)
+
+	} else {
+		if prods.Timeout > 0 {
+			// 超时时间单位为秒
+			prods.Timeout *= time.Second
+
+		} else {
+			prods.Timeout = Config.ProdTimeout
+		}
+
+		if prods.Disc != "" {
+			if that.prodsDiscMng == nil {
+				that.initProdsDiscMng()
+			}
+
+			// 服务发现
+			prods.discS = that.prodsDiscMng.SetDiscoveryS(prods.Disc, name, prods.Set, prods.DiscIdle, true) != nil
+		}
+
+		that.prodsMap[name] = prods
 	}
 }
 
 func (that *server) StartGw() {
 	go that.Manager.CheckLoop()
-	go MsgMng.CheckLoop()
-	go ChatMng.CheckLoop()
 	that.Locker.Lock()
 	defer that.Locker.Unlock()
 	that.started = true
@@ -382,40 +438,7 @@ func (that *server) IsProdHashS(hash string) bool {
 }
 
 func (that *server) GetProds(name string) *Prods {
-	val, _ := that.prodsMap.Load(name)
-	if val == nil {
-		if name == Config.GwProd {
-			if that.prodsGw == nil {
-				prods := new(Prods)
-				prods.Add(Config.WorkId, "")
-				that.prodsGw = prods
-			}
-
-			return that.prodsGw
-		}
-
-		return nil
-	}
-
-	prods, _ := val.(*Prods)
-	return prods
-}
-
-func (that *server) PutProds(name string, prods *Prods) {
-	if prods == nil {
-		that.prodsMap.Delete(name)
-
-	} else {
-		timeout := APro.GetCfg(name+".timeout", KtCvt.Int32, 0).(int32)
-		if timeout > 0 {
-			prods.timeout = time.Duration(timeout) * time.Second
-
-		} else {
-			prods.timeout = Config.ProdTimeout
-		}
-
-		that.prodsMap.Store(name, prods)
-	}
+	return that.prodsMap[name]
 }
 
 func (that *server) GetProdId(id int32) *Prod {
