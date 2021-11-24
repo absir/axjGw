@@ -4,10 +4,10 @@
 log:
 #  level: 1
 
-prods:
-  acl:
-    1: 127.0.0.1:8083
-  pass:
-    1: 127.0.0.1:8083
-msg:
+#prods:
+#  acl:
+#    1: 127.0.0.1:8083
+#  pass:
+#    1: 127.0.0.1:8083
+#msg:
 #  LastUri: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local
