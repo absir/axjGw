@@ -110,14 +110,6 @@ func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Co
 				}
 			}
 		}
-
-		if encrypt != nil && encryKey != nil {
-			data, err = encrypt.Encrypt(data, encryKey, isolate)
-			if err != nil {
-				return err
-			}
-			head |= HEAD_ENCRY
-		}
 	}
 
 	// 流写入
@@ -126,8 +118,38 @@ func rep(locker sync.Locker, out bool, conn Conn, protocol Protocol, compress Co
 		wBuff = conn.Out()
 	}
 
+	var encryptLen int32 = 0
+	if data != nil {
+		if encrypt != nil && encryKey != nil {
+			if wBuff == nil {
+				encryptLen, err = encrypt.EncryptLength(data, encryKey)
+				if err != nil {
+					return err
+				}
+			}
+
+			if encryptLen <= 0 {
+				data, err = encrypt.Encrypt(data, encryKey, isolate)
+				if err != nil {
+					return err
+				}
+			}
+
+			head |= HEAD_ENCRY
+		}
+	}
+
 	if wBuff == nil {
-		return conn.Write(protocol.Rep(req, uri, uriI, data, conn.Sticky(), head, id))
+		bs, off := protocol.Rep(req, uri, uriI, data, encryptLen, conn.Sticky(), head, id)
+		if encryptLen > 0 {
+			// 数据加密到
+			err = encrypt.EncryptToDest(data, encryKey, bs[off:])
+			if err != nil {
+				return err
+			}
+		}
+
+		return conn.Write(bs)
 
 	} else {
 		return protocol.RepOut(locker, conn, wBuff, req, uri, uriI, data, head, id)
@@ -174,7 +196,8 @@ func (that *RepBatch) init(protocol Protocol, compress Compress, compressMin int
 	that.protocol = protocol
 	that.repOrBH = func(sticky bool) []byte {
 		if data == nil {
-			return protocol.Rep(req, uri, uriI, data, sticky, head, 0)
+			bs, _ := protocol.Rep(req, uri, uriI, data, 0, sticky, head, 0)
+			return bs
 
 		} else {
 			return protocol.RepBH(req, uri, uriI, true, head)
@@ -224,40 +247,47 @@ func (that *RepBatch) rep(locker sync.Locker, out bool, conn Conn, encrypt Encry
 		}
 	}
 
-	if encrypt == nil || encryKey == nil {
-		// 无加密数据写入
-		if conn.Sticky() {
-			if that.bss == nil {
-				that.bss = that.protocol.RepBS(that.bhs, that.data, true, 0)
-			}
-
-			return conn.Write(that.bss)
-
-		} else {
-			if that.bs == nil {
-				that.bs = that.protocol.RepBS(that.bhs, that.data, false, 0)
-			}
-
-			return conn.Write(that.bs)
-		}
-	}
-
-	// 加密数据隔离
-	data, err := encrypt.Encrypt(that.data, encryKey, true)
-	if err != nil {
-		return err
-	}
-
-	head := HEAD_ENCRY
-
 	// 流写入
 	var wBuff *[]byte = nil
 	if out {
 		wBuff = conn.Out()
 	}
 
+	var head byte = 0
+	data := that.data
+	var encryptLen int32 = 0
+	var err error = nil
+	if data != nil {
+		if encrypt != nil && encryKey != nil {
+			if wBuff == nil {
+				encryptLen, err = encrypt.EncryptLength(that.data, encryKey)
+				if err != nil {
+					return err
+				}
+			}
+
+			if encryptLen <= 0 {
+				data, err = encrypt.Encrypt(data, encryKey, true)
+				if err != nil {
+					return err
+				}
+			}
+
+			head |= HEAD_ENCRY
+		}
+	}
+
 	if wBuff == nil {
-		return conn.Write(that.protocol.RepBS(bh, data, conn.Sticky(), head))
+		bs, off := that.protocol.RepBS(bh, data, encryptLen, conn.Sticky(), head)
+		if encryptLen > 0 {
+			// 数据加密到
+			err = encrypt.EncryptToDest(data, encryKey, bs[off:])
+			if err != nil {
+				return err
+			}
+		}
+
+		return conn.Write(bs)
 
 	} else {
 		return that.protocol.RepOutBS(locker, conn, wBuff, bh, data, head)

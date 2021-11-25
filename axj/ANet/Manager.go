@@ -81,7 +81,7 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkD
 	that.clientMap = cmap.NewCMapInit()
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
-	that.beatBytes = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, false, 0, 0)
+	that.beatBytes, _ = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, 0, false, 0, 0)
 	return that
 }
 

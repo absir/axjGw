@@ -33,13 +33,14 @@ type Protocol interface {
 	Req(bs []byte, pid *int64) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 流请求读取
 	ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
-	// 返回数据
-	Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte
+	// 返回数据 dLength data强制长度，不copydata
+	Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32)
 	// 返回流写入
 	RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error)
 	// 批量返回数据头
 	RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte
-	RepBS(bh []byte, data []byte, sticky bool, head byte) []byte
+	// 批量通过RepBH生成RepBs数据 dLength data强制长度，不copydata
+	RepBS(bh []byte, data []byte, dLength int32, sticky bool, head byte) ([]byte, int32)
 	RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error)
 }
 
@@ -167,7 +168,7 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax
 	return
 }
 
-func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, sticky bool, head byte, id int64) []byte {
+func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32) {
 	if req == REQ_PUSHI {
 		if id == 0 {
 			req = REQ_PUSH
@@ -203,7 +204,13 @@ func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, stick
 
 	var dLen int32 = 0
 	if data != nil {
-		dLen = int32(len(data))
+		// 强制data大小
+		if dLength > 0 {
+			dLen = dLength
+
+		} else {
+			dLen = int32(len(data))
+		}
 	}
 
 	if req == REQ_PUSHI {
@@ -244,19 +251,25 @@ func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, stick
 		KtBytes.SetInt64(bs, off, id, &off)
 	}
 
+	var dOff int32 = 0
 	if dLen > 0 {
 		// 数据
 		if sticky {
 			KtBytes.SetVInt(bs, off, dLen, &off)
 		}
 
-		copy(bs[off:], data)
+		if dLength > 0 {
+			dOff = off
+
+		} else {
+			copy(bs[off:], data)
+		}
 	}
 
 	// 最后设置头
 	head |= that.crc(head)
 	bs[0] = head
-	return bs
+	return bs, dOff
 }
 
 func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error) {
@@ -426,19 +439,26 @@ func (that *ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head 
 		head |= HEAD_DATA
 	}
 
-	return that.Rep(req, uri, uriI, nil, false, head, 0)
+	bs, _ := that.Rep(req, uri, uriI, nil, 0, false, head, 0)
+	return bs
 }
 
-func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []byte {
+func (that ProtocolV) RepBS(bh []byte, data []byte, dLength int32, sticky bool, head byte) ([]byte, int32) {
 	// 数据长度
 	var dLen int32 = 0
 	if data != nil {
-		dLen = int32(len(data))
+		if dLength > 0 {
+			dLen = dLength
+
+		} else {
+			dLen = int32(len(data))
+		}
 	}
 
 	if dLen > 0 {
+		off := int32(len(bh))
 		// 数据粘包
-		bLen := int32(len(bh)) + dLen
+		bLen := off + dLen
 		if sticky {
 			bLen += KtBytes.GetVIntLen(dLen)
 		}
@@ -450,11 +470,18 @@ func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []by
 
 		// 粘包
 		if sticky {
-			KtBytes.SetVInt(bs, dLen, dLen, &dLen)
+			KtBytes.SetVInt(bs, off, dLen, &off)
 		}
 
-		// 数据
-		copy(bs[dLen:], data)
+		var dOff int32 = 0
+
+		if dLength > 0 {
+			dOff = off
+
+		} else {
+			// 数据
+			copy(bs[off:], data)
+		}
 
 		// 头处理
 		head |= bs[0]
@@ -464,10 +491,10 @@ func (that ProtocolV) RepBS(bh []byte, data []byte, sticky bool, head byte) []by
 			bs[0] = head
 		}
 
-		return bs
+		return bs, dOff
 	}
 
-	return bh
+	return bh, 0
 }
 
 func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error) {

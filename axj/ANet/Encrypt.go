@@ -14,6 +14,10 @@ type Encrypt interface {
 	Decrypt(data []byte, key []byte) ([]byte, error)
 	// 加密 isolate 安全隔离
 	Encrypt(data []byte, key []byte, isolate bool) ([]byte, error)
+	// 加密 内存申请复用优化
+	EncryptLength(data []byte, key []byte) (int32, error)
+	// 加密 内存申请复用优化
+	EncryptToDest(data []byte, key []byte, dest []byte) error
 }
 
 type EncryptSr struct {
@@ -36,4 +40,14 @@ func (that *EncryptSr) Encrypt(data []byte, key []byte, isolate bool) ([]byte, e
 
 	KtEncry.SrEncry(data, key)
 	return data, nil
+}
+
+func (that *EncryptSr) EncryptLength(data []byte, key []byte) (int32, error) {
+	return int32(len(data)), nil
+}
+
+func (that *EncryptSr) EncryptToDest(data []byte, key []byte, dest []byte) error {
+	copy(dest, data)
+	KtEncry.SrEncry(dest, key)
+	return nil
 }
