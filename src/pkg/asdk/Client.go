@@ -193,7 +193,7 @@ func (that *Client) DialConn() (interface{}, error) {
 			return nil, err
 		}
 
-		return ANet.NewConnSocket(conn.(*net.TCPConn)), err
+		return ANet.NewConnSocket(conn.(*net.TCPConn), that.out), err
 	}
 }
 

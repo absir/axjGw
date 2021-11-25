@@ -73,7 +73,7 @@ func main() {
 					continue
 				}
 
-				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn)))
+				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn), false))
 			}
 		}()
 	}

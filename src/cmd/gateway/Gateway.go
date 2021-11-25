@@ -14,7 +14,7 @@ import (
 	"golang.org/x/net/websocket"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
+	//_ "net/http/pprof"
 	"runtime"
 	"strings"
 )
@@ -24,6 +24,7 @@ type config struct {
 	HttpWs     bool     // 启用ws网关
 	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
+	SocketOut  bool     // socketOut流写入
 	GrpcAddr   string   // grpc服务地址
 	GrpcIps    []string // grpc调用Ip白名单，支持*通配
 	LastUrl    string   // 消息持久化，数据库连接
@@ -83,7 +84,7 @@ func main() {
 					continue
 				}
 
-				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn)))
+				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut))
 			}
 		}()
 	}

@@ -28,17 +28,19 @@ type Conn interface {
 
 type ConnSocket struct {
 	conn  *net.TCPConn
+	out   bool
 	rBuff []byte
 	wBuff []byte
 }
 
-func NewConnSocket(conn *net.TCPConn) *ConnSocket {
+func NewConnSocket(conn *net.TCPConn, out bool) *ConnSocket {
 	if conn == nil {
 		return nil
 	}
 
 	that := new(ConnSocket)
 	that.conn = conn
+	that.out = out
 	return that
 }
 
@@ -74,7 +76,11 @@ func (that *ConnSocket) Sticky() bool {
 }
 
 func (that *ConnSocket) Out() *[]byte {
-	return &that.wBuff
+	if that.out {
+		return &that.wBuff
+	}
+
+	return nil
 }
 
 func (that *ConnSocket) Write(bs []byte) error {
