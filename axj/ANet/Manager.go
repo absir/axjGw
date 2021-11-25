@@ -174,7 +174,19 @@ func (that *Manager) checkClient(key interface{}, val interface{}) {
 	if clientM.idleTime <= that.checkTime {
 		// 直接心跳
 		that.OnKeep(client, false)
-		go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)
+		if clientC.conn.IsWriteAsync() {
+			clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)
+
+		} else {
+			if Util.GoPool == nil {
+				go clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)
+
+			} else {
+				Util.GoSubmit(func() {
+					clientC.Rep(true, -1, "", 0, that.beatBytes, false, false, 0)
+				})
+			}
+		}
 	}
 
 	that.handlerM.Check(that.checkTime, client)

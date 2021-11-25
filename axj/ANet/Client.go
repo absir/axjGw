@@ -322,7 +322,15 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 			drt = that.handler.KickDrt()
 		}
 
-		go CloseDelay(conn, drt)
+		if Util.GoPool == nil {
+			go CloseDelay(conn, drt)
+
+		} else {
+			Util.GoSubmit(func() {
+				CloseDelay(conn, drt)
+			})
+		}
+
 		that.conn = nil
 		that.handler.Processor().Rep(nil, that.out, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
 	}
@@ -333,25 +341,41 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 func (that *ClientCnn) ReqLoop() {
 	conn := that.conn
 	for conn == that.conn {
-		err, req, uri, uriI, data := that.Req()
-		if err != nil {
-			that.Close(err, nil)
+		if that.ReqOne(conn) {
 			break
 		}
+	}
+}
 
-		if !that.handler.OnReq(that, req, uri, uriI, data) {
-			limiter := that.limiter
-			if limiter == nil {
-				that.poolReqIO(nil, req, uri, uriI, data)
+func (that *ClientCnn) ReqOne(conn Conn) bool {
+	err, req, uri, uriI, data := that.Req()
+	if err != nil {
+		that.Close(err, nil)
+		return false
+	}
+
+	if !that.handler.OnReq(that, req, uri, uriI, data) {
+		limiter := that.limiter
+		if limiter == nil {
+			that.poolReqIO(nil, req, uri, uriI, data)
+
+		} else {
+			if Util.GoPool == nil {
+				go that.poolReqIO(limiter, req, uri, uriI, data)
 
 			} else {
-				go that.poolReqIO(limiter, req, uri, uriI, data)
-				if limiter != nil {
-					limiter.Add()
-				}
+				Util.GoSubmit(func() {
+					that.poolReqIO(limiter, req, uri, uriI, data)
+				})
+			}
+
+			if limiter != nil {
+				limiter.Add()
 			}
 		}
 	}
+
+	return true
 }
 
 func (that *ClientCnn) poolReqIO(limiter Util.Limiter, req int32, uri string, uriI int32, data []byte) {

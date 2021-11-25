@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-type Pool interface {
+type Alloc interface {
 	PInit()
 	PRelease() bool
 }
@@ -16,7 +16,7 @@ type AllocPool struct {
 	pool *sync.Pool
 }
 
-func NewAllocPool(pool bool, alloc func() Pool) *AllocPool {
+func NewAllocPool(pool bool, alloc func() Alloc) *AllocPool {
 	that := new(AllocPool)
 	that.new = func() interface{} {
 		p := alloc()
@@ -46,7 +46,7 @@ func (that *AllocPool) Get() interface{} {
 	return that.pool.Get()
 }
 
-func (that *AllocPool) Put(p Pool, recover bool) {
+func (that *AllocPool) Put(p Alloc, recover bool) {
 	if that.pool != nil {
 		if recover {
 			defer that.recover()

@@ -51,7 +51,7 @@ func (that *NotifierAsync) StartLock(run func(), lock bool) {
 	}
 
 	if !that.running {
-		go that.runDo()
+		GoSubmit(that.runDo)
 	}
 
 	if lock {
@@ -76,7 +76,7 @@ func (that *NotifierAsync) runOut(runTime int64) {
 	that.locker.Lock()
 	that.running = false
 	if that.runTime > runTime {
-		go that.runDo()
+		GoSubmit(that.runDo)
 		that.locker.Unlock()
 
 	} else {

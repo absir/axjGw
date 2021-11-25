@@ -20,6 +20,8 @@ type Conn interface {
 	Out() *[]byte
 	// 写入
 	Write(bs []byte) error
+	// 写入异步
+	IsWriteAsync() bool
 	// 关闭
 	Close()
 	// 远程地址
@@ -88,6 +90,10 @@ func (that *ConnSocket) Write(bs []byte) error {
 	return err
 }
 
+func (that *ConnSocket) IsWriteAsync() bool {
+	return false
+}
+
 func (that *ConnSocket) Close() {
 	conn := that.Conn()
 	conn.SetLinger(0)
@@ -134,6 +140,10 @@ func (that *ConnWebsocket) Out() *[]byte {
 
 func (that *ConnWebsocket) Write(bs []byte) error {
 	return websocket.Message.Send(that.Conn(), bs)
+}
+
+func (that *ConnWebsocket) IsWriteAsync() bool {
+	return false
 }
 
 func (that *ConnWebsocket) Close() {
