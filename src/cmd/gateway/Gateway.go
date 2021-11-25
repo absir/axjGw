@@ -6,10 +6,14 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
+	"axj/Thrd/AGnet"
 	"axj/Thrd/AZap"
 	"axj/Thrd/AZap/AZapIst"
+	"axj/Thrd/Util"
 	"axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
+	"github.com/panjf2000/gnet"
+	"github.com/panjf2000/gnet/pool/goroutine"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 	"net"
@@ -25,6 +29,7 @@ type config struct {
 	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
 	SocketOut  bool     // socketOut流写入
+	SocketGnet bool     // Gnet高性能服务
 	GrpcAddr   string   // grpc服务地址
 	GrpcIps    []string // grpc调用Ip白名单，支持*通配
 	LastUrl    string   // 消息持久化，数据库连接
@@ -35,6 +40,7 @@ var Config = &config{
 	HttpWs:     true,
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
+	SocketGnet: false,
 	GrpcAddr:   "127.0.0.1:8082",
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -47,6 +53,9 @@ func main() {
 		return runtime.Caller(0)
 	}, "../../resources")
 	APro.Load(nil, "config.yml")
+
+	// 协程池
+	Util.GoPool = goroutine.Default()
 
 	// 默认配置
 	{
@@ -67,26 +76,39 @@ func main() {
 
 	// socket连接
 	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
-		// socket服务
-		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
-		serv, err := net.Listen("tcp", Config.SocketAddr)
-		Kt.Panic(err)
-		defer serv.Close()
-		go func() {
-			for !APro.Stopped {
-				conn, err := serv.Accept()
-				if err != nil {
-					if APro.Stopped {
-						return
+		if Config.SocketGnet {
+			// Gnet服务
+			AZap.Logger.Info("StartGnet: " + Config.SocketAddr)
+			go func() {
+				err := gnet.Serve(&GnetHandler{}, "tcp://"+Config.SocketAddr, gnet.WithMulticore(true), gnet.WithCodec(&AgNet.AgCode{}))
+				Kt.Panic(err)
+			}()
+
+		} else {
+			// socket服务
+			AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
+			serv, err := net.Listen("tcp", Config.SocketAddr)
+			Kt.Panic(err)
+			defer serv.Close()
+			go func() {
+				for !APro.Stopped {
+					conn, err := serv.Accept()
+					if err != nil {
+						if APro.Stopped {
+							return
+						}
+
+						AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
+						continue
 					}
 
-					AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
-					continue
+					aConn := ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut)
+					Util.GoSubmit(func() {
+						gateway.Server.ConnLoop(aConn)
+					})
 				}
-
-				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut))
-			}
-		}()
+			}()
+		}
 	}
 
 	// websocket连接
@@ -113,4 +135,16 @@ func main() {
 	AZapIst.InitCfg(true)
 	// 等待关闭
 	APro.Signal()
+}
+
+type GnetHandler struct {
+	AgNet.AgHandler
+}
+
+func (that GnetHandler) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
+	out, action = that.AgHandler.OnOpened(c)
+	Util.GoSubmit(func() {
+		gateway.Server.ConnStart(c)
+	})
+	return
 }

@@ -1,9 +1,6 @@
 package Util
 
-import (
-	"axj/Thrd/AZap"
-	"go.uber.org/zap"
-)
+import "axj/Kt/Kt"
 
 // 协程池接口
 type goPool interface {
@@ -20,11 +17,8 @@ func GoSubmit(task func()) {
 func GoPoolSubmit(pool goPool, task func()) {
 	if pool != nil {
 		err := pool.Submit(task)
-		if err == nil {
-			return
-		}
-
-		AZap.Logger.Warn("GoPoolSubmit err", zap.Error(err))
+		Kt.Panic(err)
+		return
 	}
 
 	go task()

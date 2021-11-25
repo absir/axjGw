@@ -6,11 +6,13 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
+	"axj/Thrd/AGnet"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Disc"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
+	"github.com/panjf2000/gnet"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -241,6 +243,19 @@ func (that *server) ConnLoop(conn ANet.Conn) {
 	}
 }
 
+func (that *server) ConnStart(c gnet.Conn) {
+	aConn := AgNet.ConnCtx(c)
+	var conn ANet.Conn = aConn
+	client := that.connOpen(&conn)
+	if client != nil {
+		aConn.ReqStart(client)
+
+	} else if conn != nil {
+		// 连接失败关闭
+		conn.Close()
+	}
+}
+
 func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	conn := *pConn
 	manager := that.Manager
@@ -310,7 +325,7 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 		// 登录失败被踢
 		processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
 		*pConn = nil
-		go ANet.CloseDelay(conn, Config.KickDrt)
+		ANet.CloseDelay(conn, Config.KickDrt)
 		return nil
 	}
 

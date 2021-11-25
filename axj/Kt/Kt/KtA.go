@@ -147,3 +147,8 @@ func HashCode(bs []byte) int {
 
 	return 0
 }
+
+func PrintStacks() {
+	var buf [2 << 10]byte
+	fmt.Println(string(buf[:runtime.Stack(buf[:], true)]))
+}

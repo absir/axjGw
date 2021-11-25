@@ -89,7 +89,7 @@ func init() {
 	that.addr = "127.0.0.1:8683"
 	that.log = false
 	that.locker = new(sync.Mutex)
-	that.checkAsync = Util.NewNotifierAsync(that.check, that.locker)
+	that.checkAsync = Util.NewNotifierAsync(that.check, that.locker, nil)
 	that.list = new(list.List)
 	State = that
 	that.reset(false)

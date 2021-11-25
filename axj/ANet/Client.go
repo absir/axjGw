@@ -268,8 +268,8 @@ func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, dat
 
 	// 写入锁
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if that.IsClosed() {
+		that.locker.Unlock()
 		return ERR_CLOSED
 	}
 
@@ -295,6 +295,7 @@ func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, dat
 		err = handler.Processor().Rep(nil, out, that.conn, encryKey, that.compress, req, uri, uriI, data, isolate, id)
 	}
 
+	that.locker.Unlock()
 	if err != nil {
 		that.Close(err, nil)
 	}
@@ -341,13 +342,13 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 func (that *ClientCnn) ReqLoop() {
 	conn := that.conn
 	for conn == that.conn {
-		if that.ReqOne(conn) {
+		if !that.ReqOne() {
 			break
 		}
 	}
 }
 
-func (that *ClientCnn) ReqOne(conn Conn) bool {
+func (that *ClientCnn) ReqOne() bool {
 	err, req, uri, uriI, data := that.Req()
 	if err != nil {
 		that.Close(err, nil)

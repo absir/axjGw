@@ -27,12 +27,73 @@ const (
 var ERR_CRC = errors.New("CRC")
 var ERR_MAX = errors.New("MAX")
 
+type BuffReader interface {
+	ReadN(n int) (size int, buf []byte)
+	ShiftN(n int) (size int)
+	BufferLength() (size int)
+}
+
+type ReqFrame struct {
+	Head      byte
+	Req       int32
+	Uri       string
+	UriI      int32
+	Fid       int64
+	Data      []byte
+	ReaderI   int8
+	ReaderI32 int
+}
+
+func (that *ReqFrame) IsDone() bool {
+	return that.ReaderI == -1
+}
+
+func (that *ReqFrame) Reset() {
+	that.ReaderI = 0
+	that.Req = 0
+	that.Uri = ""
+	that.UriI = 0
+	that.Fid = 0
+	that.Data = nil
+}
+
+func (that *ReqFrame) readVInt(reader BuffReader) int32 {
+	_, bs := reader.ReadN(4)
+	var off int32 = 0
+	i := KtBytes.GetVIntSafe(bs, off, &off)
+	if i >= 0 {
+		reader.ShiftN(int(off))
+	}
+
+	return i
+}
+
+func (that *ReqFrame) readBytes(reader BuffReader, rLen int, bLen int, dataMax int) ([]byte, error) {
+	if rLen > dataMax {
+		return nil, ERR_MAX
+	}
+
+	if rLen < bLen {
+		return nil, nil
+	}
+
+	_, bs := reader.ReadN(bLen)
+	if len(bs) != bLen {
+		return nil, nil
+	}
+
+	reader.ShiftN(bLen)
+	return bs, nil
+}
+
 // 数据协议
 type Protocol interface {
 	// 请求读取
 	Req(bs []byte, pid *int64) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 流请求读取
 	ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
+	// 帧请求读取
+	ReqFrame(reader BuffReader, frame *ReqFrame, dataMax int) error
 	// 返回数据 dLength data强制长度，不copydata
 	Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32)
 	// 返回流写入
@@ -128,6 +189,11 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax
 	// 路由解析
 	if (head & HEAD_URI) != 0 {
 		bLen := KtIo.GetVIntReader(reader)
+		if bLen > dataMax {
+			err = ERR_MAX
+			return
+		}
+
 		var bs []byte
 		bs, err = KtIo.ReadBytesReader(reader, int(bLen))
 		if err != nil {
@@ -166,6 +232,131 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax
 	}
 
 	return
+}
+
+func (that *ProtocolV) ReqFrame(reader BuffReader, frame *ReqFrame, dataMax int) error {
+	for {
+		rLen := reader.BufferLength()
+		if rLen <= 0 {
+			return nil
+		}
+
+		switch frame.ReaderI {
+		case 0:
+			// 读取头
+			_, bs := reader.ReadN(1)
+			frame.Head = bs[0]
+			// 头校验
+			if !that.isCrc(frame.Head) {
+				return ERR_CRC
+			}
+
+			reader.ShiftN(1)
+			frame.ReaderI++
+			break
+		case 1:
+			if (frame.Head & HEAD_REQ) != 0 {
+				// 读取Req
+				frame.Req = frame.readVInt(reader)
+				if frame.Req < 0 {
+					return nil
+				}
+			}
+			frame.ReaderI++
+			break
+		case 2:
+			if (frame.Head & HEAD_URI) != 0 {
+				// 读取Uri
+				frame.ReaderI32 = int(frame.readVInt(reader))
+				if frame.ReaderI32 < 0 {
+					return nil
+				}
+
+				// 转到读取Uri[string]
+				frame.ReaderI++
+
+			} else {
+				// 直接转到读取UriI
+				frame.ReaderI += 2
+			}
+			break
+		case 3:
+			// 读取Uri[string]
+			bs, err := frame.readBytes(reader, rLen, frame.ReaderI32, dataMax)
+			if err != nil {
+				return err
+			}
+
+			if bs == nil {
+				return nil
+			}
+
+			frame.Uri = KtUnsafe.BytesToString(bs)
+			frame.ReaderI++
+			break
+		case 4:
+			// 读取UriI
+			if (frame.Head & HEAD_URI_I) != 0 {
+				frame.UriI = frame.readVInt(reader)
+				if frame.UriI < 0 {
+					return nil
+				}
+			}
+			frame.ReaderI++
+			break
+		case 5:
+			// 读取fid
+			if frame.Req == REQ_PUSHI {
+				bs, err := frame.readBytes(reader, rLen, 8, dataMax)
+				if err != nil {
+					return err
+				}
+
+				if bs == nil {
+					return nil
+				}
+
+				frame.Fid = KtBytes.GetInt64(bs, 0, nil)
+			}
+			frame.ReaderI++
+		case 6:
+			if (frame.Head & HEAD_DATA) != 0 {
+				// 读取DATA
+				frame.ReaderI32 = int(frame.readVInt(reader))
+				if frame.ReaderI32 < 0 {
+					return nil
+				}
+
+				// 转到读取Data[[]byte]
+				frame.ReaderI++
+
+			} else {
+				// 直接转到frameDone
+				frame.ReaderI += 2
+			}
+			break
+		case 7:
+			// 读取Data[[]byte]
+			bs, err := frame.readBytes(reader, rLen, frame.ReaderI32, dataMax)
+			if err != nil {
+				return err
+			}
+
+			if bs == nil {
+				return nil
+			}
+
+			frame.Data = bs
+			frame.ReaderI++
+			break
+		default:
+			// frameDone
+			frame.ReaderI = -1
+			break
+		}
+	}
+
+	return nil
 }
 
 func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32) {

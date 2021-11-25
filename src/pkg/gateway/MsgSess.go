@@ -143,7 +143,7 @@ func (that *MsgSess) getOrNewQueue() *Util.CircleQueue {
 	if that.queue == nil && _msgMng.QueueMax > 0 {
 		that.grp.locker.Lock()
 		if that.queue == nil {
-			that.queueAsync = Util.NewNotifierAsync(that.queueRun, that.grp.locker)
+			that.queueAsync = Util.NewNotifierAsync(that.queueRun, that.grp.locker, nil)
 			that.queue = Util.NewCircleQueue(_msgMng.QueueMax)
 		}
 
@@ -265,7 +265,7 @@ func (that *MsgSess) getOrNewLastAsync() *Util.NotifierAsync {
 	if that.lastAsync == nil {
 		that.grp.locker.Lock()
 		if that.lastAsync == nil {
-			that.lastAsync = Util.NewNotifierAsync(that.lastRun, that.grp.locker)
+			that.lastAsync = Util.NewNotifierAsync(that.lastRun, that.grp.locker, nil)
 		}
 
 		that.grp.locker.Unlock()
@@ -407,7 +407,9 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 
 	if !client.lasting {
 		// 启动通知线程，包含会执行LastSubRun
-		go that.lastClientRun(client, unique)
+		Util.GoSubmit(func() {
+			that.lastClientRun(client, unique)
+		})
 		client.locker.Unlock()
 		return
 	}
@@ -434,7 +436,9 @@ func (that *MsgSess) lastClientOut(client *MsgClient, unique string, lastTime in
 	client.lasting = false
 	if client.lastTime > lastTime {
 		// 漏掉重启
-		go that.lastClientRun(client, unique)
+		Util.GoSubmit(func() {
+			that.lastClientRun(client, unique)
+		})
 		client.locker.Unlock()
 		return
 	}
@@ -506,7 +510,9 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 		return
 	}
 
-	go that.subLastRun(lastId, client, unique, continuous)
+	Util.GoSubmit(func() {
+		that.subLastRun(lastId, client, unique, continuous)
+	})
 }
 
 // last消息队列消息订阅进入
@@ -533,7 +539,9 @@ func (that *MsgSess) subLastOut(client *MsgClient, unique string, subLastTime in
 		client.subLastTime = 0
 		if lastTime < client.lastTime {
 			// last通知触发，last通知或lastSubRun由LastClient负责
-			go that.lastClientRun(client, unique)
+			Util.GoSubmit(func() {
+				that.lastClientRun(client, unique)
+			})
 			client.locker.Unlock()
 			return
 		}

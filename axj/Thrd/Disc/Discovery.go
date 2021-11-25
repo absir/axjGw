@@ -178,7 +178,7 @@ func (that *DiscoveryMng) SetDiscoveryS(disc string, name string, setFun func(pr
 	}
 
 	// setAsync idleTime
-	discS.setAsync = Util.NewNotifierAsync(discS.ListProds, nil)
+	discS.setAsync = Util.NewNotifierAsync(discS.ListProds, nil, nil)
 	if idleTime <= 0 {
 		idleTime = discC.disc.IdleTime(discC.cfg)
 	}

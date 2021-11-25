@@ -8,11 +8,12 @@ import (
 type NotifierAsync struct {
 	run     func()
 	locker  sync.Locker
+	runCond func() bool
 	runTime int64
 	running bool
 }
 
-func NewNotifierAsync(run func(), locker sync.Locker) *NotifierAsync {
+func NewNotifierAsync(run func(), locker sync.Locker, runCond func() bool) *NotifierAsync {
 	that := new(NotifierAsync)
 	that.run = run
 	if locker == nil {
@@ -20,6 +21,7 @@ func NewNotifierAsync(run func(), locker sync.Locker) *NotifierAsync {
 	}
 
 	that.locker = locker
+	that.runCond = runCond
 	return that
 }
 
@@ -28,16 +30,19 @@ func (that *NotifierAsync) Start(run func()) {
 }
 
 func (that *NotifierAsync) StartLock(run func(), lock bool) {
+	// run nil 拦截
 	if run == nil && that.run == nil {
 		return
 	}
 
+	// 运行时间
 	runTime := time.Now().UnixNano()
 	if lock {
 		// 加锁
 		that.locker.Lock()
 	}
 
+	// run函数判断
 	if run != nil {
 		that.run = run
 	}
@@ -51,7 +56,9 @@ func (that *NotifierAsync) StartLock(run func(), lock bool) {
 	}
 
 	if !that.running {
-		GoSubmit(that.runDo)
+		if that.runCond == nil || that.runCond() {
+			GoSubmit(that.runDo)
+		}
 	}
 
 	if lock {
@@ -76,7 +83,10 @@ func (that *NotifierAsync) runOut(runTime int64) {
 	that.locker.Lock()
 	that.running = false
 	if that.runTime > runTime {
-		GoSubmit(that.runDo)
+		if that.runCond == nil || that.runCond() {
+			GoSubmit(that.runDo)
+		}
+
 		that.locker.Unlock()
 
 	} else {

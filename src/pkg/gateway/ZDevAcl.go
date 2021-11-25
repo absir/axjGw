@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"axj/Kt/KtUnsafe"
+	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
 	"encoding/json"
@@ -22,12 +23,14 @@ func (Z zDevAcl) Login(ctx context.Context, in *gw.LoginReq, opts ...grpc.CallOp
 
 func (Z zDevAcl) LoginBack(ctx context.Context, in *gw.LoginBack, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
 	// 加载ZG组
-	go Server.gatewayISC.GLasts(ctx, &gw.GLastsReq{
-		Cid:        in.Cid,
-		Unique:     strconv.FormatInt(in.Cid, 10),
-		Gid:        "ZG",
-		Continuous: 1,
-	}, opts...)
+	Util.GoSubmit(func() {
+		Server.gatewayISC.GLasts(ctx, &gw.GLastsReq{
+			Cid:        in.Cid,
+			Unique:     strconv.FormatInt(in.Cid, 10),
+			Gid:        "ZG",
+			Continuous: 1,
+		}, opts...)
+	})
 	return &gw.Id32Rep{
 		Id: int32(gw.Result_Succ),
 	}, nil
@@ -46,12 +49,14 @@ func (Z zDevAcl) Req(ctx context.Context, in *gw.PassReq, opts ...grpc.CallOptio
 		// 向ZG组发送消息
 		var strs []string
 		json.Unmarshal(in.Data, &strs)
-		go Server.gatewayISC.GPush(ctx, &gw.GPushReq{
-			Gid:  "ZG",
-			Qs:   3,
-			Uri:  strs[0],
-			Data: KtUnsafe.StringToBytes(strs[1]),
-		}, opts...)
+		Util.GoSubmit(func() {
+			Server.gatewayISC.GPush(ctx, &gw.GPushReq{
+				Gid:  "ZG",
+				Qs:   3,
+				Uri:  strs[0],
+				Data: KtUnsafe.StringToBytes(strs[1]),
+			}, opts...)
+		})
 		return &gw.DataRep{}, nil
 	}
 

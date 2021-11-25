@@ -244,7 +244,7 @@ func (that *ChatTeam) Start(msgTeam *MsgTeam) {
 		return
 	}
 
-	go that.startRun()
+	Util.GoSubmit(that.startRun)
 }
 
 func (that *ChatTeam) startIn() bool {

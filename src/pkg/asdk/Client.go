@@ -146,7 +146,7 @@ func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, 
 
 	that.checkDrt = time.Duration(checkDrt) * time.Second
 	// 检查异步执行
-	that.checksAsync = Util.NewNotifierAsync(that.doChecks, that.locker)
+	that.checksAsync = Util.NewNotifierAsync(that.doChecks, that.locker, nil)
 
 	// 最大请求编号
 	that.rqIMax = int32(rqIMax)

@@ -153,6 +153,50 @@ func GetVInt(bs []byte, off int32, offP *int32) int32 {
 	return val
 }
 
+func GetVIntSafe(bs []byte, off int32, offP *int32) int32 {
+	bLen := int32(len(bs))
+	if off >= bLen {
+		return -1
+	}
+
+	b := bs[off]
+	off++
+	val := int32(b) & VINT
+	if (b & VINT_NB) != 0 {
+		if off >= bLen {
+			return -1
+		}
+
+		b = bs[off]
+		off++
+		val += int32(b&VINT_B) << 7
+		if (b & VINT_NB) != 0 {
+			if off >= bLen {
+				return -1
+			}
+
+			b = bs[off]
+			off++
+			val += int32(b&VINT_B) << 14
+			if (b & VINT_NB) != 0 {
+				if off >= bLen {
+					return -1
+				}
+
+				b = bs[off]
+				off++
+				val += int32(b) << 21
+			}
+		}
+	}
+
+	if offP != nil {
+		*offP = off
+	}
+
+	return val
+}
+
 func GetInt64(bs []byte, off int32, offP *int32) int64 {
 	var val int64 = 0
 	vf := 0

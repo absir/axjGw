@@ -135,7 +135,9 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 	sess.mdfyClientNum(-1)
 	if kick {
 		// 关闭通知
-		go client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid}, nil)
+		Util.GoSubmit(func() {
+			client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid})
+		})
 	}
 
 	AZap.Debug("Grp Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
@@ -189,7 +191,9 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 		that.checkClientRun(client, unique, nil)
 
 	} else {
-		go that.checkClientRun(client, unique, limiter)
+		Util.GoSubmit(func() {
+			that.checkClientRun(client, unique, limiter)
+		})
 		limiter.Add()
 	}
 }
@@ -331,7 +335,9 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 			sTime := time.Now().UnixNano() / 1000000
 			sess.clientMap.Range(func(key, value interface{}) bool {
 				client := value.(*MsgClient)
-				go sess.Push(msgD, client, key.(string), true)
+				Util.GoSubmit(func() {
+					sess.Push(msgD, client, key.(string), true)
+				})
 				return true
 			})
 
