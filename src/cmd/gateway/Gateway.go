@@ -40,7 +40,7 @@ var Config = &config{
 	HttpWs:     true,
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
-	SocketGnet: false,
+	SocketGnet: true,
 	GrpcAddr:   "127.0.0.1:8082",
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -80,7 +80,7 @@ func main() {
 			// Gnet服务
 			AZap.Logger.Info("StartGnet: " + Config.SocketAddr)
 			go func() {
-				err := gnet.Serve(&GnetHandler{}, "tcp://"+Config.SocketAddr, gnet.WithMulticore(true), gnet.WithCodec(&AgNet.AgCode{}))
+				err := gnet.Serve(AGnet.NewAHandler(Config.SocketOut, gateway.Server.AConnOpen), "tcp://"+Config.SocketAddr, gnet.WithMulticore(true), gnet.WithCodec(AGnet.NewACode(gateway.Processor)))
 				Kt.Panic(err)
 			}()
 
@@ -135,16 +135,4 @@ func main() {
 	AZapIst.InitCfg(true)
 	// 等待关闭
 	APro.Signal()
-}
-
-type GnetHandler struct {
-	AgNet.AgHandler
-}
-
-func (that GnetHandler) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
-	out, action = that.AgHandler.OnOpened(c)
-	Util.GoSubmit(func() {
-		gateway.Server.ConnStart(c)
-	})
-	return
 }

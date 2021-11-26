@@ -12,7 +12,6 @@ import (
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
-	"github.com/panjf2000/gnet"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -243,166 +242,214 @@ func (that *server) ConnLoop(conn ANet.Conn) {
 	}
 }
 
-func (that *server) ConnStart(c gnet.Conn) {
-	aConn := AgNet.ConnCtx(c)
+func (that *server) AConnOpen(aConn *AGnet.AConn) {
 	var conn ANet.Conn = aConn
-	client := that.connOpen(&conn)
-	if client != nil {
-		aConn.ReqStart(client)
+	var done bool
+	var client ANet.Client
+	var encryptKey []byte = nil
+	fun := that.connOpenFun(&conn, &encryptKey)
+	aConn.StartFun(func(el interface{}) {
+		frame, _ := el.(*ANet.ReqFrame)
+		if frame == nil {
+			aConn.Close()
+			return
+		}
 
-	} else if conn != nil {
-		// 连接失败关闭
-		conn.Close()
-	}
+		if !done {
+			done, client = fun(Processor.ReqFrame(frame, encryptKey))
+		}
+
+		if done {
+			if client == nil {
+				aConn.Close()
+				return
+			}
+
+			aConn.StartReq(client, frame)
+			return
+		}
+	})
 }
 
 func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	conn := *pConn
-	manager := that.Manager
-	// 交换密钥
 	var encryptKey []byte = nil
-	processor := manager.Processor()
-	_, _, _, flag, _ := processor.Req(conn, encryptKey)
-	compress := (flag & ANet.FLG_COMPRESS) != 0
-	if (flag&ANet.FLG_ENCRYPT) != 0 && processor.Encrypt != nil {
-		sKey, cKey := processor.Encrypt.NewKeys()
-		if sKey != nil && cKey != nil {
-			encryptKey = sKey
-			// 连接秘钥
-			err := processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
+	fun := that.connOpenFun(pConn, &encryptKey)
+	for {
+		done, client := fun(that.Manager.Processor().Req(conn, encryptKey))
+		if done {
+			return client
+		}
+	}
+}
+
+func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err error, req int32, uri string, uriI int32, data []byte) (bool, ANet.Client) {
+	conn := *pConn
+	var flag int32
+	var compress bool
+	var encryptKey []byte
+	_i := 0
+	return func(err error, req int32, uri string, uriI int32, data []byte) (_done bool, _client ANet.Client) {
+		_done = true
+		if err != nil {
+			return
+		}
+
+		switch _i {
+		case 0:
+			// flag
+			flag = uriI
+			// 连接压缩
+			compress = (flag & ANet.FLG_COMPRESS) != 0
+			processor := that.Manager.Processor()
+			// 连接密钥
+			if (flag&ANet.FLG_ENCRYPT) != 0 && processor.Encrypt != nil {
+				sKey, cKey := processor.Encrypt.NewKeys()
+				if sKey != nil && cKey != nil {
+					encryptKey = sKey
+					if pEncryptKey != nil {
+						*pEncryptKey = encryptKey
+					}
+
+					// 连接秘钥
+					err = processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
+					if err != nil {
+						return
+					}
+				}
+			}
+			// Acl准备
+			err = processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
 			if err != nil {
-				return nil
+				return
 			}
-		}
-	}
+			break
+		case 1:
+			// 登录Acl处理
+			cid := that.CidGen(compress)
+			aclProds := that.GetProds(Config.AclProd)
+			aclClient := aclProds.GetProdHash(Config.WorkHash).GetAclClient()
+			login, err := aclClient.Login(aclProds.TimeoutCtx(), &gw.LoginReq{
+				Cid:  cid,
+				Data: data,
+				Addr: conn.RemoteAddr(),
+			})
 
-	// Acl准备
-	err := processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
-	if err != nil {
-		return nil
-	}
+			if err != nil || login == nil {
+				if err == io.EOF {
+					AZap.Logger.Debug("Serv Login Acl EOF")
 
-	// 登录请求
-	err, _, uriHash, uriRoute, loginData := processor.Req(conn, encryptKey)
-	if err != nil {
-		if err == io.EOF {
-			AZap.Logger.Debug("Serv Login Req EOF")
+				} else {
+					if err == nil {
+						AZap.Logger.Debug("Serv Login Acl Fail nil")
 
-		} else {
-			AZap.Logger.Warn("Serv Login Req ERR", zap.Error(err))
-		}
+					} else {
+						AZap.Debug("Serv Login Acl Fail %s", err.Error())
+					}
+				}
 
-		return nil
-	}
-
-	// 登录Acl处理
-	cid := that.CidGen(compress)
-	aclProds := that.GetProds(Config.AclProd)
-	aclClient := aclProds.GetProdHash(Config.WorkHash).GetAclClient()
-	login, err := aclClient.Login(aclProds.TimeoutCtx(), &gw.LoginReq{
-		Cid:  cid,
-		Data: loginData,
-		Addr: conn.RemoteAddr(),
-	})
-
-	if err != nil || login == nil {
-		if err == io.EOF {
-			AZap.Logger.Debug("Serv Login Acl EOF")
-
-		} else {
-			if err == nil {
-				AZap.Logger.Debug("Serv Login Acl Fail nil")
-
-			} else {
-				AZap.Debug("Serv Login Acl Fail %s", err.Error())
+				return
 			}
+
+			// 登录踢出
+			if login.KickData != nil {
+				// 登录失败被踢
+				that.Manager.Processor().Rep(nil, true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
+				*pConn = nil
+				ANet.CloseDelay(conn, Config.KickDrt)
+				return
+			}
+
+			// 客户端注册
+			manager := that.Manager
+			client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
+			clientG := Handler.ClientG(client)
+			// clientG.Kick()
+			// 用户状态设置
+			clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
+			if clientG.Gid() != "" {
+				// 用户连接保持
+				clientG.connKeep()
+				clientG.connCheck(nil)
+				if clientG.IsClosed() {
+					return
+				}
+			}
+
+			// 请求并发限制
+			if login.Limit > 0 {
+				clientG.SetLimiter(int(login.Limit))
+			}
+
+			// 路由服务规则
+			clientG.PutRId("", login.Rid)
+			clientG.PutRIds(login.Rids)
+			// 路由hash校验
+			uriRoute := uriI
+			uriHash := uri
+			if uriRoute > 0 {
+				if uriHash != UriDict.UriMapHash {
+					// 路由缓存
+					manager.Processor().Rep(nil, true, conn, nil, compress, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
+				}
+			}
+
+			// 消息处理 单用户登录
+			if clientG.Gid() != "" && clientG.unique == "" {
+				// 消息队列清理开启
+				rep, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
+					Gid:    clientG.gid,
+					Cid:    clientG.Id(),
+					Unique: clientG.Unique(),
+					Clear:  login.Clear,
+				})
+
+				if Server.Id32(rep) < R_SUCC_MIN {
+					clientG.Close(err, nil)
+					return true, nil
+				}
+			}
+
+			// 注册成功回调
+			if login.Back {
+				rep, err := aclClient.LoginBack(aclProds.TimeoutCtx(), &gw.LoginBack{
+					Cid:    clientG.Id(),
+					Unique: clientG.unique,
+					Uid:    clientG.uid,
+					Sid:    clientG.sid,
+				})
+
+				if Server.Id32(rep) < R_SUCC_MIN {
+					clientG.Close(err, nil)
+					return true, nil
+				}
+			}
+
+			// 登录成功
+			client.Get().Rep(true, ANet.REQ_LOOP, strconv.FormatInt(cid, 10)+"/"+clientG.unique+"/"+clientG.gid, 0, login.Data, false, false, 0)
+			if client.Get().IsClosed() {
+				return
+			}
+
+			// 并发限制
+			if login.Limit > 0 {
+				clientG.SetLimiter(int(login.Limit))
+			}
+
+			_client = client
+			return
+			break
+		default:
+			return
+			break
 		}
 
-		return nil
-	}
-
-	if login.KickData != nil {
-		// 登录失败被踢
-		processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
-		*pConn = nil
-		ANet.CloseDelay(conn, Config.KickDrt)
-		return nil
-	}
-
-	// 客户端注册
-	client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
-	clientG := Handler.ClientG(client)
-	// clientG.Kick()
-	// 用户状态设置
-	clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
-	if clientG.Gid() != "" {
-		// 用户连接保持
-		clientG.connKeep()
-		clientG.connCheck(nil)
-		if clientG.IsClosed() {
-			return nil
+		if _client == nil {
+			_done = false
+			_i++
 		}
+		return
 	}
-
-	// 请求并发限制
-	if login.Limit > 0 {
-		clientG.SetLimiter(int(login.Limit))
-	}
-
-	// 路由服务规则
-	clientG.PutRId("", login.Rid)
-	clientG.PutRIds(login.Rids)
-	// 路由hash校验
-	if uriRoute > 0 {
-		if uriHash != UriDict.UriMapHash {
-			// 路由缓存
-			processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
-		}
-	}
-
-	// 消息处理 单用户登录
-	if clientG.Gid() != "" && clientG.unique == "" {
-		// 消息队列清理开启
-		rep, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
-			Gid:    clientG.gid,
-			Cid:    clientG.Id(),
-			Unique: clientG.Unique(),
-			Clear:  login.Clear,
-		})
-
-		if Server.Id32(rep) < R_SUCC_MIN {
-			clientG.Close(err, nil)
-			return nil
-		}
-	}
-
-	// 注册成功回调
-	if login.Back {
-		rep, err := aclClient.LoginBack(aclProds.TimeoutCtx(), &gw.LoginBack{
-			Cid:    clientG.Id(),
-			Unique: clientG.unique,
-			Uid:    clientG.uid,
-			Sid:    clientG.sid,
-		})
-
-		if Server.Id32(rep) < R_SUCC_MIN {
-			clientG.Close(err, nil)
-			return nil
-		}
-	}
-
-	// 登录成功
-	client.Get().Rep(true, ANet.REQ_LOOP, strconv.FormatInt(cid, 10)+"/"+clientG.unique+"/"+clientG.gid, 0, login.Data, false, false, 0)
-	if client.Get().IsClosed() {
-		return nil
-	}
-
-	// 并发限制
-	if login.Limit > 0 {
-		clientG.SetLimiter(int(login.Limit))
-	}
-
-	return client
 }
 
 func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServer) {

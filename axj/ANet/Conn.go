@@ -31,8 +31,8 @@ type Conn interface {
 type ConnSocket struct {
 	conn  *net.TCPConn
 	out   bool
-	rBuff []byte
 	wBuff []byte
+	rBuff []byte
 }
 
 func NewConnSocket(conn *net.TCPConn, out bool) *ConnSocket {

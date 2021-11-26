@@ -23,6 +23,31 @@ func (that *Processor) ReqPId(conn Conn, decryKey []byte) (error, int32, string,
 	return err, req, uri, uriI, pid, data
 }
 
+func (that *Processor) ReqFrame(frame *ReqFrame, decryKey []byte) (err error, req int32, uri string, uriI int32, data []byte) {
+	head := frame.Head
+	data = frame.Data
+	if data != nil {
+		if (head&HEAD_ENCRY) != 0 && decryKey != nil && that.Encrypt != nil {
+			data, err = that.Encrypt.Decrypt(data, decryKey)
+			if err != nil {
+				return
+			}
+		}
+
+		if (head&HEAD_COMPRESS) != 0 && that.Compress != nil {
+			data, err = that.Compress.UnCompress(data)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	req = frame.Req
+	uri = frame.Uri
+	uriI = frame.UriI
+	return
+}
+
 func (that *Processor) Rep(locker sync.Locker, out bool, conn Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
 	compr := that.Compress
 	if !compress {

@@ -220,11 +220,27 @@ func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {
 	}
 
 	handler := that.handler
-	// 保持连接
-	handler.OnKeep(that.client, false)
-
 	// 获取请求
 	err, req, uri, uriI, data := handler.Processor().Req(that.conn, that.encryKey)
+	if uri == "" && uriI > 0 {
+		// 路由解压
+		uriDict := handler.UriDict()
+		if uriDict != nil {
+			uri = uriDict.UriIMapUri()[uriI]
+		}
+	}
+
+	return err, req, uri, uriI, data
+}
+
+func (that *ClientCnn) ReqFrame(frame *ReqFrame) (error, int32, string, int32, []byte) {
+	if that.IsClosed() {
+		return ERR_CLOSED, 0, "", 0, nil
+	}
+
+	handler := that.handler
+	// 获取请求
+	err, req, uri, uriI, data := handler.Processor().ReqFrame(frame, that.encryKey)
 	if uri == "" && uriI > 0 {
 		// 路由解压
 		uriDict := handler.UriDict()
@@ -342,20 +358,22 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 func (that *ClientCnn) ReqLoop() {
 	conn := that.conn
 	for conn == that.conn {
-		if !that.ReqOne() {
+		if !that.OnReq(that.Req()) {
 			break
 		}
 	}
 }
 
-func (that *ClientCnn) ReqOne() bool {
-	err, req, uri, uriI, data := that.Req()
+func (that *ClientCnn) OnReq(err error, req int32, uri string, uriI int32, data []byte) bool {
 	if err != nil {
 		that.Close(err, nil)
 		return false
 	}
 
-	if !that.handler.OnReq(that, req, uri, uriI, data) {
+	handler := that.handler
+	// 保持连接
+	handler.OnKeep(that.client, false)
+	if !handler.OnReq(that, req, uri, uriI, data) {
 		limiter := that.limiter
 		if limiter == nil {
 			that.poolReqIO(nil, req, uri, uriI, data)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"axj/ANet"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
 	"fmt"
@@ -8,6 +9,15 @@ import (
 )
 
 func main() {
+	readerFrame := ANet.ReaderFrame{}
+	readerFrame.Req = 2
+
+	frame := readerFrame.ReqFrame
+	frame.Req = 1
+
+	println(readerFrame.Req)
+	println(frame.Req)
+
 	testMapRange()
 }
 
@@ -29,7 +39,7 @@ func testMapRange() {
 	sb := 0
 	cmap := cmap.NewCMapInit()
 	for i := 0; i < 1000000; i++ {
-		cmap.Store(i, Util.NewNotifierAsync(nil, nil))
+		cmap.Store(i, Util.NewNotifierAsync(nil, nil, nil))
 		if sb != cmap.SizeBuckets() {
 			sb = cmap.SizeBuckets()
 			fmt.Printf("%d => %d\n", cmap.CountFast(), cmap.SizeBuckets())
