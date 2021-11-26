@@ -68,9 +68,17 @@ func (that *MsgSess) getOrNewClientMap() *cmap.CMap {
 	return that.clientMap
 }
 
-func (that *MsgSess) mdfyClientNum(num int) {
+func (that *MsgSess) dirtyClientNum() {
 	that.grp.locker.Lock()
-	that.clientNum = that.clientNum + num
+	clientNum := 0
+	if that.client != nil {
+		clientNum++
+	}
+
+	if that.clientMap != nil {
+		clientNum += int(that.clientMap.CountFast())
+	}
+	that.clientNum = clientNum
 	that.grp.locker.Unlock()
 }
 

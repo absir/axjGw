@@ -152,7 +152,7 @@ func (that *msgMng) checkGrp(key interface{}, grp *MsgGrp) {
 	clientNum := 0
 	if Server.IsProdHash(grp.ghash) {
 		sess := grp.sess
-		if sess != nil && sess.clientNum > 0 {
+		if sess != nil {
 			// 客户端连接
 			grp.checkClients()
 			clientNum = sess.clientNum

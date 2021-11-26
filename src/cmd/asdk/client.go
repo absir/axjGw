@@ -86,6 +86,7 @@ func init() {
 	that := new(clientsState)
 	// 127.0.0.1:8683
 	// ws://127.0.0.1:8682/gw
+	// 47.102.86.20:18683
 	that.addr = "127.0.0.1:8683"
 	that.log = false
 	that.locker = new(sync.Mutex)

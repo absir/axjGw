@@ -109,7 +109,7 @@ func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 
 	client.cid = cid
 	client.gatewayI = Server.GetProdCid(cid).GetGWIClient()
-	client.idleTime = time.Now().UnixNano() + that.passTime
+	client.idleTime = time.Now().UnixNano() + _msgMng.IdleDrt
 	return client
 }
 
@@ -132,7 +132,7 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 	}
 
 	client.connVer = 0
-	sess.mdfyClientNum(-1)
+	sess.dirtyClientNum()
 	if kick {
 		// 关闭通知
 		Util.GoSubmit(func() {
@@ -249,7 +249,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 		sess.getOrNewClientMap().Store(unique, client)
 	}
 
-	sess.mdfyClientNum(1)
+	sess.dirtyClientNum()
 	AZap.Debug("Grp Conn %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return client
 }
