@@ -1064,6 +1064,11 @@ func BindKeyVal(target *reflect.Value, key interface{}, val interface{}) {
 		return
 
 	} else if fType.Kind() == reflect.Map {
+		if field.IsNil() {
+			rVal := reflect.MakeMap(fType)
+			field.Set(rVal)
+		}
+
 		BindInterface(field, val)
 		return
 	}

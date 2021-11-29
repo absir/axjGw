@@ -11,7 +11,7 @@ type config struct {
 	CompressMin  int           // 最短压缩
 	DataMax      int32         // 最大数据(请求)
 	Encrypt      bool          // 通讯加密
-	CheckDrt     int64         // 客户端检查间隔
+	CheckDrt     time.Duration // 客户端检查间隔
 	IdleDrt      int64         // 空闲检测间隔
 	ConnDrt      int64         // 连接检查间隔
 	KickDrt      time.Duration // 踢出间隔

@@ -1,13 +1,10 @@
 package main
 
 import (
-	"axj/ANet"
 	"axj/APro"
 	"axj/Kt/Kt"
-	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axj/Thrd/AZap/AZapIst"
-	"axjGW/pkg/gateway"
 	"axjGW/pkg/proxy"
 	"go.uber.org/zap"
 	"net"
@@ -15,25 +12,7 @@ import (
 	"strings"
 )
 
-type Config struct {
-	SocketAddr  string // socket服务地址
-	CompressMin int    // 最短压缩
-	DataMax     int32  // 最大数据(请求)
-	Encrypt     bool   // 通讯加密
-	CheckDrt    int64  // 客户端检查间隔
-	IdleDrt     int64  // 空闲检测间隔
-}
-
-var PCfg = Config{
-	SocketAddr:  ":8683",
-	CompressMin: 256,
-	DataMax:     256 << 10,
-	Encrypt:     true,
-	CheckDrt:    3000,
-	IdleDrt:     30000,
-}
-
-var PWorkHash int
+var WorkHash int
 
 func main() {
 	// 初始化配置
@@ -44,21 +23,20 @@ func main() {
 
 	// 默认配置
 	{
-		KtCvt.BindInterface(&PCfg, APro.Cfg)
-		PWorkHash = int(APro.WorkId())
+		WorkHash = int(APro.WorkId())
 	}
 
 	// 代理服务初始化
-
-	proxy.PrxServ.Init(APro.WorkId(), APro.Cfg, new(proxy.PrxAcl))
+	proxy.PrxServMng.Init(APro.WorkId(), APro.Cfg)
 	// 代理服务开启
-	proxy.PrxServ.Start()
+	proxy.PrxServMng.Start()
 
+	Config := proxy.Config
 	// socket连接
-	if PCfg.SocketAddr != "" && !strings.HasPrefix(PCfg.SocketAddr, "!") {
+	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
 		// socket服务
-		AZap.Logger.Info("StartSocket: " + PCfg.SocketAddr)
-		serv, err := net.Listen("tcp", PCfg.SocketAddr)
+		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
+		serv, err := net.Listen("tcp", Config.SocketAddr)
 		Kt.Panic(err)
 		defer serv.Close()
 		go func() {
@@ -69,11 +47,11 @@ func main() {
 						return
 					}
 
-					AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
+					AZap.Logger.Warn("Proxy Accept Err", zap.Error(err))
 					continue
 				}
 
-				go gateway.Server.ConnLoop(ANet.NewConnSocket(conn.(*net.TCPConn), false))
+				proxy.PrxServMng.Accept(conn.(*net.TCPConn))
 			}
 		}()
 	}

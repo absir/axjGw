@@ -74,7 +74,7 @@ func (that *Manager) Client(cid int64) Client {
 	return nil
 }
 
-func NewManager(handlerM HandlerM, workerId int32, idleDrt time.Duration, checkDrt time.Duration) *Manager {
+func NewManager(handlerM HandlerM, workerId int32, idleDrt int64, checkDrt time.Duration) *Manager {
 	that := new(Manager)
 	that.idWorker = Util.NewIdWorkerPanic(workerId)
 	that.handlerM = handlerM
@@ -140,9 +140,9 @@ func (that *Manager) CheckStop() {
 }
 
 func (that *Manager) CheckLoop() {
-	loopTime := time.Now().UnixNano()
-	that.checkLoop = loopTime
-	for loopTime == that.checkLoop {
+	checkLoop := time.Now().UnixNano()
+	that.checkLoop = checkLoop
+	for checkLoop == that.checkLoop {
 		time.Sleep(that.checkDrt)
 		that.checkTime = time.Now().UnixNano()
 		that.clientMap.RangeBuff(that.checkRange, &that.clientBuff, 1024)

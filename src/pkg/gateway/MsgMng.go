@@ -128,9 +128,9 @@ func (that *msgMng) CheckStop() {
 }
 
 func (that *msgMng) CheckLoop() {
-	loopTime := time.Now().UnixNano()
-	that.checkLoop = loopTime
-	for loopTime == that.checkLoop {
+	checkLoop := time.Now().UnixNano()
+	that.checkLoop = checkLoop
+	for checkLoop == that.checkLoop {
 		time.Sleep(that.CheckDrt)
 		that.checkTime = time.Now().UnixNano()
 		that.grpMap.RangeBuff(that.checkRange, &that.checkBuff, 1024)

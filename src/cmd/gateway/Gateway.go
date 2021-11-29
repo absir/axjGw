@@ -74,7 +74,6 @@ func main() {
 
 	// socket连接
 	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
-
 		// socket服务
 		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
 		serv, err := net.Listen("tcp", Config.SocketAddr)
@@ -108,7 +107,7 @@ func main() {
 	}
 
 	// websocket连接
-	if Config.HttpAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
+	if Config.HttpAddr != "" && !strings.HasPrefix(Config.HttpAddr, "!") {
 		// http服务
 		AZap.Logger.Info("StartHttp: " + Config.HttpAddr)
 		if Config.HttpWs {

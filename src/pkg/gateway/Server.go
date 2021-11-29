@@ -129,7 +129,7 @@ func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI
 	initHandler()
 	// 路由字典初始化
 	initUriDict()
-	that.Manager = ANet.NewManager(Handler, workId, time.Duration(Config.IdleDrt)*time.Millisecond, time.Duration(Config.CheckDrt)*time.Millisecond)
+	that.Manager = ANet.NewManager(Handler, workId, Config.IdleDrt*int64(time.Millisecond), Config.CheckDrt*time.Millisecond)
 	that.Context = context.Background()
 	that.gatewayISC = &gatewayISC{Server: gatewayI}
 }
@@ -370,7 +370,6 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			manager := that.Manager
 			client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
 			clientG := Handler.ClientG(client)
-			// clientG.Kick()
 			// 用户状态设置
 			clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
 			if clientG.Gid() != "" {

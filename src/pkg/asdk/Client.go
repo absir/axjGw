@@ -344,6 +344,7 @@ func (that *Client) rqAdd(rq *rqDt) {
 
 	} else {
 		rqI := that.rqI
+		var num int32 = 0
 		for {
 			rqI++
 			if rqI <= ANet.REQ_ONEWAY || rqI >= that.rqIMax {
@@ -352,6 +353,12 @@ func (that *Client) rqAdd(rq *rqDt) {
 
 			if that.rqDict[rqI] == nil {
 				break
+			}
+
+			num++
+			if num >= that.rqIMax {
+				num = 0
+				time.Sleep(time.Millisecond)
 			}
 		}
 

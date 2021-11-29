@@ -21,7 +21,6 @@ type chatMng struct {
 	TStartLimit  int           // 群消息检查单次获取列表数
 	TIdleLive    int64         // 群消息发送管道，调用空闲存活时间
 	TPushQueue   int           // 群消息发送管道, 内存管道最大值
-	loopTime     int64
 	checkLoop    int64
 	checkTime    int64
 	tStartTime   int64
@@ -80,9 +79,9 @@ func (that *chatMng) CheckLoop() {
 		return
 	}
 
-	loopTime := time.Now().UnixNano()
-	that.checkLoop = loopTime
-	for loopTime == that.checkLoop {
+	checkLoop := time.Now().UnixNano()
+	that.checkLoop = checkLoop
+	for checkLoop == that.checkLoop {
 		time.Sleep(that.FDrt)
 		checkTime := time.Now().UnixNano()
 		that.checkTime = checkTime

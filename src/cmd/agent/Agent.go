@@ -33,7 +33,7 @@ type config struct {
 	CheckDrt    int
 	RqIMax      int
 	ConnDrt     int
-	Conns       map[string]*agent.RULE
+	Rules       map[string]*agent.RULE
 }
 
 var Config = &config{
@@ -45,7 +45,6 @@ var Config = &config{
 	CheckDrt:    10,
 	RqIMax:      0,
 	ConnDrt:     30,
-	Conns:       map[string]*agent.RULE{},
 }
 
 var Client *asdk.Client
@@ -135,20 +134,20 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 		return
 	case agent.REQ_RULES:
 		// 本地映射配置
-		conns := APro.Cfg.Get("conns")
-		if conns != nil {
+		if Config.Rules != nil {
+			bs, err := json.Marshal(Config.Rules)
+			if err != nil {
+				Kt.Err(err, false)
 
-			json.Marshal(conns)
-
+			} else if bs != nil {
+				adapter.Rep(Client, agent.REQ_RULES, "", 0, bs, false, 0)
+			}
 		}
 
 		return
 	}
 
 	fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
-}
-
-type Conns struct {
 }
 
 type ConnId struct {
