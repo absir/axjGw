@@ -23,9 +23,13 @@ const (
 
 )
 
+// 最大FRAME数
+var FRAME_MAX = 128
+
 // CRC错误
 var ERR_CRC = errors.New("CRC")
 var ERR_MAX = errors.New("MAX")
+var ERR_FRAME_MAX = errors.New("FRAME_MAX")
 
 type ReqFrame struct {
 	Head byte

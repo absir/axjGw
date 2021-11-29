@@ -47,8 +47,8 @@ func (that ACode) Decode(c gnet.Conn) ([]byte, error) {
 			conn.listAsync.SubmitLock(frame, false)
 			conn.locker.Unlock()
 			// frame最大缓冲长度
-			if conn.listAsync.Size() > 0 {
-				return nil, ERR_FRAME_MAX
+			if conn.listAsync.Size() > ANet.FRAME_MAX {
+				return nil, ANet.ERR_FRAME_MAX
 			}
 		}
 	}

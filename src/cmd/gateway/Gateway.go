@@ -81,7 +81,7 @@ func main() {
 			// Gnet服务
 			AZap.Logger.Info("StartGnet: " + Config.SocketAddr)
 			if Config.FrameMax > 0 {
-				AGnet.FRAME_MAX = Config.FrameMax
+				ANet.FRAME_MAX = Config.FrameMax
 			}
 
 			go func() {

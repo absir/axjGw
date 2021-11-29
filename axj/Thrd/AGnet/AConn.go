@@ -3,14 +3,10 @@ package AGnet
 import (
 	"axj/ANet"
 	"axj/Thrd/Util"
-	"errors"
 	"github.com/panjf2000/gnet"
 	"io"
 	"sync"
 )
-
-var FRAME_MAX = 128
-var ERR_FRAME_MAX = errors.New("ERR_BUFF_MAX")
 
 func connCtx(c gnet.Conn) *AConn {
 	ctx := c.Context()
