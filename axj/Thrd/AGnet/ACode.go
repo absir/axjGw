@@ -7,13 +7,11 @@ import (
 
 type ACode struct {
 	processor *ANet.Processor
-	dataMax   int
 }
 
 func NewACode(processor *ANet.Processor) *ACode {
 	that := new(ACode)
 	that.processor = processor
-	that.dataMax = int(processor.DataMax)
 	return that
 }
 
@@ -24,9 +22,16 @@ func (that ACode) Encode(c gnet.Conn, buf []byte) ([]byte, error) {
 func (that ACode) Decode(c gnet.Conn) ([]byte, error) {
 	conn := connCtx(c)
 	if conn != nil {
+		bs := c.Read()
+		c.ResetBuffer()
+		pBs := &bs
 		for {
-			that.processor.Protocol.ReqFrame(c, conn.readerFrame, that.dataMax)
-			frame := conn.readerFrame.DoneFrame()
+			err := that.processor.Protocol.ReqFrame(pBs, conn.frameReader, that.processor.DataMax)
+			if err != nil {
+				return nil, err
+			}
+
+			frame := conn.frameReader.DoneFrame()
 			if frame == nil {
 				break
 			}

@@ -29,7 +29,7 @@ type AConn struct {
 	closed      bool
 	locker      sync.Locker
 	listAsync   *Util.ListAsync
-	readerFrame *ANet.ReaderFrame
+	frameReader *ANet.FrameReader
 	client      ANet.Client
 }
 
@@ -39,7 +39,7 @@ func open(c gnet.Conn, out bool) *AConn {
 	that.out = out
 	that.locker = new(sync.Mutex)
 	that.listAsync = Util.NewListAsync(nil, that.locker)
-	that.readerFrame = &ANet.ReaderFrame{}
+	that.frameReader = &ANet.FrameReader{}
 	return that
 }
 

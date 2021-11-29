@@ -30,6 +30,7 @@ type config struct {
 	SocketAddr string   // socket服务地址
 	SocketOut  bool     // socketOut流写入
 	SocketGnet bool     // Gnet高性能服务
+	FrameMax   int      // 最大帧数
 	GrpcAddr   string   // grpc服务地址
 	GrpcIps    []string // grpc调用Ip白名单，支持*通配
 	LastUrl    string   // 消息持久化，数据库连接
@@ -79,6 +80,10 @@ func main() {
 		if Config.SocketGnet {
 			// Gnet服务
 			AZap.Logger.Info("StartGnet: " + Config.SocketAddr)
+			if Config.FrameMax > 0 {
+				AGnet.FRAME_MAX = Config.FrameMax
+			}
+
 			go func() {
 				err := gnet.Serve(AGnet.NewAHandler(Config.SocketOut, gateway.Server.AConnOpen), "tcp://"+Config.SocketAddr, gnet.WithMulticore(true), gnet.WithCodec(AGnet.NewACode(gateway.Processor)))
 				Kt.Panic(err)

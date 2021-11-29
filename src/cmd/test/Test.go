@@ -9,13 +9,13 @@ import (
 )
 
 func main() {
-	readerFrame := ANet.ReaderFrame{}
-	readerFrame.Req = 2
+	frameReader := ANet.FrameReader{}
+	frameReader.Req = 2
 
-	frame := readerFrame.ReqFrame
+	frame := frameReader.ReqFrame
 	frame.Req = 1
 
-	println(readerFrame.Req)
+	println(frameReader.Req)
 	println(frame.Req)
 
 	testMapRange()

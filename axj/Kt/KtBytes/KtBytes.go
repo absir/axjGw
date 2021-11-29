@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+var EMPTY_BYTES = []byte{}
+
 func Copy(bs []byte) []byte {
 	if bs == nil {
 		return nil

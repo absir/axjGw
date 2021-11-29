@@ -27,12 +27,6 @@ const (
 var ERR_CRC = errors.New("CRC")
 var ERR_MAX = errors.New("MAX")
 
-type BuffReader interface {
-	ReadN(n int) (size int, buf []byte)
-	ShiftN(n int) (size int)
-	BufferLength() (size int)
-}
-
 type ReqFrame struct {
 	Head byte
 	Req  int32
@@ -42,27 +36,20 @@ type ReqFrame struct {
 	Data []byte
 }
 
-type ReaderFrame struct {
+type FrameReader struct {
 	ReqFrame
-	ReaderI   int8
-	ReaderI32 int
+	readerB int8
+	readerI int
+	i32     int32
+	i64     int64
 }
 
-func (that *ReaderFrame) IsDone() bool {
-	return that.ReaderI == -1
+func (that *FrameReader) IsDone() bool {
+	return that.readerB == -1
 }
 
-func (that *ReaderFrame) Reset() {
-	that.ReaderI = 0
-	that.Req = 0
-	that.Uri = ""
-	that.UriI = 0
-	that.Fid = 0
-	that.Data = nil
-}
-
-func (that *ReaderFrame) DoneFrame() *ReqFrame {
-	if that.ReaderI == -1 {
+func (that *FrameReader) DoneFrame() *ReqFrame {
+	if that.readerB == -1 {
 		frame := that.ReqFrame
 		that.Reset()
 		return &frame
@@ -71,25 +58,150 @@ func (that *ReaderFrame) DoneFrame() *ReqFrame {
 	return nil
 }
 
-func (that *ReaderFrame) readVInt(reader BuffReader) int32 {
-	_, bs := reader.ReadN(4)
-	var off int32 = 0
-	i := KtBytes.GetVIntSafe(bs, off, &off)
-	if i >= 0 {
-		reader.ShiftN(int(off))
-	}
-
-	return i
+func (that *FrameReader) Reset() {
+	that.Req = 0
+	that.Uri = ""
+	that.UriI = 0
+	that.Fid = 0
+	that.readerB = 0
+	that.next()
 }
 
-func (that *ReaderFrame) readBytes(reader BuffReader, bLen int) ([]byte, error) {
-	_, bs := reader.ReadN(bLen)
-	if len(bs) != bLen {
-		return nil, nil
+func (that *FrameReader) next() {
+	that.Data = nil
+	that.readerI = 0
+	that.i32 = 0
+	that.i64 = 0
+}
+
+func (that *FrameReader) readByte(pBs *[]byte) (byte, bool) {
+	bs := *pBs
+	bLen := len(bs)
+	if bLen > 0 {
+		b := bs[0]
+		*pBs = bs[1:]
+		return b, true
 	}
 
-	reader.ShiftN(bLen)
-	return bs, nil
+	return 0, false
+}
+
+func (that *FrameReader) readVInt(pBs *[]byte) int32 {
+	bs := *pBs
+	bLen := len(bs)
+	i32 := that.i32
+	for i := 0; i < bLen; i++ {
+		b := bs[i]
+		switch that.readerI {
+		case 0:
+			i32 += int32(b) & KtBytes.VINT
+			break
+		case 1:
+			i32 += int32(b&KtBytes.VINT_B) << 7
+			break
+		case 2:
+			i32 += int32(b&KtBytes.VINT_B) << 14
+			break
+		case 3:
+			i32 += int32(b) << 21
+			break
+		}
+
+		if that.readerI >= 3 || (b&KtBytes.VINT_NB) == 0 {
+			*pBs = bs[i+1:]
+			that.readerI = 0
+			that.i32 = 0
+			return i32
+
+		} else {
+			that.readerI++
+		}
+	}
+
+	return -1
+}
+
+func (that *FrameReader) readLong(pBs *[]byte) int64 {
+	bs := *pBs
+	bLen := len(bs)
+	i64 := that.i64
+	for i := 0; i < bLen; i++ {
+		b := bs[i]
+		switch that.readerI {
+		case 0:
+			i64 += int64(b)
+			break
+		case 1:
+			i64 += int64(b) << 8
+			break
+		case 2:
+			i64 += int64(b) << 16
+			break
+		case 3:
+			i64 += int64(b) << 24
+			break
+		case 4:
+			i64 += int64(b) << 32
+			break
+		case 5:
+			i64 += int64(b) << 40
+			break
+		case 6:
+			i64 += int64(b) << 48
+			break
+		case 7:
+			i64 += int64(b) << 56
+			break
+		}
+
+		if that.readerI >= 7 {
+			*pBs = bs[i+1:]
+			that.readerI = 0
+			that.i64 = 0
+			return i64
+
+		} else {
+			that.readerI++
+		}
+	}
+
+	return -1
+}
+
+func (that *FrameReader) readDataLen(pBs *[]byte, dataMax int32) (bool, error) {
+	dLen := that.readVInt(pBs)
+	if dLen >= 0 {
+		if dLen > dataMax {
+			return false, ERR_MAX
+		}
+
+		that.Data = make([]byte, dLen)
+		that.i32 = dLen
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (that *FrameReader) readData(pBs *[]byte) []byte {
+	bs := *pBs
+	bLen := len(bs)
+	dLen := int(that.i32)
+	if dLen <= bLen {
+		copy(that.Data[that.readerI:], bs[:dLen])
+		*pBs = bs[dLen:]
+		data := that.Data
+		that.Data = nil
+		that.readerI = 0
+		that.i32 = 0
+		return data
+
+	} else {
+		copy(that.Data[that.readerI:], bs)
+		that.readerI += bLen
+		that.i32 -= int32(bLen)
+		return nil
+	}
 }
 
 // 数据协议
@@ -99,7 +211,7 @@ type Protocol interface {
 	// 流请求读取
 	ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 帧请求读取
-	ReqFrame(reader BuffReader, frame *ReaderFrame, dataMax int) error
+	ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32) error
 	// 返回数据 dLength data强制长度，不copydata
 	Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32)
 	// 返回流写入
@@ -240,143 +352,116 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax
 	return
 }
 
-func (that *ProtocolV) ReqFrame(reader BuffReader, frame *ReaderFrame, dataMax int) error {
+func (that *ProtocolV) ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32) error {
 	for {
-		switch frame.ReaderI {
+		switch reader.readerB {
 		case 0:
 			// 读取头
-			if reader.BufferLength() < 1 {
+			b, ok := reader.readByte(pBs)
+			if !ok {
 				return nil
 			}
-			_, bs := reader.ReadN(1)
-			frame.Head = bs[0]
+
+			reader.Head = b
 			// 头校验
-			if !that.isCrc(frame.Head) {
+			if !that.isCrc(reader.Head) {
 				return ERR_CRC
 			}
 
-			reader.ShiftN(1)
-			frame.ReaderI++
+			reader.readerB++
 			break
 		case 1:
-			if (frame.Head & HEAD_REQ) != 0 {
+			if (reader.Head & HEAD_REQ) != 0 {
 				// 读取Req
-				if reader.BufferLength() < 1 {
-					return nil
-				}
-				frame.Req = frame.readVInt(reader)
-				if frame.Req < 0 {
+				reader.Req = reader.readVInt(pBs)
+				if reader.Req < 0 {
 					return nil
 				}
 			}
-			frame.ReaderI++
+			reader.readerB++
 			break
 		case 2:
-			if (frame.Head & HEAD_URI) != 0 {
+			if (reader.Head & HEAD_URI) != 0 {
 				// 读取Uri
-				if reader.BufferLength() < 1 {
-					return nil
-				}
-				frame.ReaderI32 = int(frame.readVInt(reader))
-				if frame.ReaderI32 < 0 {
-					return nil
-				}
-
-				// 转到读取Uri[string]
-				frame.ReaderI++
-
-			} else {
-				// 直接转到读取UriI
-				frame.ReaderI += 2
-			}
-			break
-		case 3:
-			// 读取Uri[string]
-			if reader.BufferLength() < frame.ReaderI32 {
-				return nil
-			}
-			bs, err := frame.readBytes(reader, frame.ReaderI32)
-			if err != nil {
-				return err
-			}
-
-			if bs == nil {
-				return nil
-			}
-
-			frame.Uri = KtUnsafe.BytesToString(bs)
-			frame.ReaderI++
-			break
-		case 4:
-			if (frame.Head & HEAD_URI_I) != 0 {
-				// 读取UriI
-				if reader.BufferLength() < 1 {
-					return nil
-				}
-				frame.UriI = frame.readVInt(reader)
-				if frame.UriI < 0 {
-					return nil
-				}
-			}
-			frame.ReaderI++
-			break
-		case 5:
-			// 读取fid
-			if frame.Req == REQ_PUSHI {
-				if reader.BufferLength() < 8 {
-					return nil
-				}
-				bs, err := frame.readBytes(reader, 8)
+				ok, err := reader.readDataLen(pBs, dataMax)
 				if err != nil {
 					return err
 				}
 
-				if bs == nil {
+				if !ok {
 					return nil
 				}
 
-				frame.Fid = KtBytes.GetInt64(bs, 0, nil)
+				// 转到读取Uri[string]
+				reader.readerB++
+
+			} else {
+				// 直接转到读取UriI
+				reader.readerB += 2
 			}
-			frame.ReaderI++
-		case 6:
-			if (frame.Head & HEAD_DATA) != 0 {
-				// 读取DATA
-				if reader.BufferLength() < 1 {
+			break
+		case 3:
+			// 读取Uri[string]
+			data := reader.readData(pBs)
+			if data == nil {
+				return nil
+			}
+
+			reader.Uri = KtUnsafe.BytesToString(data)
+			reader.readerB++
+			break
+		case 4:
+			if (reader.Head & HEAD_URI_I) != 0 {
+				// 读取UriI
+				reader.UriI = reader.readVInt(pBs)
+				if reader.UriI < 0 {
 					return nil
 				}
-				frame.ReaderI32 = int(frame.readVInt(reader))
-				if frame.ReaderI32 < 0 {
+			}
+			reader.readerB++
+			break
+		case 5:
+			// 读取fid
+			if reader.Req == REQ_PUSHI {
+				reader.Fid = reader.readLong(pBs)
+				if reader.Fid < 0 {
+					return nil
+				}
+			}
+			reader.readerB++
+		case 6:
+			if (reader.Head & HEAD_DATA) != 0 {
+				// 读取DATA
+				ok, err := reader.readDataLen(pBs, dataMax)
+				if err != nil {
+					return err
+				}
+
+				if !ok {
 					return nil
 				}
 
 				// 转到读取Data[[]byte]
-				frame.ReaderI++
+				reader.readerB++
 
 			} else {
 				// 直接转到frameDone
-				frame.ReaderI += 2
+				reader.readerB += 2
 			}
 			break
 		case 7:
 			// 读取Data[[]byte]
-			if reader.BufferLength() < frame.ReaderI32 {
-				return nil
-			}
-			bs, err := frame.readBytes(reader, frame.ReaderI32)
-			if err != nil {
-				return err
-			}
-
-			if bs == nil {
+			data := reader.readData(pBs)
+			if data == nil {
 				return nil
 			}
 
-			frame.Data = bs
-			frame.ReaderI++
+			reader.Data = data
+			reader.readerB++
 			break
 		default:
 			// frameDone
-			frame.ReaderI = -1
+			reader.readerB = -1
 			return nil
 		}
 	}
