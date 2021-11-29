@@ -11,7 +11,6 @@ import (
 	"axj/Thrd/Util"
 	"axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
-	"github.com/panjf2000/gnet/pool/goroutine"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 	"net"
@@ -55,7 +54,6 @@ func main() {
 	APro.Load(nil, "config.yml")
 
 	// 协程池
-	Util.GoPool = goroutine.Default()
 
 	// 默认配置
 	{
@@ -94,7 +92,8 @@ func main() {
 					continue
 				}
 
-				sConn := ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut)
+				tConn := conn.(*net.TCPConn)
+				sConn := ANet.NewConnSocket(tConn, Config.SocketOut)
 				if Config.SocketPoll {
 					// 优先ePoll模式
 					gateway.Server.ConnPoll(sConn)
