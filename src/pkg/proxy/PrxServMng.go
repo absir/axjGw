@@ -10,6 +10,7 @@ import (
 	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/gateway"
+	"encoding/json"
 	"io"
 	"net"
 	"strconv"
@@ -47,6 +48,7 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 		Processor.Encrypt = &ANet.EncryptSr{}
 	}
 	that.Manager = ANet.NewManager(Handler, wordId, Config.IdleDrt*int64(time.Millisecond), Config.CheckDrt*time.Millisecond)
+	initProtos()
 	initPrxMng()
 }
 
@@ -226,6 +228,19 @@ func (h handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, 
 	clientG := Handler.ClientG(client)
 	if req == agent.REQ_RULES && clientG.IsRules() {
 		// 接受本地映射配置
+		var rules map[string]*agent.RULE
+		json.Unmarshal(data, &rules)
+		if rules != nil {
+			for name, rule := range rules {
+				proto := FindProto(rule.Proto, true)
+				if proto == nil {
+					continue
+				}
+
+				serv := StartServ(name, rule.Addr, proto)
+				serv.Update(proto, clientG.Id(), rule.Addr)
+			}
+		}
 
 		return
 	}
