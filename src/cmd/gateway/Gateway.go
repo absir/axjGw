@@ -6,13 +6,11 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
-	"axj/Thrd/AGnet"
 	"axj/Thrd/AZap"
 	"axj/Thrd/AZap/AZapIst"
 	"axj/Thrd/Util"
 	"axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
-	"github.com/panjf2000/gnet"
 	"github.com/panjf2000/gnet/pool/goroutine"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
@@ -29,7 +27,6 @@ type config struct {
 	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
 	SocketOut  bool     // socketOut流写入
-	SocketGnet bool     // Gnet高性能服务
 	FrameMax   int      // 最大帧数
 	GrpcAddr   string   // grpc服务地址
 	GrpcIps    []string // grpc调用Ip白名单，支持*通配
@@ -41,7 +38,6 @@ var Config = &config{
 	HttpWs:     true,
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
-	SocketGnet: true,
 	GrpcAddr:   "127.0.0.1:8082",
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -77,43 +73,30 @@ func main() {
 
 	// socket连接
 	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
-		if Config.SocketGnet {
-			// Gnet服务
-			AZap.Logger.Info("StartGnet: " + Config.SocketAddr)
-			if Config.FrameMax > 0 {
-				ANet.FRAME_MAX = Config.FrameMax
-			}
 
-			go func() {
-				err := gnet.Serve(AGnet.NewAHandler(Config.SocketOut, gateway.Server.AConnOpen), "tcp://"+Config.SocketAddr, gnet.WithMulticore(true), gnet.WithCodec(AGnet.NewACode(gateway.Processor)))
-				Kt.Panic(err)
-			}()
-
-		} else {
-			// socket服务
-			AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
-			serv, err := net.Listen("tcp", Config.SocketAddr)
-			Kt.Panic(err)
-			defer serv.Close()
-			go func() {
-				for !APro.Stopped {
-					conn, err := serv.Accept()
-					if err != nil {
-						if APro.Stopped {
-							return
-						}
-
-						AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
-						continue
+		// socket服务
+		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
+		serv, err := net.Listen("tcp", Config.SocketAddr)
+		Kt.Panic(err)
+		defer serv.Close()
+		go func() {
+			for !APro.Stopped {
+				conn, err := serv.Accept()
+				if err != nil {
+					if APro.Stopped {
+						return
 					}
 
-					aConn := ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut)
-					Util.GoSubmit(func() {
-						gateway.Server.ConnLoop(aConn)
-					})
+					AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
+					continue
 				}
-			}()
-		}
+
+				aConn := ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut)
+				Util.GoSubmit(func() {
+					gateway.Server.ConnLoop(aConn)
+				})
+			}
+		}()
 	}
 
 	// websocket连接
