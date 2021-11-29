@@ -6,7 +6,6 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
-	"axj/Thrd/AGnet"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Disc"
 	"axj/Thrd/Util"
@@ -242,35 +241,6 @@ func (that *server) ConnLoop(conn ANet.Conn) {
 	}
 }
 
-func (that *server) AConnOpen(aConn *AGnet.AConn) {
-	var conn ANet.Conn = aConn
-	var done bool
-	var client ANet.Client
-	var encryptKey []byte = nil
-	fun := that.connOpenFun(&conn, &encryptKey)
-	aConn.StartFun(func(el interface{}) {
-		frame, _ := el.(*ANet.ReqFrame)
-		if frame == nil {
-			aConn.Close()
-			return
-		}
-
-		if !done {
-			done, client = fun(Processor.ReqFrame(frame, encryptKey))
-		}
-
-		if done {
-			if client == nil {
-				aConn.Close()
-				return
-			}
-
-			aConn.StartReq(client, frame)
-			return
-		}
-	})
-}
-
 func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	conn := *pConn
 	var encryptKey []byte = nil
@@ -281,6 +251,42 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 			return client
 		}
 	}
+}
+
+func (that *server) ConnPoll(conn ANet.Conn) {
+	connPoll := conn.ConnPoll()
+	if connPoll == nil {
+		Util.GoSubmit(func() {
+			Server.ConnLoop(conn)
+		})
+		return
+	}
+
+	var done bool
+	var client ANet.Client
+	var encryptKey []byte = nil
+	fun := that.connOpenFun(&conn, &encryptKey)
+	connPoll.FrameStart(func(el interface{}) {
+		frame, _ := el.(*ANet.ReqFrame)
+		if frame == nil {
+			conn.Close()
+			return
+		}
+
+		if !done {
+			done, client = fun(Processor.ReqFrame(frame, encryptKey))
+		}
+
+		if done {
+			if client == nil {
+				conn.Close()
+				return
+			}
+
+			connPoll.FrameReq(client, frame)
+			return
+		}
+	})
 }
 
 func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err error, req int32, uri string, uriI int32, data []byte) (bool, ANet.Client) {

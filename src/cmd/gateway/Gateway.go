@@ -27,6 +27,7 @@ type config struct {
 	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
 	SocketOut  bool     // socketOut流写入
+	SocketPoll bool     // socketPoll读取
 	FrameMax   int      // 最大帧数
 	GrpcAddr   string   // grpc服务地址
 	GrpcIps    []string // grpc调用Ip白名单，支持*通配
@@ -38,6 +39,8 @@ var Config = &config{
 	HttpWs:     true,
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
+	SocketOut:  false,
+	SocketPoll: true,
 	GrpcAddr:   "127.0.0.1:8082",
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -91,10 +94,16 @@ func main() {
 					continue
 				}
 
-				aConn := ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut)
-				Util.GoSubmit(func() {
-					gateway.Server.ConnLoop(aConn)
-				})
+				sConn := ANet.NewConnSocket(conn.(*net.TCPConn), Config.SocketOut)
+				if Config.SocketPoll {
+					// 优先ePoll模式
+					gateway.Server.ConnPoll(sConn)
+
+				} else {
+					Util.GoSubmit(func() {
+						gateway.Server.ConnLoop(sConn)
+					})
+				}
 			}
 		}()
 	}

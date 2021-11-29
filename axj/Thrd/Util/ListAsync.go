@@ -35,7 +35,7 @@ func (that *ListAsync) SetRun(run func(interface{})) {
 	}
 }
 
-func (that *ListAsync) Close(lock bool) {
+func (that *ListAsync) Clear(lock bool) {
 	if lock {
 		that.locker.Lock()
 	}
@@ -120,11 +120,19 @@ func (that *ListAsync) runOut() {
 	}
 }
 
-func (that *ListAsync) runDone() bool {
+func (that *ListAsync) runDone() (bool, interface{}) {
 	that.locker.Lock()
-	done := that.size <= 0
+	front := that.list.Front()
+	if front == nil {
+		that.locker.Unlock()
+		return true, nil
+	}
+
+	el := front.Value
+	that.size--
+	that.list.Remove(front)
 	that.locker.Unlock()
-	return done
+	return false, el
 }
 
 func (that *ListAsync) runDo() {
@@ -134,9 +142,11 @@ func (that *ListAsync) runDo() {
 	}
 
 	defer that.runOut()
+	var done bool
 	for {
 		that.run(el)
-		if that.runDone() {
+		done, el = that.runDone()
+		if done {
 			break
 		}
 	}

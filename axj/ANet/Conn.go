@@ -26,6 +26,8 @@ type Conn interface {
 	Close()
 	// 远程地址
 	RemoteAddr() string
+	// EPoll模式
+	ConnPoll() *ConnPoll
 }
 
 type ConnSocket struct {
@@ -104,6 +106,10 @@ func (that *ConnSocket) RemoteAddr() string {
 	return that.Conn().RemoteAddr().String()
 }
 
+func (that *ConnSocket) ConnPoll() *ConnPoll {
+	return nil
+}
+
 type ConnWebsocket websocket.Conn
 
 func NewConnWebsocket(conn *websocket.Conn) *ConnWebsocket {
@@ -152,4 +158,8 @@ func (that *ConnWebsocket) Close() {
 
 func (that *ConnWebsocket) RemoteAddr() string {
 	return that.Conn().RemoteAddr().String()
+}
+
+func (that *ConnWebsocket) ConnPoll() *ConnPoll {
+	return nil
 }
