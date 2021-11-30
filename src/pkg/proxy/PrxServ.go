@@ -3,39 +3,62 @@ package proxy
 import (
 	"axj/ANet"
 	"axj/APro"
+	"axj/Kt/Kt"
+	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
+	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
+	"axjGW/pkg/proxy/PProto"
 	"bytes"
-	"errors"
 	"go.uber.org/zap"
 	"net"
 	"strconv"
+	"strings"
 )
 
-type prxServ struct {
+type PrxServ struct {
 	Name  string
+	Addr  string
 	Proto PrxProto
+	Cfg   interface{}
 	cid   int64
-	pAddr string
+	rule  *agent.RULE
 }
 
-func StartServ(name string, addr string, proto PrxProto) *prxServ {
+func StartServ(name string, addr string, proto PrxProto, cfg map[string]string) *PrxServ {
+	if addr == "" || proto == nil {
+		return nil
+	}
+
+	if addr[0] >= '0' && addr[0] <= '9' && KtCvt.ToInt32(addr) > 0 {
+		addr = ":" + addr
+	}
+
 	val, _ := PrxServMng.servMap.Load(addr)
 	if val != nil {
-		that, _ := val.(*prxServ)
+		that, _ := val.(*PrxServ)
 		return that
 	}
 
-	that := new(prxServ)
+	that := new(PrxServ)
 	that.Name = name
+	that.Addr = addr
 	that.Proto = proto
-	serv, err := net.Listen("tcp", addr)
-	if err != nil {
-		AZap.Logger.Error("prxServ Start err", zap.Error(err))
+	// 协议配置
+	that.Cfg = that.Proto.NewCfg()
+	if cfg != nil {
+		KtCvt.BindInterface(that.Cfg, cfg)
 	}
 
-	AZap.Logger.Info("prxServ Start " + addr)
+	serv, err := net.Listen("tcp", addr)
+	if err != nil {
+		AZap.Logger.Error("PrxServ Start err", zap.Error(err))
+		return nil
+	}
+
+	PrxServMng.servMap.Store(addr, that)
+	AZap.Logger.Info("PrxServ Start " + addr)
 	Util.GoSubmit(func() {
 		for !APro.Stopped {
 			conn, err := serv.Accept()
@@ -44,7 +67,7 @@ func StartServ(name string, addr string, proto PrxProto) *prxServ {
 					return
 				}
 
-				AZap.Logger.Warn("prxServ Accept Err", zap.Error(err))
+				AZap.Logger.Warn("PrxServ Accept Err", zap.Error(err))
 				continue
 			}
 
@@ -55,33 +78,49 @@ func StartServ(name string, addr string, proto PrxProto) *prxServ {
 	return that
 }
 
-func (that *prxServ) Update(proto PrxProto, cid int64, pAddr string) {
-	if that.Proto != proto {
-		AZap.Logger.Warn("prxServ Update err " + that.Proto.Name() + " => " + proto.Name())
+func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *agent.RULE) {
+	if proto != nil && that.Proto != proto {
+		AZap.Logger.Warn("PrxServ Rule err " + that.Proto.Name() + " => " + proto.Name())
 		return
 	}
 
-	if cid > 0 && pAddr != "" {
-		that.cid = cid
-		that.pAddr = pAddr
-		AZap.Logger.Info("prxServ Update " + strconv.FormatInt(cid, 10) + " => " + pAddr)
+	sName := clientG.gid
+	if sName == "" {
+		sName = strconv.FormatInt(clientG.Id(), 10)
+	}
+
+	// 服务名一致，不需要别名
+	if name != that.Name {
+		sName = sName + "@" + name
+	}
+
+	// 提示映射规则
+	desc := that.Proto.ServAddr(that.Cfg, sName)
+	if desc == "" {
+		desc = sName + that.Addr
+	}
+
+	desc = desc + " => " + rule.Addr
+	AZap.Logger.Info("PrxServ Rule " + desc)
+	// 发送给客户端
+	clientG.Rep(true, agent.REQ_ON_RULE, desc, 0, nil, false, false, 0)
+	if _, ok := proto.(PProto.Socket); ok {
+		that.cid = clientG.Id()
+		that.rule = rule
 	}
 }
 
-func (that *prxServ) accept(conn *net.TCPConn) {
-	buff := make([]byte, that.Proto.ReadBufferSize())
+func (that *PrxServ) accept(conn *net.TCPConn) {
+	buff := make([]byte, that.Proto.ReadBufferSize(that.Cfg))
 	buffer := &bytes.Buffer{}
 	name := ""
 	Util.GoSubmit(func() {
+		var size = 0
+		var err error
+		ctx := that.Proto.ReadServerCtx(that.Cfg, conn)
 		for {
-			size, err := conn.Read(buff)
-			if err != nil || size <= 0 {
-				PrxMng.closeConn(conn, err)
-				return
-			}
-
 			ok := false
-			ok, err = that.Proto.ReadServerName(buffer, buff[:size], &name)
+			ok, err = that.Proto.ReadServerName(that.Cfg, ctx, buffer, buff[:size], &name, conn)
 			if err != nil {
 				PrxMng.closeConn(conn, err)
 				return
@@ -90,17 +129,32 @@ func (that *prxServ) accept(conn *net.TCPConn) {
 			if ok {
 				break
 			}
+
+			// 读取缓冲数据过大
+			if buffer.Len() > that.Proto.ReadBufferMax(that.Cfg) {
+				PrxMng.closeConn(conn, err)
+				return
+			}
+
+			// 二次读取
+			size, err = conn.Read(buff)
+			if err != nil || size <= 0 {
+				PrxMng.closeConn(conn, err)
+				return
+			}
 		}
 
 		// 解析代理连接成功
 		client, pAddr := that.clientPAddr(name, that.Proto)
 		if client == nil || pAddr == "" {
-			PrxMng.closeConn(conn, errors.New("NO CLIENT RULE "+that.Name+" - "+name))
+			PrxMng.closeConn(conn, Kt.NewErrReason("NO CLIENT RULE "+that.Name+" - "+name))
 			return
 		}
 
-		id, adap := PrxMng.adapOpen(that.Proto, conn, buff)
-		err := client.Get().Rep(true, agent.REQ_CONN, pAddr, id, buffer.Bytes(), false, false, 0)
+		data := buffer.Bytes()
+		buffer.Reset()
+		id, adap := PrxMng.adapOpen(that, conn, buff, ctx, buffer)
+		err = client.Get().Rep(true, agent.REQ_CONN, pAddr, id, data, false, false, 0)
 		if err != nil {
 			adap.Close(err)
 			return
@@ -109,16 +163,84 @@ func (that *prxServ) accept(conn *net.TCPConn) {
 }
 
 // 获取代理客户端，代理地址
-func (that *prxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, string) {
-	if that.cid > 0 && that.pAddr != "" {
-		// 指定代理
-		client := PrxServMng.Manager.Client(that.cid)
+func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, string) {
+	idx := strings.IndexByte(name, '.')
+	str := name
+	if idx >= 0 {
+		str = name[0:idx]
+	}
+
+	strs := strings.SplitN(str, "@", 2)
+	gid := strs[0]
+	sub := ""
+	if len(strs) > 1 {
+		sub = strs[1]
+	}
+
+	var client ANet.Client = nil
+	if gid == "" && sub == "" {
+		if that.cid > 0 && that.rule != nil {
+			client = PrxServMng.Manager.Client(that.cid)
+			if client == nil {
+				return nil, ""
+			}
+
+			return client, that.rule.Addr
+		}
+
+	} else if gid != "" {
+		val, _ := PrxMng.gidMap.Load(gid)
+		cid, _ := val.(int64)
+		if cid <= 0 {
+			cid = KtCvt.ToInt64(gid)
+			if cid <= 0 {
+				return nil, ""
+			}
+		}
+
+		client = PrxServMng.Manager.Client(cid)
 		if client == nil {
 			return nil, ""
 		}
 
-		return client, that.pAddr
+		clientG := Handler.ClientG(client)
+		if clientG.ruleServs != nil {
+			// 服务名一致，不需要别名
+			sName := sub
+			if sName == that.Name {
+				return client, ""
+
+			} else if sName == "" {
+				sName = that.Name
+			}
+
+			ruleServ := clientG.ruleServs[sName]
+			if ruleServ != nil {
+				if ruleServ.serv != that {
+					return client, ""
+				}
+
+				// 返回客户端，规则地址
+				return client, ruleServ.rule.Addr
+			}
+		}
 	}
 
-	return nil, ""
+	if AclClient != nil {
+		rep, err := AclClient.Addr(Config.AclCtx(), &gw.AddrReq{
+			Gid:  gid,
+			Sub:  sub,
+			Name: name,
+		})
+
+		if err != nil {
+			AZap.Warn("AclClient.Addr Err", zap.Error(err))
+		}
+
+		if rep != nil && rep.Addr != "" {
+			return client, rep.Addr
+		}
+	}
+
+	return client, ""
 }

@@ -1,6 +1,7 @@
 package ANet
 
 import (
+	"axj/Kt/Kt"
 	"golang.org/x/net/websocket"
 	"io"
 	"net"
@@ -103,7 +104,7 @@ func (that *ConnSocket) Close() {
 }
 
 func (that *ConnSocket) RemoteAddr() string {
-	return that.Conn().RemoteAddr().String()
+	return Kt.IpAddr(that.Conn().RemoteAddr())
 }
 
 func (that *ConnSocket) ConnPoll() *ConnPoll {
@@ -157,7 +158,7 @@ func (that *ConnWebsocket) Close() {
 }
 
 func (that *ConnWebsocket) RemoteAddr() string {
-	return that.Conn().RemoteAddr().String()
+	return Kt.IpAddr(that.Conn().RemoteAddr())
 }
 
 func (that *ConnWebsocket) ConnPoll() *ConnPoll {

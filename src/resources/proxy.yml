@@ -1,0 +1,11 @@
+Servs:
+  http:
+    Addr: 9080
+    Proto: http
+    Cfg:
+      ServName: proxy.com:9080
+      RealIp: X-Original-Forwarded-For
+
+
+ClientKeys:
+  61A583A27A845A3835A32D4C: 22

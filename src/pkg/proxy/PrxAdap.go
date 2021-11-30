@@ -2,18 +2,23 @@ package proxy
 
 import (
 	"axj/Thrd/Util"
+	"bytes"
 	"net"
 	"sync"
+	"time"
 )
 
 type PrxAdap struct {
-	locker   sync.Locker
-	closed   bool
-	proto    PrxProto
-	outConn  *net.TCPConn // 外部代理连接
-	outBuff  []byte
-	passTime int64        // 超时时间
-	inConn   *net.TCPConn // 内部处理连接
+	id        int32
+	locker    sync.Locker
+	closed    bool
+	serv      *PrxServ
+	outConn   *net.TCPConn // 外部代理连接
+	outBuff   []byte
+	outCtx    interface{}
+	outBuffer *bytes.Buffer
+	passTime  int64        // 超时时间
+	inConn    *net.TCPConn // 内部处理连接
 }
 
 func (that *PrxAdap) Close(err error) {
@@ -29,8 +34,13 @@ func (that *PrxAdap) Close(err error) {
 
 	that.closed = true
 	that.locker.Unlock()
+	PrxMng.connMap.Delete(that.id)
 	PrxMng.closeConn(that.outConn, nil)
 	PrxMng.closeConn(that.inConn, err)
+}
+
+func (that *PrxAdap) OnKeep() {
+	that.passTime = time.Now().UnixNano() + Config.AdapTimeout
 }
 
 func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
@@ -45,7 +55,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 	that.inConn = inConn
 	that.locker.Unlock()
 	{
-		inBuff := make([]byte, that.proto.ReadBufferSize())
+		inBuff := make([]byte, that.serv.Proto.ReadBufferSize(that.serv.Cfg))
 		Util.GoSubmit(func() {
 			// 数据转发
 			for {
@@ -74,7 +84,21 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 					return
 				}
 
-				_, err = that.inConn.Write(that.outBuff[:size])
+				data := that.outBuff[:size]
+				if that.outCtx != nil {
+					data, err = that.serv.Proto.ProcServerData(that.serv.Cfg, that.outCtx, that.outBuffer, data, that.outConn)
+				}
+
+				if err != nil {
+					that.Close(err)
+					return
+				}
+
+				if data == nil {
+					continue
+				}
+
+				_, err = that.inConn.Write(data)
 				if err != nil {
 					that.Close(err)
 					return

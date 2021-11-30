@@ -19,7 +19,7 @@ func main() {
 	APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 		return runtime.Caller(0)
 	}, "../../resources")
-	APro.Load(nil, "config.yml")
+	APro.Load(nil, "proxy.yml")
 
 	// 默认配置
 	{

@@ -137,6 +137,20 @@ message TeamRep {
     bool readFeed = 3;
 }
 
+message AddrReq {
+    // gid
+    string gid = 1;
+    // 子名
+    string sub = 2;
+    // 全名
+    string name = 3;
+}
+
+message AddrRep {
+    // 映射地址
+    string addr = 1;
+}
+
 service Acl {
     // 登录
     rpc login(LoginReq) returns (LoginRep);
@@ -146,6 +160,8 @@ service Acl {
     rpc discBack(LoginBack) returns (Id32Rep);
     // 组查询 tid
     rpc team(GidReq) returns (TeamRep);
+    // 代理查询
+    rpc addr(AddrReq) returns (AddrRep);
 }
 
 message PassReq {

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
+	"net"
 	"os"
 	"runtime"
+	"strings"
 )
 
 const (
@@ -148,7 +150,47 @@ func HashCode(bs []byte) int {
 	return 0
 }
 
+func IpAddr(addr net.Addr) string {
+	if tAddr, ok := addr.(*net.TCPAddr); ok {
+		if tAddr.Zone != "" {
+			return tAddr.Zone
+		}
+
+		return tAddr.IP.String()
+	}
+
+	if uAddr, ok := addr.(*net.UDPAddr); ok {
+		if uAddr.Zone != "" {
+			return uAddr.Zone
+		}
+
+		return uAddr.IP.String()
+	}
+
+	str := addr.String()
+	idx := strings.IndexByte(str, ':')
+	if idx >= 0 {
+		return str[:idx]
+	}
+
+	return str
+}
+
 func PrintStacks() {
 	var buf [2 << 10]byte
 	fmt.Println(string(buf[:runtime.Stack(buf[:], true)]))
+}
+
+type ErrReason struct {
+	reason string
+}
+
+func (e ErrReason) Error() string {
+	return e.reason
+}
+
+func NewErrReason(reason string) error {
+	that := new(ErrReason)
+	that.reason = reason
+	return that
 }

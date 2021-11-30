@@ -1,9 +1,10 @@
 package proxy
 
 import (
+	"axj/Kt/Kt"
 	"axj/Thrd/AZap"
 	"axj/Thrd/cmap"
-	"errors"
+	"bytes"
 	"go.uber.org/zap"
 	"io"
 	"net"
@@ -18,16 +19,18 @@ type prxMng struct {
 	loopTime  int64
 	checkTime int64
 	checkBuff []interface{}
+	gidMap    *cmap.CMap
 }
 
 var PrxMng *prxMng
 
-var ERR_TIMEOUT = errors.New("TIMEOUT")
+var ERR_TIMEOUT = Kt.NewErrReason("TIMEOUT")
 
 func initPrxMng() {
 	that := new(prxMng)
 	that.locker = new(sync.Mutex)
 	that.connMap = cmap.NewCMapInit()
+	that.gidMap = cmap.NewCMapInit()
 	PrxMng = that
 }
 
@@ -39,7 +42,12 @@ func (that *prxMng) closeConn(conn *net.TCPConn, err error) {
 	conn.SetLinger(0)
 	conn.Close()
 	if err != nil && err != io.EOF {
-		AZap.Logger.Warn("PrxAdap close", zap.Error(err))
+		if errR, ok := err.(*Kt.ErrReason); ok {
+			AZap.Logger.Debug("PrxAdap Close " + errR.Error())
+
+		} else {
+			AZap.Logger.Warn("PrxAdap Close", zap.Error(err))
+		}
 	}
 }
 
@@ -72,12 +80,17 @@ func (that *prxMng) checkRange(key, val interface{}) bool {
 	return true
 }
 
-func (that *prxMng) adapOpen(proto PrxProto, outConn *net.TCPConn, outBuff []byte) (int32, *PrxAdap) {
+func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte, outCtx interface{}, outBuffer *bytes.Buffer) (int32, *PrxAdap) {
 	adap := new(PrxAdap)
 	adap.locker = new(sync.Mutex)
-	adap.proto = proto
+	adap.serv = serv
 	adap.outConn = outConn
 	adap.outBuff = outBuff
+	adap.outCtx = adap.serv.Proto.ProcServerCtx(adap.serv.Cfg, outCtx, outConn)
+	if adap.outCtx != nil {
+		adap.outBuffer = outBuffer
+	}
+
 	var num int32 = 0
 	that.locker.Lock()
 	id := that.connId
@@ -91,7 +104,8 @@ func (that *prxMng) adapOpen(proto PrxProto, outConn *net.TCPConn, outBuff []byt
 
 		if _, ok := that.connMap.Load(id); !ok {
 			// 保证实时性
-			adap.passTime = time.Now().UnixNano() + Config.AdapTimeout
+			adap.id = id
+			adap.OnKeep()
 			that.connMap.Store(id, adap)
 			that.connId = id
 			break
@@ -109,7 +123,7 @@ func (that *prxMng) adapOpen(proto PrxProto, outConn *net.TCPConn, outBuff []byt
 }
 
 func (that *prxMng) adapConn(id int32, inConn *net.TCPConn) {
-	val, ok := that.connMap.LoadAndDelete(id)
+	val, ok := that.connMap.Load(id)
 	adap, _ := val.(*PrxAdap)
 	if adap == nil {
 		// adap不存在
@@ -124,4 +138,12 @@ func (that *prxMng) adapConn(id int32, inConn *net.TCPConn) {
 	}
 
 	adap.doInConn(inConn)
+}
+
+func (that *prxMng) adapClose(id int32) {
+	val, _ := that.connMap.LoadAndDelete(id)
+	adap, _ := val.(*PrxAdap)
+	if adap != nil {
+		adap.Close(nil)
+	}
 }

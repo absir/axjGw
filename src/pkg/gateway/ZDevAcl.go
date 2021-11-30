@@ -69,3 +69,7 @@ func (Z zDevAcl) Send(ctx context.Context, in *gw.PassReq, opts ...grpc.CallOpti
 		Id: int32(gw.Result_Succ),
 	}, nil
 }
+
+func (Z zDevAcl) Addr(ctx context.Context, in *gw.AddrReq, opts ...grpc.CallOption) (*gw.AddrRep, error) {
+	return nil, nil
+}

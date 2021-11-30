@@ -1127,7 +1127,7 @@ func BindMapVal(target *reflect.Value, from reflect.Value) {
 
 	it := from.MapRange()
 	for it.Next() {
-		BindKeyVal(target, it.Key(), it.Value())
+		BindKeyVal(target, it.Key().Interface(), it.Value().Interface())
 	}
 }
 

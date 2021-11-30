@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"axj/ANet"
+	"axj/Kt/Kt"
 	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
@@ -9,15 +10,17 @@ import (
 	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
-	"axjGW/pkg/gateway"
 	"encoding/json"
+	"google.golang.org/grpc"
 	"io"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 )
 
 type prxServMng struct {
+	locker   sync.Locker
 	Manager  *ANet.Manager
 	idWorker *Util.IdWorker
 	servMap  *cmap.CMap
@@ -27,10 +30,12 @@ var PrxServMng = new(prxServMng)
 
 var Processor *ANet.Processor
 var Handler = &handler{}
+var AclClient gw.AclClient
 
 func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 	initConfig()
 	KtCvt.BindInterface(Config, Cfg)
+	that.locker = new(sync.Mutex)
 	that.idWorker = Util.NewIdWorkerPanic(wordId)
 	that.servMap = cmap.NewCMapInit()
 	Processor = &ANet.Processor{
@@ -50,9 +55,24 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 	that.Manager = ANet.NewManager(Handler, wordId, Config.IdleDrt*int64(time.Millisecond), Config.CheckDrt*time.Millisecond)
 	initProtos()
 	initPrxMng()
+	// Acl服务客户端
+	if Config.Acl != "" {
+		client, err := grpc.Dial(Config.Acl)
+		Kt.Panic(err)
+		AclClient = gw.NewAclClient(client)
+	}
 }
 
 func (that *prxServMng) Start() {
+	if Config.Servs != nil {
+		for name, serv := range Config.Servs {
+			s := StartServ(name, serv.Addr, FindProto(serv.Proto, true), serv.Cfg)
+			if s != nil {
+				serv.Addr = s.Addr
+			}
+		}
+	}
+
 	go that.Manager.CheckLoop()
 	go PrxMng.CheckLoop()
 }
@@ -84,6 +104,7 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 		Util.GoSubmit(func() {
 			PrxMng.adapConn(uriI, tConn)
 		})
+		*pConn = nil
 		return nil
 	}
 
@@ -104,6 +125,7 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 
 	// Acl准备
 	err = Processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
+	err, req, _, uriI, data = Processor.Req(conn, encryptKey)
 	cid := that.idWorker.Generate()
 	login, err := that.login(cid, data, conn)
 	if err != nil || login == nil {
@@ -142,15 +164,6 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 		clientG.SetLimiter(int(login.Limit))
 	}
 
-	// 注册成功回调
-	if login.Back {
-		ok, err := that.loginBack(cid, login.Unique, login.Uid, login.Sid)
-		if !ok {
-			clientG.Close(err, nil)
-			return nil
-		}
-	}
-
 	if clientG.IsRules() {
 		// 接受客户端本地映射配置
 		client.Get().Rep(true, agent.REQ_RULES, "", 0, login.Data, false, false, 0)
@@ -167,23 +180,65 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 		clientG.SetLimiter(int(login.Limit))
 	}
 
+	if clientG.gid != "" {
+		PrxServMng.locker.Lock()
+		PrxMng.gidMap.Store(clientG.gid, clientG.Id())
+		PrxServMng.locker.Unlock()
+	}
+
 	return client
 }
 
 func (that *prxServMng) login(cid int64, data []byte, conn ANet.Conn) (*gw.LoginRep, error) {
 	// 客户端授权
-	return nil, nil
-}
+	if Config.ClientKeys != nil && len(Config.ClientKeys) > 0 {
+		var strs []string
+		json.Unmarshal(data, &strs)
+		if len(strs) >= 4 {
+			flag := Config.ClientKeys[strs[0]]
+			fLen := len(flag)
+			if fLen > 0 && flag[0] > '0' {
+				rep := &gw.LoginRep{}
+				if flag[1] > '1' {
+					gid := strs[2]
+					if gid == "" {
+						gid = strs[3]
+					}
 
-func (that *prxServMng) loginBack(cid int64, unique string, uid int64, sid string) (bool, error) {
-	// 客户端鉴权
-	return true, nil
+					rep.Sid = gid
+				}
+
+				if fLen > 1 && flag[1] > '1' {
+					rep.Unique = "*"
+				}
+
+				return rep, nil
+			}
+		}
+	}
+
+	if AclClient != nil {
+		// Acl服务登录
+		return AclClient.Login(Config.AclCtx(), &gw.LoginReq{
+			Cid:  cid,
+			Data: data,
+			Addr: conn.RemoteAddr(),
+		})
+	}
+
+	return nil, nil
 }
 
 type ClientG struct {
 	ANet.ClientMng
-	gid    string
-	unique string
+	gid       string
+	unique    string
+	ruleServs map[string]*RuleServ
+}
+
+type RuleServ struct {
+	rule *agent.RULE
+	serv *PrxServ
 }
 
 func (that *ClientG) IsRules() bool {
@@ -198,75 +253,4 @@ func (that *ClientG) SetLogin(login *gw.LoginRep) {
 
 	that.gid = gid
 	that.unique = login.Unique
-}
-
-type handler struct {
-}
-
-func (h handler) ClientG(client ANet.Client) *ClientG {
-	return client.(*ClientG)
-}
-
-func (h handler) OnOpen(client ANet.Client) {
-}
-
-func (h handler) OnClose(client ANet.Client, err error, reason interface{}) {
-}
-
-func (h handler) OnKeep(client ANet.Client, req bool) {
-}
-
-func (h handler) OnReq(client ANet.Client, req int32, uri string, uriI int32, data []byte) bool {
-	if req > ANet.REQ_ONEWAY && req != agent.REQ_RULES {
-		return false
-	}
-
-	return true
-}
-
-func (h handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, data []byte) {
-	clientG := Handler.ClientG(client)
-	if req == agent.REQ_RULES && clientG.IsRules() {
-		// 接受本地映射配置
-		var rules map[string]*agent.RULE
-		json.Unmarshal(data, &rules)
-		if rules != nil {
-			for name, rule := range rules {
-				proto := FindProto(rule.Proto, true)
-				if proto == nil {
-					continue
-				}
-
-				serv := StartServ(name, rule.Addr, proto)
-				serv.Update(proto, clientG.Id(), rule.Addr)
-			}
-		}
-
-		return
-	}
-
-	clientG.Get().Rep(true, req, "", gateway.ERR_PROD_NO, nil, false, false, 0)
-}
-
-func (h handler) Processor() *ANet.Processor {
-	return Processor
-}
-
-func (h handler) UriDict() ANet.UriDict {
-	return nil
-}
-
-func (h handler) KickDrt() time.Duration {
-	return 0
-}
-
-func (h handler) New(conn ANet.Conn) ANet.ClientM {
-	clientG := new(ClientG)
-	return clientG
-}
-
-func (h handler) Check(time int64, client ANet.Client) {
-}
-
-func (h handler) CheckDone(time int64) {
 }

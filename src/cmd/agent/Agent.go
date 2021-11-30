@@ -26,6 +26,7 @@ type config struct {
 	Proxy       string // 代理地址
 	ClientKey   string // 客户端Key
 	ClientCert  string // 客户端证书
+	ClientId    string // 客户端唯一编号
 	Out         bool
 	Encry       bool
 	CompressMin int
@@ -94,7 +95,17 @@ func (o Opt) SaveStorage(name string, value string) {
 }
 
 func (o Opt) LoginData(adapter *asdk.Adapter) []byte {
-	data, err := json.Marshal([]string{Config.ClientKey, Config.ClientCert})
+	hardAddr := ""
+	// 获取本机的MAC地址
+	inters, err := net.Interfaces()
+	if inters != nil {
+		for _, inter := range inters {
+			hardAddr = strings.ReplaceAll(inter.HardwareAddr.String(), ":", "")
+			break
+		}
+	}
+
+	data, err := json.Marshal([]string{Config.ClientKey, Config.ClientCert, Config.ClientId, hardAddr})
 	Kt.Err(err, true)
 	return data
 }
@@ -113,21 +124,6 @@ func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte) 
 
 func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32, data []byte) {
 	switch req {
-	case agent.REQ_CERT:
-		// 服务器下发证书
-		f := APro.Create(CLIENT_CERT_FILE, false)
-		if f != nil {
-			_, err := f.Write(data)
-			if err == nil {
-				err = f.Close()
-			}
-
-			if err != nil {
-				Kt.Err(err, true)
-			}
-		}
-
-		return
 	case agent.REQ_CONN:
 		// 发送连接
 		go connProxy(uri, uriI, data)
@@ -144,6 +140,10 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 			}
 		}
 
+		return
+	case agent.REQ_ON_RULE:
+		// 映射规则
+		fmt.Println("OnRule " + uri)
 		return
 	}
 
@@ -169,8 +169,8 @@ func (that *ConnId) onError(err error) bool {
 	}
 
 	that.locker.Lock()
-	defer that.locker.Unlock()
 	if that.closed {
+		that.locker.Unlock()
 		return true
 	}
 
@@ -186,11 +186,18 @@ func (that *ConnId) onError(err error) bool {
 		aConn.Close()
 	}
 
+	that.locker.Unlock()
 	if err == io.EOF {
 		AZap.Debug("ConnId EOF %d", that.id)
 
 	} else {
 		Kt.Err(err, true)
+	}
+
+	adap := Client.Conn()
+	if adap != nil {
+		//  关闭通知
+		adap.Rep(Client, agent.REQ_CLOSED, "", that.id, nil, false, 0)
 	}
 
 	return true
@@ -276,7 +283,7 @@ func connProxy(addr string, id int32, data []byte) {
 
 	// aConn代理连接 数据接收 写入到 conn本地连接
 	var buff []byte = nil
-	for !connId.closed {
+	for !connId.closed || true {
 		// 循环写入
 		err, data, reader := aConn.ReadA()
 		if connId.onError(err) {
