@@ -22,6 +22,7 @@ type config struct {
 	Servs         map[string]*Serv  // 协议服务
 	ClientKeys    map[string]string // 客户端授权码
 	Acl           string            // Acl服务地址
+	AclTry        time.Duration     // Acl服务地址
 	AclTimeout    time.Duration     // Acl调用超时
 }
 
@@ -48,6 +49,7 @@ func initConfig() {
 		AdapMaxId:     KtBytes.VINT_3_MAX,
 		Servs:         map[string]*Serv{},
 		ClientKeys:    map[string]string{},
+		AclTry:        3000,
 		AclTimeout:    30000,
 	}
 

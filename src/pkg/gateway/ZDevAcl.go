@@ -17,6 +17,7 @@ var ZDevAcl = &zDevAcl{}
 
 func (Z zDevAcl) Login(ctx context.Context, in *gw.LoginReq, opts ...grpc.CallOption) (*gw.LoginRep, error) {
 	return &gw.LoginRep{
+		Succ: true,
 		Back: true,
 	}, nil
 }

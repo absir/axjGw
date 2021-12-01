@@ -366,6 +366,12 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 				return
 			}
 
+			// 登录失败
+			if !login.Succ {
+				AZap.Logger.Debug("Serv Login Acl Fail")
+				return
+			}
+
 			// 客户端注册
 			manager := that.Manager
 			client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)

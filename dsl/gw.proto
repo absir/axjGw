@@ -86,28 +86,29 @@ message LoginReq {
 }
 
 message LoginRep {
+    bool succ = 1;
     // 数字编号
-    int64 uid = 1;
+    int64 uid = 2;
     // 字符编号
-    string sid = 2;
+    string sid = 3;
     // 唯一标识(一个标识，只允许一个Conn)
-    string unique = 3;
+    string unique = 4;
     // 最大请求数
-    int32 limit = 4;
+    int32 limit = 5;
     // 路由服务编号
-    int32 rid = 5;
+    int32 rid = 6;
     // 路由服务映射
-    map<string, int32> rids = 6;
+    map<string, int32> rids = 7;
     // 登录返回
-    bytes data = 7;
+    bytes data = 8;
     // 清理队列
-    bool clear = 8;
+    bool clear = 9;
     // 登录回调
-    bool back = 9;
+    bool back = 10;
     // 断线回调
-    bool discBack = 10;
+    bool discBack = 11;
     // 登录失败
-    bytes kickData = 11;
+    bytes kickData = 12;
 }
 
 message LoginBack {

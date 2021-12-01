@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"axj/ANet"
-	"axj/Kt/Kt"
 	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
@@ -11,6 +10,7 @@ import (
 	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
 	"encoding/json"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"io"
 	"net"
@@ -57,9 +57,19 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 	initPrxMng()
 	// Acl服务客户端
 	if Config.Acl != "" {
-		client, err := grpc.Dial(Config.Acl)
-		Kt.Panic(err)
-		AclClient = gw.NewAclClient(client)
+		go func() {
+			for {
+				client, err := grpc.Dial(Config.Acl, grpc.WithInsecure())
+				if err != nil {
+					AZap.Logger.Warn("Acl grpc.Dial Err "+Config.Acl, zap.Error(err))
+					time.Sleep(Config.AclTry * time.Millisecond)
+					continue
+				}
+
+				AclClient = gw.NewAclClient(client)
+				break
+			}
+		}()
 	}
 }
 
