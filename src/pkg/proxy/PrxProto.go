@@ -34,7 +34,7 @@ func initProtos() {
 	protos = map[string]PrxProto{}
 	RegProto(&PProto.Socket{})
 	RegProto(&PProto.Http{})
-	RegProto(&PProto.Rtmp{})
+	RegProto(&PProto.Rtsp{})
 }
 
 func RegProto(proto PrxProto) {

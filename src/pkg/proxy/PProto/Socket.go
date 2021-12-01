@@ -8,12 +8,18 @@ import (
 type Socket struct {
 }
 
+type SocketCfg struct {
+	BuffSize int
+}
+
 func (h Socket) Name() string {
 	return "socket"
 }
 
 func (h Socket) NewCfg() interface{} {
-	return nil
+	return &SocketCfg{
+		BuffSize: 4096,
+	}
 }
 
 func (h Socket) ServAddr(cfg interface{}, sName string) string {
@@ -21,11 +27,11 @@ func (h Socket) ServAddr(cfg interface{}, sName string) string {
 }
 
 func (h Socket) ReadBufferSize(cfg interface{}) int {
-	return 256
+	return cfg.(*SocketCfg).BuffSize
 }
 
 func (h Socket) ReadBufferMax(cfg interface{}) int {
-	return 256
+	return cfg.(*SocketCfg).BuffSize
 }
 
 func (h Socket) ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{} {

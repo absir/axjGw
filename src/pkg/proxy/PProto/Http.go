@@ -13,6 +13,7 @@ type Http struct {
 }
 
 type HttpCfg struct {
+	BuffSize int
 	ServName string
 	RealIp   string
 }
@@ -22,7 +23,7 @@ func (h Http) Name() string {
 }
 
 func (h Http) NewCfg() interface{} {
-	return new(HttpCfg)
+	return &HttpCfg{BuffSize: 1024}
 }
 
 func (h Http) ServAddr(cfg interface{}, sName string) string {
@@ -39,11 +40,11 @@ func (h Http) ServAddr(cfg interface{}, sName string) string {
 }
 
 func (h Http) ReadBufferSize(cfg interface{}) int {
-	return 256
+	return cfg.(*HttpCfg).BuffSize
 }
 
 func (h Http) ReadBufferMax(cfg interface{}) int {
-	return 1024
+	return cfg.(*HttpCfg).BuffSize
 }
 
 var Host = "Host:"
@@ -76,12 +77,12 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 	bLen := len(bs)
 	c := cfg.(*HttpCfg)
 	hCtx := ctx.(*HttpCtx)
+	si := hCtx.si
 	realIpLen := 0
 	if c.RealIp != "" {
 		realIpLen = len(c.RealIp)
 	}
 
-	si := hCtx.si
 	for i := hCtx.i; i < bLen; i++ {
 		b := bs[i]
 		hCtx.i = i
