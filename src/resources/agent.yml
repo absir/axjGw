@@ -3,9 +3,9 @@ Rules:
   http:
     Addr: 127.0.0.1:8787
   rtsp:
-    Addr: 127.0.0.1:8787
+    Addr: 192.168.50.41:554
   http2:
-    Addr: 127.0.0.1:8787
+    Addr: 192.168.50.41:80
     Proto: http
     Port: 9081
   socket:
