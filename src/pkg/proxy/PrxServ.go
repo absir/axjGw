@@ -104,7 +104,7 @@ func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *a
 	AZap.Logger.Info("PrxServ Rule " + desc)
 	// 发送给客户端
 	clientG.Rep(true, agent.REQ_ON_RULE, desc, 0, nil, false, false, 0)
-	if _, ok := proto.(PProto.Socket); ok {
+	if _, ok := proto.(*PProto.Socket); ok {
 		that.cid = clientG.Id()
 		that.rule = rule
 	}
@@ -122,7 +122,7 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 			ok := false
 			ok, err = that.Proto.ReadServerName(that.Cfg, ctx, buffer, buff[:size], &name, conn)
 			if err != nil {
-				PrxMng.closeConn(conn, err)
+				PrxMng.closeConn(conn, true, err)
 				return
 			}
 
@@ -132,14 +132,14 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 
 			// 读取缓冲数据过大
 			if buffer.Len() > that.Proto.ReadBufferMax(that.Cfg) {
-				PrxMng.closeConn(conn, err)
+				PrxMng.closeConn(conn, true, err)
 				return
 			}
 
 			// 二次读取
 			size, err = conn.Read(buff)
 			if err != nil || size <= 0 {
-				PrxMng.closeConn(conn, err)
+				PrxMng.closeConn(conn, true, err)
 				return
 			}
 		}
@@ -147,7 +147,7 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 		// 解析代理连接成功
 		client, pAddr := that.clientPAddr(name, that.Proto)
 		if client == nil || pAddr == "" {
-			PrxMng.closeConn(conn, Kt.NewErrReason("NO CLIENT RULE "+that.Name+" - "+name))
+			PrxMng.closeConn(conn, true, Kt.NewErrReason("NO CLIENT RULE "+that.Name+" - "+name))
 			return
 		}
 

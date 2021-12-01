@@ -530,7 +530,7 @@ func (that *Client) onError(adapter *Adapter, err error, lock bool) bool {
 
 	} else {
 		// 关闭连接
-		adapter.conn.Close()
+		adapter.conn.Close(true)
 		if that.closeAdapter(adapter, lock) {
 			if !adapter.kicked {
 				// 未踢开，CLOSE状态通知
@@ -598,7 +598,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			// 被踢
 			adapter.kicked = true
 			that.adapter = nil
-			adapter.conn.Close()
+			adapter.conn.Close(true)
 			that.opt.OnState(adapter, KICK, "", data)
 			continue
 		case ANet.REQ_LAST:

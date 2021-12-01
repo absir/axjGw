@@ -4,15 +4,12 @@ import (
 	"axj/ANet"
 	"axj/APro"
 	"axj/Kt/Kt"
-	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
-	"axj/Thrd/AZap"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/asdk"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"runtime"
@@ -33,7 +30,7 @@ type config struct {
 	DataMax     int
 	CheckDrt    int
 	RqIMax      int
-	ConnDrt     int
+	ConnDrt     time.Duration
 	Rules       map[string]*agent.RULE
 }
 
@@ -61,14 +58,13 @@ func main() {
 	}, "../../resources")
 	APro.Load(nil, "agent.yml")
 	loadConfig()
-
+	Config.ConnDrt *= time.Second
 	Client = asdk.NewClient(Config.Proxy, Config.Out, Config.Encry, Config.CompressMin, Config.DataMax, Config.CheckDrt, Config.RqIMax, &Opt{})
-	connDrt := time.Duration(Config.ConnDrt) * time.Second
 	go func() {
 		for !APro.Stopped {
 			// 保持连接
 			Client.Conn()
-			time.Sleep(connDrt)
+			time.Sleep(Config.ConnDrt)
 		}
 	}()
 	APro.Signal()
@@ -150,57 +146,12 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 	fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
 }
 
-type ConnId struct {
-	id      int32
-	locker  sync.Locker
-	closed  bool
-	conn    *net.TCPConn
-	aConn   ANet.Conn
-	aConned bool
-}
-
-func (that *ConnId) onError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	if that.closed {
-		return true
-	}
-
-	that.locker.Lock()
-	if that.closed {
-		that.locker.Unlock()
-		return true
-	}
-
-	that.closed = true
-	conn := that.conn
-	if conn != nil {
-		conn.SetLinger(0)
-		conn.Close()
-	}
-
-	aConn := that.aConn
-	if aConn != nil {
-		aConn.Close()
-	}
-
-	that.locker.Unlock()
-	if err == io.EOF {
-		AZap.Debug("ConnId EOF %d", that.id)
-
-	} else {
-		Kt.Err(err, true)
-	}
-
+func repClosedId(id int32) {
 	adap := Client.Conn()
 	if adap != nil {
 		//  关闭通知
-		adap.Rep(Client, agent.REQ_CLOSED, "", that.id, nil, false, 0)
+		adap.Rep(Client, agent.REQ_CLOSED, "", id, nil, false, 0)
 	}
-
-	return true
 }
 
 func connProxy(addr string, id int32, data []byte) {
@@ -209,112 +160,66 @@ func connProxy(addr string, id int32, data []byte) {
 		locker: new(sync.Mutex),
 	}
 
-	// 结束关闭
-	defer connClose(connId)
-	// 代理缓冲大小
-	buffSize := 0
 	{
-		idx := strings.IndexByte(addr, '/')
-		if idx >= 0 {
-			buffSize = int(KtCvt.ToInt32(addr[:idx]))
-			addr = addr[idx+1:]
+		// 代理缓冲大小
+		buffSize := 0
+		{
+			idx := strings.IndexByte(addr, '/')
+			if idx >= 0 {
+				buffSize = int(KtCvt.ToInt32(addr[:idx]))
+				addr = addr[idx+1:]
+			}
+
+			if buffSize < 256 {
+				buffSize = 256
+			}
 		}
 
-		if buffSize < 256 {
-			buffSize = 256
+		// 本地连接
+		{
+			conn, err := net.Dial("tcp", addr)
+			if connId.onError(err) || conn == nil {
+				return
+			}
+
+			connId.conn = conn.(*net.TCPConn)
 		}
-	}
 
-	// 本地连接
-	conn, err := net.Dial("tcp", addr)
-	if connId.onError(err) || conn == nil {
-		return
-	}
-
-	connId.conn = conn.(*net.TCPConn)
-
-	// 代理连接
-	var aConn ANet.Conn = nil
-	{
+		// 代理连接
 		{
 			conn, err := Client.DialConn()
 			if connId.onError(err) || conn == nil {
 				return
 			}
 
-			aConn, _ = conn.(ANet.Conn)
-		}
+			aConn, _ := conn.(ANet.Conn)
 
-		connId.aConn = aConn
-		// 代理连接协议
-		aProcessor, _ := Client.GetProcessor().(*ANet.Processor)
-		if aConn == nil || aProcessor == nil {
-			return
-		}
-
-		// 代理连接连接id请求
-		err = aProcessor.Rep(nil, true, aConn, nil, false, agent.REQ_CONN, "", id, nil, false, 0)
-		if connId.onError(err) {
-			return
-		}
-
-		connId.aConned = true
-
-		// conn本地连接 数据接收 写入到 aConn代理连接
-		go func() {
-			buff := make([]byte, buffSize)
-			for !connId.closed {
-				n, err := conn.Read(buff)
-				if connId.onError(err) {
-					return
-				}
-
-				if n > 0 {
-					aConn.Write(buff[:n])
-				}
-			}
-		}()
-
-		// 缓冲数据写入到conn本地连接
-		conn.Write(data)
-		// data gc
-		data = nil
-	}
-
-	// aConn代理连接 数据接收 写入到 conn本地连接
-	var buff []byte = nil
-	for !connId.closed || true {
-		// 循环写入
-		err, data, reader := aConn.ReadA()
-		if connId.onError(err) {
-			return
-		}
-
-		if reader == nil {
-			conn.Write(data)
-
-		} else {
-			if buff == nil {
-				buff = make([]byte, buffSize)
+			connId.aConn = aConn
+			// 代理连接协议
+			aProcessor, _ := Client.GetProcessor().(*ANet.Processor)
+			if aConn == nil || aProcessor == nil {
+				return
 			}
 
-			n, err := reader.Read(buff)
+			// 代理连接连接id请求
+			err = aProcessor.Rep(nil, true, aConn, nil, false, agent.REQ_CONN, "", id, nil, false, 0)
 			if connId.onError(err) {
 				return
 			}
 
-			if n > 0 {
-				conn.Write(buff[:n])
+			connId.aConnBuff = make([]byte, buffSize)
+		}
+
+		// 连接数据写入
+		if data != nil {
+			_, err := connId.conn.Write(data)
+			if connId.onError(err) {
+				return
 			}
 		}
 	}
-}
 
-func connClose(connId *ConnId) {
-	// 关闭连接
-	connId.onError(io.EOF)
-	if !connId.aConned {
-		// 关闭通知
-		Client.Req("", KtBytes.GetVIntBytes(connId.id), false, 60, nil)
-	}
+	// 双向数据代理
+	go connId.connLoop()
+	connId.aConnLoop()
 }

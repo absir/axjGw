@@ -113,5 +113,5 @@ func (that *ConnPoll) OnClose() {
 	that.conn = nil
 	that.listAsync.Clear(false)
 	that.locker.Unlock()
-	conn.Close()
+	conn.Close(true)
 }

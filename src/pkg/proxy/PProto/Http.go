@@ -187,7 +187,9 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 						name := strings.TrimSpace(line[HostLen+1:])
 						if c.RealIp != "" {
 							name = string(KtUnsafe.StringToBytes(name))
-							bs = KtBytes.Copy(bs)
+							hCtx.oBuffer.Reset()
+							hCtx.oBuffer.Write(bs)
+							bs = hCtx.oBuffer.Bytes()
 							buffer.Reset()
 							// 真实ip
 							if hCtx.realIpEi == 0 {

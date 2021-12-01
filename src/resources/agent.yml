@@ -2,7 +2,13 @@ ClientKey: 61A583A27A845A3835A32D4C
 Rules:
   http:
     Addr: 127.0.0.1:8787
+  rtmp:
+    Addr: 127.0.0.1:8787
   http2:
     Addr: 127.0.0.1:8787
     Proto: http
     Port: 9081
+  socket:
+    Addr: 127.0.0.1:8787
+    Proto: socket
+    Port: 9082

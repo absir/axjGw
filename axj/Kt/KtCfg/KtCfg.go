@@ -321,6 +321,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 					}
 
 					if ybMaps.IsEmpty() {
+						yB = 0
 						yMap = nil
 						break
 					}
@@ -340,12 +341,16 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 						yMap.Put(name, mp)
 					}
 
-					yB = b
-					yMap = mp
-
 					if ybMaps == nil {
 						ybMaps = new(Kt.Stack).Init()
 					}
+
+					if yMap != nil {
+						ybMaps.Push(&BLinkedMap{b: yB, mp: yMap})
+					}
+
+					yB = b
+					yMap = mp
 
 					ybMaps.Push(&BLinkedMap{b: yB, mp: yMap})
 					return

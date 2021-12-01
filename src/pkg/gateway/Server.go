@@ -237,7 +237,7 @@ func (that *server) ConnLoop(conn ANet.Conn) {
 
 	} else if conn != nil {
 		// 连接失败关闭
-		conn.Close()
+		conn.Close(true)
 	}
 }
 
@@ -269,7 +269,7 @@ func (that *server) ConnPoll(conn ANet.Conn) {
 	connPoll.FrameStart(func(el interface{}) {
 		frame, _ := el.(*ANet.ReqFrame)
 		if frame == nil {
-			conn.Close()
+			conn.Close(true)
 			return
 		}
 
@@ -279,7 +279,7 @@ func (that *server) ConnPoll(conn ANet.Conn) {
 
 		if done {
 			if client == nil {
-				conn.Close()
+				conn.Close(true)
 				return
 			}
 

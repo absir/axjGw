@@ -136,7 +136,7 @@ func (that *ClientCnn) close(err error, reason interface{}, inner bool) {
 	conn := that.conn
 	if conn != nil {
 		that.conn = nil
-		conn.Close()
+		conn.Close(true)
 	}
 
 	// 解除reqLoop阻塞
@@ -325,7 +325,7 @@ func CloseDelay(conn Conn, drt time.Duration) {
 	}
 
 	time.Sleep(drt)
-	conn.Close()
+	conn.Close(false)
 }
 
 func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {

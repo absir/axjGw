@@ -24,7 +24,7 @@ type Conn interface {
 	// 写入异步
 	IsWriteAsync() bool
 	// 关闭
-	Close()
+	Close(immed bool)
 	// 远程地址
 	RemoteAddr() string
 	// EPoll模式
@@ -97,9 +97,12 @@ func (that *ConnSocket) IsWriteAsync() bool {
 	return false
 }
 
-func (that *ConnSocket) Close() {
+func (that *ConnSocket) Close(immed bool) {
 	conn := that.Conn()
-	conn.SetLinger(0)
+	if immed {
+		conn.SetLinger(0)
+	}
+
 	conn.Close()
 }
 
@@ -153,7 +156,7 @@ func (that *ConnWebsocket) IsWriteAsync() bool {
 	return false
 }
 
-func (that *ConnWebsocket) Close() {
+func (that *ConnWebsocket) Close(immed bool) {
 	that.Conn().Close()
 }
 

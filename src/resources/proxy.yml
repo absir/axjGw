@@ -5,6 +5,11 @@ Servs:
     Cfg:
       ServName: proxy.com:9080
       RealIp: X-Original-Forwarded-For
+  rtmp:
+    Addr: 9083
+    Proto: rtmp
+    Cfg:
+      ServName: proxy.com:9083
 
 
 ClientKeys:

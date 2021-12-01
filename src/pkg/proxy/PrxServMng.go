@@ -86,7 +86,7 @@ func (that *prxServMng) Accept(tConn *net.TCPConn) {
 
 		} else if conn != nil {
 			// 连接失败关闭
-			conn.Close()
+			conn.Close(true)
 		}
 	})
 }
@@ -96,7 +96,7 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 	var encryptKey []byte
 	err, req, _, uriI, data := Processor.Req(conn, encryptKey)
 	if err != nil {
-		conn.Close()
+		conn.Close(true)
 		return nil
 	}
 

@@ -34,12 +34,15 @@ func initPrxMng() {
 	PrxMng = that
 }
 
-func (that *prxMng) closeConn(conn *net.TCPConn, err error) {
+func (that *prxMng) closeConn(conn *net.TCPConn, immed bool, err error) {
 	if conn == nil {
 		return
 	}
 
-	conn.SetLinger(0)
+	if immed {
+		conn.SetLinger(0)
+	}
+
 	conn.Close()
 	if err != nil && err != io.EOF {
 		if errR, ok := err.(*Kt.ErrReason); ok {

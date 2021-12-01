@@ -35,8 +35,8 @@ func (that *PrxAdap) Close(err error) {
 	that.closed = true
 	that.locker.Unlock()
 	PrxMng.connMap.Delete(that.id)
-	PrxMng.closeConn(that.outConn, nil)
-	PrxMng.closeConn(that.inConn, err)
+	PrxMng.closeConn(that.outConn, false, nil)
+	PrxMng.closeConn(that.inConn, false, err)
 }
 
 func (that *PrxAdap) OnKeep() {
@@ -48,7 +48,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 	that.locker.Lock()
 	if that.closed {
 		that.locker.Unlock()
-		PrxMng.closeConn(inConn, nil)
+		PrxMng.closeConn(inConn, true, nil)
 		return
 	}
 

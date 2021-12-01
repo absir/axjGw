@@ -9,7 +9,7 @@ type Socket struct {
 }
 
 func (h Socket) Name() string {
-	return "http"
+	return "socket"
 }
 
 func (h Socket) NewCfg() interface{} {
@@ -33,6 +33,7 @@ func (h Socket) ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{} {
 }
 
 func (h Socket) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error) {
+	buffer.Write(data)
 	return true, nil
 }
 
