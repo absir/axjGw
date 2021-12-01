@@ -1,12 +1,15 @@
-package main
+package agent
 
 import (
 	"axj/ANet"
+	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
+	"axjGW/pkg/asdk"
 	"go.uber.org/zap"
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -17,6 +20,78 @@ type ConnId struct {
 	conn      *net.TCPConn
 	aConn     ANet.Conn
 	aConnBuff []byte
+}
+
+var Client *asdk.Client
+
+func ConnProxy(addr string, id int32, data []byte) {
+	connId := &ConnId{
+		id:     id,
+		locker: new(sync.Mutex),
+	}
+
+	{
+		// 代理缓冲大小
+		buffSize := 0
+		{
+			idx := strings.IndexByte(addr, '/')
+			if idx >= 0 {
+				buffSize = int(KtCvt.ToInt32(addr[:idx]))
+				addr = addr[idx+1:]
+			}
+
+			if buffSize < 256 {
+				buffSize = 256
+			}
+		}
+
+		// 本地连接
+		{
+			conn, err := net.Dial("tcp", addr)
+			if connId.onError(err) || conn == nil {
+				return
+			}
+
+			connId.conn = conn.(*net.TCPConn)
+		}
+
+		// 代理连接
+		{
+			conn, err := Client.DialConn()
+			if connId.onError(err) || conn == nil {
+				return
+			}
+
+			aConn, _ := conn.(ANet.Conn)
+
+			connId.aConn = aConn
+			// 代理连接协议
+			aProcessor, _ := Client.GetProcessor().(*ANet.Processor)
+			if aConn == nil || aProcessor == nil {
+				return
+			}
+
+			// 代理连接连接id请求
+			err = aProcessor.Rep(nil, true, aConn, nil, false, REQ_CONN, "", id, nil, false, 0)
+			if connId.onError(err) {
+				return
+			}
+
+			connId.aConnBuff = make([]byte, buffSize)
+		}
+
+		// 连接数据写入
+		if data != nil {
+			_, err := connId.conn.Write(data)
+			if connId.onError(err) {
+				return
+			}
+		}
+	}
+
+	// 双向数据代理
+	go connId.connLoop()
+	connId.aConnLoop()
 }
 
 func (that *ConnId) onError(err error) bool {
@@ -128,5 +203,13 @@ func (that *ConnId) aConnLoop() {
 				}
 			}
 		}
+	}
+}
+
+func repClosedId(id int32) {
+	adap := Client.Conn()
+	if adap != nil {
+		//  关闭通知
+		adap.Rep(Client, REQ_CLOSED, "", id, nil, false, 0)
 	}
 }

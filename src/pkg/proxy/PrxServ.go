@@ -170,7 +170,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 		str = name[0:idx]
 	}
 
-	strs := strings.SplitN(str, "@", 2)
+	strs := strings.SplitN(str, "-", 2)
 	gid := strs[0]
 	sub := ""
 	if len(strs) > 1 {

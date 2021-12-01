@@ -1,7 +1,6 @@
 package main
 
 import (
-	"axj/ANet"
 	"axj/APro"
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
@@ -15,7 +14,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -60,6 +58,7 @@ func main() {
 	loadConfig()
 	Config.ConnDrt *= time.Second
 	Client = asdk.NewClient(Config.Proxy, Config.Out, Config.Encry, Config.CompressMin, Config.DataMax, Config.CheckDrt, Config.RqIMax, &Opt{})
+	agent.Client = Client
 	go func() {
 		for !APro.Stopped {
 			// 保持连接
@@ -122,7 +121,7 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 	switch req {
 	case agent.REQ_CONN:
 		// 发送连接
-		go connProxy(uri, uriI, data)
+		go agent.ConnProxy(uri, uriI, data)
 		return
 	case agent.REQ_RULES:
 		// 本地映射配置
@@ -144,82 +143,4 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 	}
 
 	fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
-}
-
-func repClosedId(id int32) {
-	adap := Client.Conn()
-	if adap != nil {
-		//  关闭通知
-		adap.Rep(Client, agent.REQ_CLOSED, "", id, nil, false, 0)
-	}
-}
-
-func connProxy(addr string, id int32, data []byte) {
-	connId := &ConnId{
-		id:     id,
-		locker: new(sync.Mutex),
-	}
-
-	{
-		// 代理缓冲大小
-		buffSize := 0
-		{
-			idx := strings.IndexByte(addr, '/')
-			if idx >= 0 {
-				buffSize = int(KtCvt.ToInt32(addr[:idx]))
-				addr = addr[idx+1:]
-			}
-
-			if buffSize < 256 {
-				buffSize = 256
-			}
-		}
-
-		// 本地连接
-		{
-			conn, err := net.Dial("tcp", addr)
-			if connId.onError(err) || conn == nil {
-				return
-			}
-
-			connId.conn = conn.(*net.TCPConn)
-		}
-
-		// 代理连接
-		{
-			conn, err := Client.DialConn()
-			if connId.onError(err) || conn == nil {
-				return
-			}
-
-			aConn, _ := conn.(ANet.Conn)
-
-			connId.aConn = aConn
-			// 代理连接协议
-			aProcessor, _ := Client.GetProcessor().(*ANet.Processor)
-			if aConn == nil || aProcessor == nil {
-				return
-			}
-
-			// 代理连接连接id请求
-			err = aProcessor.Rep(nil, true, aConn, nil, false, agent.REQ_CONN, "", id, nil, false, 0)
-			if connId.onError(err) {
-				return
-			}
-
-			connId.aConnBuff = make([]byte, buffSize)
-		}
-
-		// 连接数据写入
-		if data != nil {
-			_, err := connId.conn.Write(data)
-			if connId.onError(err) {
-				return
-			}
-		}
-	}
-
-	// 双向数据代理
-	go connId.connLoop()
-	connId.aConnLoop()
 }

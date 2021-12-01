@@ -163,6 +163,11 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 		return nil
 	}
 
+	if !login.Succ {
+		AZap.Logger.Debug("Serv Login Acl Fail")
+		return nil
+	}
+
 	// 客户端注册
 	manager := that.Manager
 	client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
