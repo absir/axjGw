@@ -93,7 +93,7 @@ func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *a
 
 	// 服务名一致，不需要别名
 	if name != that.Name {
-		sName = sName + "@" + name
+		sName = sName + "_" + name
 	}
 
 	// 提示映射规则

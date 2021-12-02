@@ -5,17 +5,40 @@ import (
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtUnsafe"
 	"bytes"
+	lru "github.com/hashicorp/golang-lru"
 	"net"
 	"strings"
+	"sync"
 )
 
 type Http struct {
 }
 
 type HttpCfg struct {
-	BuffSize int
-	ServName string
-	RealIp   string
+	BuffSize   int
+	ServName   string
+	RealIp     string
+	CookieAddr string
+	locker     sync.Locker
+	LruSize    int
+	lruCache   *lru.Cache
+}
+
+func (h *HttpCfg) GetOrCreateLruCache() *lru.Cache {
+	if h.lruCache == nil {
+		h.locker.Lock()
+		if h.lruCache == nil {
+			if h.LruSize < 256 {
+				h.LruSize = 256
+			}
+
+			h.lruCache, _ = lru.New(h.LruSize)
+		}
+
+		h.locker.Unlock()
+	}
+
+	return h.lruCache
 }
 
 func (h Http) Name() string {
@@ -23,7 +46,7 @@ func (h Http) Name() string {
 }
 
 func (h Http) NewCfg() interface{} {
-	return &HttpCfg{BuffSize: 1024}
+	return &HttpCfg{BuffSize: 1024, locker: new(sync.Mutex)}
 }
 
 func (h Http) ServAddr(cfg interface{}, sName string) string {
@@ -49,6 +72,12 @@ func (h Http) ReadBufferMax(cfg interface{}) int {
 
 var Host = "Host:"
 var HostLen = len(Host)
+
+var Cookie = "Cookie:"
+var CookieLen = len(Cookie)
+
+var Content = "Content"
+var ContentLen = len(Content)
 
 type HttpCtx struct {
 	i        int
@@ -83,13 +112,14 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 		realIpLen = len(c.RealIp)
 	}
 
+	done := false
 	for i := hCtx.i; i < bLen; i++ {
 		b := bs[i]
 		hCtx.i = i
 		if b == '\r' || b == '\n' {
 			if i > si {
 				line := KtUnsafe.BytesToString(bs[si:i])
-				// println(line)
+				//println(line)
 				lLen := len(line)
 				if realIpLen > 0 && realIpLen < lLen && hCtx.realIpEi == 0 && strings.EqualFold(line[:realIpLen], c.RealIp) {
 					str := strings.TrimSpace(line[realIpLen:])
@@ -100,43 +130,97 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 
 				} else if HostLen < lLen && strings.EqualFold(line[:HostLen], Host) {
 					name := strings.TrimSpace(line[HostLen+1:])
+					done = c.CookieAddr == ""
 					if c.ServName != "" && !strings.HasSuffix(name, c.ServName) {
-						// 服务名不匹配
-						return true, SERV_NAME_ERR
+						// CookieAddr ip地址访问，海康摄像头
+						if c.CookieAddr != "" && name != "" && name[0] >= '0' && name[0] <= '9' {
+							done = false
+
+						} else {
+							return true, SERV_NAME_ERR
+						}
 					}
 
 					if c.RealIp != "" {
 						name = string(KtUnsafe.StringToBytes(name))
-						bs = KtBytes.Copy(bs)
-						buffer.Reset()
-						// 真实ip
-						if hCtx.realIpEi == 0 {
-							// 添加header
-							buffer.Write(bs[:si])
-							buffer.Write(KtUnsafe.StringToBytes(c.RealIp))
-							buffer.Write(KtUnsafe.StringToBytes(": "))
-							buffer.Write(KtUnsafe.StringToBytes(Kt.IpAddr(conn.RemoteAddr())))
-							buffer.Write(KtUnsafe.StringToBytes("\n"))
-							buffer.Write(bs[si:])
-
-						} else {
-							// 修改header
-							buffer.Write(bs[:hCtx.realIpSi])
-							buffer.Write(KtUnsafe.StringToBytes(c.RealIp))
-							buffer.Write(KtUnsafe.StringToBytes(": "))
-							buffer.Write(KtUnsafe.StringToBytes(Kt.IpAddr(conn.RemoteAddr())))
-							buffer.Write(bs[hCtx.realIpEi:])
-						}
 					}
 
 					*pName = name
-					return true, nil
+					if done {
+						return true, nil
+					}
+
+				} else if c.CookieAddr != "" && CookieLen < lLen && strings.EqualFold(line[:CookieLen], Cookie) {
+					if c.CookieAddr != "*" {
+						// CookieAddr key值获取
+						idx := strings.LastIndex(line, c.CookieAddr)
+						if idx > 0 {
+							line = line[idx:]
+							idx = strings.IndexAny(line, "; ")
+							if idx > 0 {
+								line = line[:idx]
+							}
+						}
+					}
+
+					name := *pName
+					if c.ServName != "" && !strings.HasSuffix(name, c.ServName) {
+						// 读取域名映射缓存
+						if val, ok := c.GetOrCreateLruCache().Get(line); ok {
+							name, _ = val.(string)
+							if name != "" {
+								*pName = name
+							}
+						}
+
+					} else {
+						// 添加域名映射缓存
+						if c.RealIp == "" {
+							name = string(KtUnsafe.StringToBytes(name))
+						}
+
+						c.GetOrCreateLruCache().Add(string(KtUnsafe.StringToBytes(line)), name)
+					}
+
+					done = true
+					break
+
+				} else if ContentLen < lLen && strings.EqualFold(line[:ContentLen], Content) {
+					done = true
+					break
 				}
 			}
 
 			si = i + 1
 			hCtx.si = si
 		}
+	}
+
+	if done {
+		if c.RealIp != "" {
+			bs = KtBytes.Copy(bs)
+			buffer.Reset()
+			// 真实ip
+			if hCtx.realIpEi == 0 {
+				// 添加header
+				buffer.Write(bs[:si])
+				buffer.Write(KtUnsafe.StringToBytes(c.RealIp))
+				buffer.Write(KtUnsafe.StringToBytes(": "))
+				buffer.Write(KtUnsafe.StringToBytes(Kt.IpAddr(conn.RemoteAddr())))
+				buffer.Write(KtUnsafe.StringToBytes("\n"))
+				buffer.Write(bs[si:])
+
+			} else {
+				// 修改header
+				buffer.Write(bs[:hCtx.realIpSi])
+				buffer.Write(KtUnsafe.StringToBytes(c.RealIp))
+				buffer.Write(KtUnsafe.StringToBytes(": "))
+				buffer.Write(KtUnsafe.StringToBytes(Kt.IpAddr(conn.RemoteAddr())))
+				buffer.Write(bs[hCtx.realIpEi:])
+			}
+		}
+
+		return true, nil
 	}
 
 	return false, nil
