@@ -80,9 +80,11 @@ var Content = "Content"
 var ContentLen = len(Content)
 
 type HttpCtx struct {
+	name     string
 	i        int
 	si       int
 	hi       int
+	rn       int
 	realIpSi int
 	realIpEi int
 	got      bool
@@ -93,6 +95,7 @@ func (that *HttpCtx) reset() {
 	that.i = 0
 	that.si = 0
 	that.hi = 0
+	that.rn = 0
 	that.realIpSi = 0
 	that.realIpEi = 0
 	that.got = false
@@ -121,7 +124,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 		if b == '\r' || b == '\n' {
 			if i > si {
 				line := KtUnsafe.BytesToString(bs[si:i])
-				//println(line)
+				// println(line)
 				lLen := len(line)
 				if realIpLen > 0 && realIpLen < lLen && hCtx.realIpEi == 0 && strings.EqualFold(line[:realIpLen], c.RealIp) {
 					str := strings.TrimSpace(line[realIpLen:])
@@ -134,6 +137,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 					hCtx.hi = si
 					name := strings.TrimSpace(line[HostLen+1:])
 					done = c.CookieAddr == ""
+					cName := false
 					if c.ServName != "" && !strings.HasSuffix(name, c.ServName) {
 						// CookieAddr ip地址访问，海康摄像头
 						if c.CookieAddr != "" && name != "" && name[0] >= '0' && name[0] <= '9' {
@@ -142,13 +146,20 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 						} else {
 							return true, SERV_NAME_ERR
 						}
+
+					} else if c.CookieAddr != "" {
+						cName = true
 					}
 					
-					if c.RealIp != "" {
+					if c.RealIp != "" || cName {
 						name = string(KtUnsafe.StringToBytes(name))
 					}
 
 					*pName = name
+					if cName {
+						hCtx.name = name
+					}
+
 					if done {
 						break
 					}
@@ -157,12 +168,17 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 					if c.CookieAddr != "*" {
 						// CookieAddr key值获取
 						idx := strings.LastIndex(line, c.CookieAddr)
-						if idx > 0 {
+						if idx >= 0 {
 							line = line[idx:]
 							idx = strings.IndexAny(line, "; ")
 							if idx > 0 {
 								line = line[:idx]
 							}
+
+						} else {
+							// 没有CookieAddr
+							done = true
+							break
 						}
 					}
 
@@ -192,10 +208,19 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 					done = true
 					break
 				}
+
+			} else if hCtx.rn >= 2 || (hCtx.rn >= 1 && i > 1 && bs[i-1] == b) {
+				hCtx.got = true
+				done = true
+				break
 			}
 
 			si = i + 1
 			hCtx.si = si
+			hCtx.rn++
+
+		} else {
+			hCtx.rn = 0
 		}
 	}
 
@@ -230,13 +255,10 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 	return false, nil
 }
 
-var Get = "GET "
-var GetLen = len(Get)
-
 func (h Http) ProcServerCtx(cfg interface{}, ctx interface{}, conn *net.TCPConn) interface{} {
 	c := cfg.(*HttpCfg)
-	if c.RealIp != "" {
-		hCtx := ctx.(*HttpCtx)
+	hCtx := ctx.(*HttpCtx)
+	if c.RealIp != "" || hCtx.name != "" {
 		hCtx.reset()
 		hCtx.oBuffer = new(bytes.Buffer)
 		return hCtx
@@ -264,8 +286,8 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 				line := KtUnsafe.BytesToString(bs[si:i])
 				// println(line)
 				lLen := len(line)
-				if hCtx.got {
-					if realIpLen > 0 && realIpLen < lLen && hCtx.realIpEi == 0 && strings.EqualFold(line[:realIpLen], c.RealIp) {
+				if hCtx.got && realIpLen > 0 {
+					if realIpLen < lLen && hCtx.realIpEi == 0 && strings.EqualFold(line[:realIpLen], c.RealIp) {
 						str := strings.TrimSpace(line[realIpLen:])
 						if str != "" && str[0] == ':' {
 							hCtx.realIpSi = si
@@ -298,29 +320,58 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 								buffer.Write(KtUnsafe.StringToBytes(Kt.IpAddr(conn.RemoteAddr())))
 								buffer.Write(bs[hCtx.realIpEi:])
 							}
-						}
 
-						bs = buffer.Bytes()
-						buffer.Reset()
-						hCtx.reset()
-						hCtx.oBuffer.Reset()
-						return bs, nil
+							bs = buffer.Bytes()
+							buffer.Reset()
+							hCtx.reset()
+							hCtx.oBuffer.Reset()
+							return bs, nil
+						}
 					}
 
 				} else {
-					if GetLen < lLen && strings.EqualFold(line[:GetLen], Get) {
+					if hCtx.rn >= 2 || (hCtx.rn >= 1 && i > 1 && bs[i-1] == b) {
 						hCtx.got = true
+						hCtx.oBuffer.Reset()
+						hCtx.oBuffer.Write(bs[:i])
+					}
+				}
+
+				// CookieAddr 映射更新
+				if hCtx.name != "" && CookieLen < lLen && strings.EqualFold(line[:CookieLen], Cookie) {
+					if c.CookieAddr != "*" {
+						// CookieAddr key值获取
+						idx := strings.LastIndex(line, c.CookieAddr)
+						if idx >= 0 {
+							line = line[idx:]
+							idx = strings.IndexAny(line, "; ")
+							if idx > 0 {
+								line = line[:idx]
+							}
+
+						} else {
+							line = ""
+						}
+					}
+
+					if line != "" {
+						c.GetOrCreateLruCache().Add(string(KtUnsafe.StringToBytes(line)), hCtx.name)
 					}
 				}
 			}
 
 			si = i + 1
 			hCtx.i = si
-			if !hCtx.got {
-				hCtx.oBuffer.Reset()
-				hCtx.oBuffer.Write(bs[:si])
-			}
+			hCtx.rn++
+
+		} else {
+			hCtx.rn = 0
 		}
+	}
+
+	if realIpLen <= 0 || !hCtx.got {
+		hCtx.oBuffer.Reset()
+		hCtx.oBuffer.Write(bs)
 	}
 
 	oBs := hCtx.oBuffer.Bytes()
