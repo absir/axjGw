@@ -5,8 +5,8 @@ Servs:
     Proto: http
     Cfg:
       ServName: proxy.yiyiny.com:9080
+      RealIp: X-Original-Forwarded-For
       CookieAddr: WebSession
-  #      RealIp: X-Original-Forwarded-For
   rtsp:
     Addr: 554
     Proto: rtsp
