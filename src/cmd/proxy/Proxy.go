@@ -35,7 +35,7 @@ func main() {
 	// socket连接
 	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
 		// socket服务
-		Kt.Info("StartProxy: " + Config.SocketAddr)
+		AZap.Logger.Info("StartProxy: " + Config.SocketAddr)
 		serv, err := net.Listen("tcp", Config.SocketAddr)
 		Kt.Panic(err)
 		defer serv.Close()
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// 启动完成
-	Kt.Info("Proxy all AXJ started")
+	AZap.Logger.Info("Proxy all AXJ started")
 	// 日志配置
 	AZapIst.InitCfg(true)
 	// 等待关闭

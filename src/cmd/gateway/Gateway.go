@@ -75,7 +75,7 @@ func main() {
 	// socket连接
 	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
 		// socket服务
-		Kt.Info("StartSocket: " + Config.SocketAddr)
+		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
 		serv, err := net.Listen("tcp", Config.SocketAddr)
 		Kt.Panic(err)
 		defer serv.Close()
@@ -109,9 +109,9 @@ func main() {
 	// websocket连接
 	if Config.HttpAddr != "" && !strings.HasPrefix(Config.HttpAddr, "!") {
 		// http服务
-		Kt.Info("StartHttp: " + Config.HttpAddr)
+		AZap.Logger.Info("StartHttp: " + Config.HttpAddr)
 		if Config.HttpWs {
-			Kt.Info("StartHttpWs: " + Config.HttpWsPath)
+			AZap.Logger.Info("StartHttpWs: " + Config.HttpWsPath)
 			// websocket连接
 			http.Handle(Config.HttpWsPath, websocket.Handler(func(conn *websocket.Conn) {
 				gateway.Server.ConnLoop(ANet.NewConnWebsocket(conn))
@@ -125,7 +125,7 @@ func main() {
 	}
 
 	// 启动完成
-	Kt.Info("Gateway all AXJ started")
+	AZap.Logger.Info("Gateway all AXJ started")
 	// 日志配置
 	AZapIst.InitCfg(true)
 	// 等待关闭
