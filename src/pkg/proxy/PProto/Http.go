@@ -77,9 +77,6 @@ var HostLen = len(Host)
 var Cookie = "Cookie:"
 var CookieLen = len(Cookie)
 
-var Content = "Content"
-var ContentLen = len(Content)
-
 var ContentLength = "Content-Length: "
 var ContentLengthLen = len(ContentLength)
 
@@ -138,7 +135,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 		if b == '\r' || b == '\n' {
 			if i > si {
 				line := KtUnsafe.BytesToString(bs[si:i])
-				// println(line)
+				//println(line)
 				lLen := len(line)
 				if realIpLen > 0 && realIpLen < lLen && hCtx.realIpEi == 0 && strings.EqualFold(line[:realIpLen], c.RealIp) {
 					str := strings.TrimSpace(line[realIpLen:])
@@ -179,48 +176,46 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 					}
 
 				} else if c.CookieAddr != "" && CookieLen < lLen && strings.EqualFold(line[:CookieLen], Cookie) {
-					if c.CookieAddr != "*" {
-						// CookieAddr key值获取
-						idx := strings.LastIndex(line, c.CookieAddr)
-						if idx >= 0 {
-							line = line[idx:]
-							idx = strings.IndexAny(line, "; ")
-							if idx > 0 {
-								line = line[:idx]
+					name := *pName
+					if name != "" {
+						if c.CookieAddr != "*" {
+							// CookieAddr key值获取
+							idx := strings.LastIndex(line, c.CookieAddr)
+							if idx >= 0 {
+								line = line[idx:]
+								idx = strings.IndexAny(line, "; ")
+								if idx > 0 {
+									line = line[:idx]
+								}
+
+							} else {
+								// 没有CookieAddr
+								done = true
+								break
+							}
+						}
+
+						if c.ServName != "" && !strings.HasSuffix(name, c.ServName) {
+							// 读取域名映射缓存
+							if val, ok := c.GetOrCreateLruCache().Get(line); ok {
+								name, _ = val.(string)
+								if name != "" {
+									*pName = name
+								}
 							}
 
 						} else {
-							// 没有CookieAddr
-							done = true
-							break
-						}
-					}
-
-					name := *pName
-					if c.ServName != "" && !strings.HasSuffix(name, c.ServName) {
-						// 读取域名映射缓存
-						if val, ok := c.GetOrCreateLruCache().Get(line); ok {
-							name, _ = val.(string)
-							if name != "" {
-								*pName = name
+							// 添加域名映射缓存
+							if c.RealIp == "" {
+								name = string(KtUnsafe.StringToBytes(name))
 							}
+
+							c.GetOrCreateLruCache().Add(string(KtUnsafe.StringToBytes(line)), name)
 						}
 
-					} else {
-						// 添加域名映射缓存
-						if c.RealIp == "" {
-							name = string(KtUnsafe.StringToBytes(name))
-						}
-
-						c.GetOrCreateLruCache().Add(string(KtUnsafe.StringToBytes(line)), name)
+						done = true
+						break
 					}
-
-					done = true
-					break
-
-				} else if ContentLen < lLen && strings.EqualFold(line[:ContentLen], Content) {
-					done = true
-					break
 				}
 
 			} else if hCtx.rn > 2 || (hCtx.rn > 1 && i > 1 && bs[i-1] == b) {
@@ -291,7 +286,6 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 		realIpLen = len(c.RealIp)
 	}
 
-	println(KtUnsafe.BytesToString(bs))
 	si := hCtx.i
 	for i := hCtx.i; i < bLen; i++ {
 		b := bs[i]
@@ -385,7 +379,7 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 				buffer.Reset()
 				hCtx.reset()
 				hCtx.oBuffer.Reset()
-				println(KtUnsafe.BytesToString(bs))
+				//println(KtUnsafe.BytesToString(bs))
 				return bs, nil
 			}
 
@@ -400,8 +394,9 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 
 	if realIpLen <= 0 || !hCtx.got {
 		hCtx.oBuffer.Reset()
+		contentLast := hCtx.contentLen + hCtx.si
 		// 最后换行数据 包含Content-Length 固定大小 数据
-		for i := bLen - 1; i >= hCtx.contentLen; i-- {
+		for i := bLen - 1; i >= contentLast; i-- {
 			b := bs[i]
 			if b == '\r' || b == '\n' {
 				hCtx.oBuffer.Write(bs[:i+1])
@@ -411,8 +406,8 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 		}
 
 		// Content-Length 固定大小
-		if hCtx.contentLen > 0 && hCtx.contentLen <= bLen {
-			hCtx.oBuffer.Write(bs[:hCtx.contentLen])
+		if hCtx.contentLen > 0 && contentLast <= bLen {
+			hCtx.oBuffer.Write(bs[:contentLast])
 			hCtx.contentLen = 0
 		}
 	}
