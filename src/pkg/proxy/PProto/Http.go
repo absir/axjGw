@@ -131,6 +131,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 					}
 
 				} else if HostLen < lLen && strings.EqualFold(line[:HostLen], Host) {
+					hCtx.hi = si
 					name := strings.TrimSpace(line[HostLen+1:])
 					done = c.CookieAddr == ""
 					if c.ServName != "" && !strings.HasSuffix(name, c.ServName) {
@@ -142,17 +143,15 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 							return true, SERV_NAME_ERR
 						}
 					}
-
+					
 					if c.RealIp != "" {
 						name = string(KtUnsafe.StringToBytes(name))
 					}
 
 					*pName = name
 					if done {
-						return true, nil
+						break
 					}
-
-					hCtx.hi = si
 
 				} else if c.CookieAddr != "" && CookieLen < lLen && strings.EqualFold(line[:CookieLen], Cookie) {
 					if c.CookieAddr != "*" {
