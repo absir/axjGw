@@ -82,6 +82,7 @@ var ContentLen = len(Content)
 type HttpCtx struct {
 	i        int
 	si       int
+	hi       int
 	realIpSi int
 	realIpEi int
 	got      bool
@@ -91,6 +92,7 @@ type HttpCtx struct {
 func (that *HttpCtx) reset() {
 	that.i = 0
 	that.si = 0
+	that.hi = 0
 	that.realIpSi = 0
 	that.realIpEi = 0
 	that.got = false
@@ -150,6 +152,8 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 						return true, nil
 					}
 
+					hCtx.hi = si
+
 				} else if c.CookieAddr != "" && CookieLen < lLen && strings.EqualFold(line[:CookieLen], Cookie) {
 					if c.CookieAddr != "*" {
 						// CookieAddr key值获取
@@ -200,6 +204,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 		if c.RealIp != "" {
 			bs = KtBytes.Copy(bs)
 			buffer.Reset()
+			si = hCtx.hi
 			// 真实ip
 			if hCtx.realIpEi == 0 {
 				// 添加header
