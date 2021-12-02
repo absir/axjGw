@@ -45,8 +45,11 @@ func (that *prxMng) closeConn(conn *net.TCPConn, immed bool, err error) {
 
 	conn.Close()
 	if err != nil && err != io.EOF {
-		if errR, ok := err.(*Kt.ErrReason); ok {
-			AZap.Logger.Debug("PrxAdap Close " + errR.Error())
+		if _, ok := err.(*Kt.ErrReason); ok {
+			AZap.Logger.Debug("PrxAdap Close " + err.Error())
+
+		} else if _, ok = err.(*net.OpError); ok {
+			AZap.Logger.Debug("PrxAdap Close " + err.Error())
 
 		} else {
 			AZap.Logger.Warn("PrxAdap Close", zap.Error(err))
