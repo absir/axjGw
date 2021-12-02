@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const (
@@ -27,6 +28,11 @@ var Env = Develop
 var Active = true
 
 var Started = true
+
+// 信息日志
+func Info(info string) {
+	fmt.Println(time.Now().Format(time.RFC3339) + " Info " + info)
+}
 
 var info = log.New(os.Stdout, "", log.LstdFlags)
 
