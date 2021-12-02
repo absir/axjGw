@@ -16,7 +16,7 @@ type RtmpCfg struct {
 }
 
 func (r Rtsp) Name() string {
-	return "rtmp"
+	return "rtsp"
 }
 
 func (r Rtsp) NewCfg() interface{} {

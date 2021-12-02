@@ -8,7 +8,7 @@ Servs:
       RealIp: X-Original-Forwarded-For
   rtsp:
     Addr: 9083
-    Proto: rtmp
+    Proto: rtsp
     Cfg:
       ServName: proxy.com:9083
 
