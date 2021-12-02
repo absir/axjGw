@@ -214,6 +214,7 @@ func (that *prxServMng) login(cid int64, data []byte, conn ANet.Conn) (*gw.Login
 			fLen := len(flag)
 			if fLen > 0 && flag[0] > '0' {
 				rep := &gw.LoginRep{}
+				rep.Succ = true
 				if flag[1] > '1' {
 					gid := strs[2]
 					if gid == "" {

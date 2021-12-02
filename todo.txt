@@ -1,0 +1,3 @@
+bytes.Buffer 按size 梯度 pool
+ANet protocal bytes.Buffer Pool 优化
+agent client conn close 及时关闭状态管理

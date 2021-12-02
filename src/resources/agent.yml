@@ -8,7 +8,7 @@ Rules:
     Addr: 192.168.50.41:80
     Proto: http
     Port: 9081
-  socket:
+  tcp:
     Addr: 127.0.0.1:8787
-    Proto: socket
+    Proto: tcp
     Port: 9082

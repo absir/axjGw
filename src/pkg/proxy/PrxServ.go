@@ -58,7 +58,7 @@ func StartServ(name string, addr string, proto PrxProto, cfg map[string]string) 
 	}
 
 	PrxServMng.servMap.Store(addr, that)
-	AZap.Logger.Info("PrxServ Start " + addr)
+	AZap.Logger.Info("PrxServ Start " + proto.Name() + "://" + addr)
 	Util.GoSubmit(func() {
 		for !APro.Stopped {
 			conn, err := serv.Accept()
@@ -71,7 +71,9 @@ func StartServ(name string, addr string, proto PrxProto, cfg map[string]string) 
 				continue
 			}
 
-			that.accept(conn.(*net.TCPConn))
+			Util.GoSubmit(func() {
+				that.accept(conn.(*net.TCPConn))
+			})
 		}
 	})
 
@@ -100,11 +102,11 @@ func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *a
 		desc = sName + that.Addr
 	}
 
-	desc = desc + " => " + rule.Addr
+	desc = that.Proto.Name() + "://" + desc + " => " + rule.Addr
 	AZap.Logger.Info("PrxServ Rule " + desc)
 	// 发送给客户端
 	clientG.Rep(true, agent.REQ_ON_RULE, desc, 0, nil, false, false, 0)
-	if _, ok := proto.(*PProto.Socket); ok {
+	if _, ok := proto.(*PProto.Tcp); ok {
 		that.cid = clientG.Id()
 		that.rule = rule
 	}
@@ -114,52 +116,50 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 	buff := make([]byte, that.Proto.ReadBufferSize(that.Cfg))
 	buffer := &bytes.Buffer{}
 	name := ""
-	Util.GoSubmit(func() {
-		var size = 0
-		var err error
-		ctx := that.Proto.ReadServerCtx(that.Cfg, conn)
-		for {
-			ok := false
-			ok, err = that.Proto.ReadServerName(that.Cfg, ctx, buffer, buff[:size], &name, conn)
-			if err != nil {
-				PrxMng.closeConn(conn, true, err)
-				return
-			}
-
-			if ok {
-				break
-			}
-
-			// 读取缓冲数据过大
-			if buffer.Len() > that.Proto.ReadBufferMax(that.Cfg) {
-				PrxMng.closeConn(conn, true, err)
-				return
-			}
-
-			// 二次读取
-			size, err = conn.Read(buff)
-			if err != nil || size <= 0 {
-				PrxMng.closeConn(conn, true, err)
-				return
-			}
-		}
-
-		// 解析代理连接成功
-		client, pAddr := that.clientPAddr(name, that.Proto)
-		if client == nil || pAddr == "" {
-			PrxMng.closeConn(conn, true, Kt.NewErrReason("NO CLIENT RULE "+that.Name+" - "+name))
-			return
-		}
-
-		data := buffer.Bytes()
-		buffer.Reset()
-		id, adap := PrxMng.adapOpen(that, conn, buff, ctx, buffer)
-		err = client.Get().Rep(true, agent.REQ_CONN, pAddr, id, data, false, false, 0)
+	var size = 0
+	var err error
+	ctx := that.Proto.ReadServerCtx(that.Cfg, conn)
+	for {
+		ok := false
+		ok, err = that.Proto.ReadServerName(that.Cfg, ctx, buffer, buff[:size], &name, conn)
 		if err != nil {
-			adap.Close(err)
+			PrxMng.closeConn(conn, true, err)
 			return
 		}
-	})
+
+		if ok {
+			break
+		}
+
+		// 读取缓冲数据过大
+		if buffer.Len() > that.Proto.ReadBufferMax(that.Cfg) {
+			PrxMng.closeConn(conn, true, err)
+			return
+		}
+
+		// 二次读取
+		size, err = conn.Read(buff)
+		if err != nil || size <= 0 {
+			PrxMng.closeConn(conn, true, err)
+			return
+		}
+	}
+
+	// 解析代理连接成功
+	client, pAddr := that.clientPAddr(name, that.Proto)
+	if client == nil || pAddr == "" {
+		PrxMng.closeConn(conn, true, Kt.NewErrReason("NO CLIENT RULE "+that.Name+" - "+name))
+		return
+	}
+
+	data := buffer.Bytes()
+	buffer.Reset()
+	id, adap := PrxMng.adapOpen(that, conn, buff, ctx, buffer)
+	err = client.Get().Rep(true, agent.REQ_CONN, pAddr, id, data, false, false, 0)
+	if err != nil {
+		adap.Close(err)
+		return
+	}
 }
 
 // 获取代理客户端，代理地址
@@ -170,7 +170,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 		str = name[0:idx]
 	}
 
-	strs := strings.SplitN(str, "-", 2)
+	strs := strings.SplitN(str, "_", 2)
 	gid := strs[0]
 	sub := ""
 	if len(strs) > 1 {
@@ -228,9 +228,10 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 
 	if AclClient != nil {
 		rep, err := AclClient.Addr(Config.AclCtx(), &gw.AddrReq{
-			Gid:  gid,
-			Sub:  sub,
-			Name: name,
+			Gid:   gid,
+			Sub:   sub,
+			Name:  name,
+			Proto: that.Proto.Name(),
 		})
 
 		if err != nil {

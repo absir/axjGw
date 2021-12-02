@@ -142,6 +142,7 @@ var Cfg KtCfg.Cfg = nil
 
 func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 	if Cfg == nil {
+		// 配置读取处理
 		readMap := map[string]KtCfg.Read{}
 		readMap["@env"] = func(str string) {
 			str = strings.ToLower(str)
@@ -189,6 +190,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 			_cfg = KtCfg.ReadIn(reader, _cfg, &readMap).(KtCfg.Cfg)
 		}
 
+		// 入口文件参数配置
 		readMap["@cfg"](entry)
 		for {
 			el := cfgs.Front()
@@ -206,6 +208,13 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 			}
 		}
 
+		// 环境变量参数配置
+		acfg := os.Getenv("_acfg")
+		if acfg != "" {
+			_cfg = KtCfg.ReadIn(bufio.NewReader(strings.NewReader(acfg)), _cfg, &readMap).(KtCfg.Cfg)
+		}
+
+		// 命令行参数配置
 		var fun *KtCfg.Read = nil
 		name := ""
 		var lst *list.List = nil

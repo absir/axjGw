@@ -65,6 +65,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 					return
 				}
 
+				that.OnKeep()
 				_, err = that.outConn.Write(inBuff[:size])
 				if err != nil {
 					that.Close(err)
@@ -84,6 +85,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 					return
 				}
 
+				that.OnKeep()
 				data := that.outBuff[:size]
 				if that.outCtx != nil {
 					data, err = that.serv.Proto.ProcServerData(that.serv.Cfg, that.outCtx, that.outBuffer, data, that.outConn)

@@ -32,7 +32,7 @@ var protos map[string]PrxProto
 
 func initProtos() {
 	protos = map[string]PrxProto{}
-	RegProto(&PProto.Socket{})
+	RegProto(&PProto.Tcp{})
 	RegProto(&PProto.Http{})
 	RegProto(&PProto.Rtsp{})
 }

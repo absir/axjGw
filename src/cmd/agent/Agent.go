@@ -43,10 +43,12 @@ var Config = &config{
 	ConnDrt:     30,
 }
 
+var Machineid string
 var Client *asdk.Client
 
 const (
-	CLIENT_CERT_FILE = "client.cert"
+	CERT_FILE    = "client.cert"
+	BIN_MAC_FILE = "bin/client.mac"
 )
 
 func main() {
@@ -71,11 +73,35 @@ func main() {
 
 func loadConfig() {
 	KtCvt.BindInterface(Config, APro.Cfg)
-	f := APro.Open(CLIENT_CERT_FILE)
+	f := APro.Open(CERT_FILE)
 	if f != nil {
 		data, err := ioutil.ReadAll(f)
 		Kt.Panic(err)
 		Config.ClientCert = KtUnsafe.BytesToString(data)
+	}
+
+	// 获取本机的MAC地址
+	f = APro.Open(BIN_MAC_FILE)
+	if f != nil {
+		data, err := ioutil.ReadAll(f)
+		Kt.Panic(err)
+		Machineid = KtUnsafe.BytesToString(data)
+	}
+
+	if Machineid == "" {
+		inters, err := net.Interfaces()
+		Kt.Panic(err)
+		if inters != nil {
+			for _, inter := range inters {
+				Machineid = strings.ReplaceAll(inter.HardwareAddr.String(), ":", "")
+				if Machineid != "" {
+					f = APro.Create(BIN_MAC_FILE, false)
+					f.WriteString(Machineid)
+					f.Close()
+					break
+				}
+			}
+		}
 	}
 }
 
@@ -90,17 +116,7 @@ func (o Opt) SaveStorage(name string, value string) {
 }
 
 func (o Opt) LoginData(adapter *asdk.Adapter) []byte {
-	hardAddr := ""
-	// 获取本机的MAC地址
-	inters, err := net.Interfaces()
-	if inters != nil {
-		for _, inter := range inters {
-			hardAddr = strings.ReplaceAll(inter.HardwareAddr.String(), ":", "")
-			break
-		}
-	}
-
-	data, err := json.Marshal([]string{Config.ClientKey, Config.ClientCert, Config.ClientId, hardAddr})
+	data, err := json.Marshal([]string{Config.ClientKey, Config.ClientCert, Config.ClientId, Machineid})
 	Kt.Err(err, true)
 	return data
 }

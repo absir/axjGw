@@ -145,6 +145,8 @@ message AddrReq {
     string sub = 2;
     // 全名
     string name = 3;
+    // 协议名
+    string proto = 4;
 }
 
 message AddrRep {

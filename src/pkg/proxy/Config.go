@@ -45,7 +45,7 @@ func initConfig() {
 		KickDrt:       6000,
 		AdapCheckDrt:  3000,
 		AdapCheckBuff: 128,
-		AdapTimeout:   30000,
+		AdapTimeout:   60000,
 		AdapMaxId:     KtBytes.VINT_3_MAX,
 		Servs:         map[string]*Serv{},
 		ClientKeys:    map[string]string{},
