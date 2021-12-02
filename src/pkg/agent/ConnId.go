@@ -122,8 +122,8 @@ func (that *ConnId) onError(err error) bool {
 
 	that.locker.Unlock()
 	if err != io.EOF {
-		if nErr, ok := err.(*net.OpError); ok {
-			AZap.Debug("ConnId Close %d, %v", that.id, nErr.Error())
+		if _, ok := err.(*net.OpError); ok {
+			AZap.Debug("ConnId Close %d, %v", that.id, err)
 
 		} else {
 			AZap.Warn("Conn Err "+strconv.Itoa(int(that.id)), zap.Error(err))
