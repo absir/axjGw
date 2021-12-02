@@ -75,7 +75,7 @@ func main() {
 	// socket连接
 	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
 		// socket服务
-		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
+		AZap.Logger.Info("StartProxy: " + Config.SocketAddr)
 		serv, err := net.Listen("tcp", Config.SocketAddr)
 		Kt.Panic(err)
 		defer serv.Close()
