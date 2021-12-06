@@ -3,6 +3,7 @@ package proxy
 import (
 	"axj/Kt/Kt"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
 	"bytes"
 	"go.uber.org/zap"
@@ -86,15 +87,19 @@ func (that *prxMng) checkRange(key, val interface{}) bool {
 	return true
 }
 
-func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte, outCtx interface{}, outBuffer *bytes.Buffer) (int32, *PrxAdap) {
+func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte, outBuffer *bytes.Buffer, outCtx interface{}, buffer *bytes.Buffer) (int32, *PrxAdap) {
 	adap := new(PrxAdap)
 	adap.locker = new(sync.Mutex)
 	adap.serv = serv
 	adap.outConn = outConn
 	adap.outBuff = outBuff
-	adap.outCtx = adap.serv.Proto.ProcServerCtx(adap.serv.Cfg, outCtx, outBuffer, outConn)
-	if adap.outCtx != nil {
-		adap.outBuffer = outBuffer
+	adap.outBuffer = outBuffer
+	adap.outCtx = adap.serv.Proto.ProcServerCtx(adap.serv.Cfg, outCtx, buffer, outConn)
+	if adap.outCtx == nil {
+		Util.PutBuffer(buffer)
+
+	} else {
+		adap.buffer = buffer
 	}
 
 	var num int32 = 0

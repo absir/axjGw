@@ -3,8 +3,10 @@ package main
 import (
 	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axj/Thrd/AZap/AZapIst"
+	"axj/Thrd/Util"
 	"axjGW/pkg/proxy"
 	"go.uber.org/zap"
 	"net"
@@ -26,6 +28,8 @@ func main() {
 		WorkHash = int(APro.WorkId())
 	}
 
+	// 内存池
+	Util.SetBufferPoolsStr(APro.GetCfg("bpools", KtCvt.String, "1024,5120,10240").(string))
 	// 代理服务初始化
 	proxy.PrxServMng.Init(APro.WorkId(), APro.Cfg)
 	// 代理服务开启

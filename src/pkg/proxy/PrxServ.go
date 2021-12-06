@@ -114,16 +114,19 @@ func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *a
 }
 
 func (that *PrxServ) accept(conn *net.TCPConn) {
-	buff := make([]byte, that.Proto.ReadBufferSize(that.Cfg))
-	buffer := &bytes.Buffer{}
+	var outBuffer *bytes.Buffer
+	outBuff := Util.GetBufferBytes(that.Proto.ReadBufferSize(that.Cfg), &outBuffer)
+	buffer := Util.GetBuffer(that.Proto.ReadBufferSize(that.Cfg), true)
 	name := ""
 	var size = 0
 	var err error
 	ctx := that.Proto.ReadServerCtx(that.Cfg, conn)
 	for {
 		ok := false
-		ok, err = that.Proto.ReadServerName(that.Cfg, ctx, buffer, buff[:size], &name, conn)
+		ok, err = that.Proto.ReadServerName(that.Cfg, ctx, buffer, outBuff[:size], &name, conn)
 		if err != nil {
+			Util.PutBuffer(outBuffer)
+			Util.PutBuffer(buffer)
 			PrxMng.closeConn(conn, true, err)
 			return
 		}
@@ -134,13 +137,17 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 
 		// 读取缓冲数据过大
 		if buffer.Len() > that.Proto.ReadBufferMax(that.Cfg) {
+			Util.PutBuffer(outBuffer)
+			Util.PutBuffer(buffer)
 			PrxMng.closeConn(conn, true, err)
 			return
 		}
 
 		// 二次读取
-		size, err = conn.Read(buff)
+		size, err = conn.Read(outBuff)
 		if err != nil || size <= 0 {
+			Util.PutBuffer(outBuffer)
+			Util.PutBuffer(buffer)
 			PrxMng.closeConn(conn, true, err)
 			return
 		}
@@ -149,13 +156,15 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 	// 解析代理连接成功
 	client, pAddr := that.clientPAddr(name, that.Proto)
 	if client == nil || pAddr == "" {
+		Util.PutBuffer(outBuffer)
+		Util.PutBuffer(buffer)
 		PrxMng.closeConn(conn, true, Kt.NewErrReason("NO CLIENT RULE "+that.Name+" - "+name))
 		return
 	}
 
 	data := buffer.Bytes()
 	buffer.Reset()
-	id, adap := PrxMng.adapOpen(that, conn, buff, ctx, buffer)
+	id, adap := PrxMng.adapOpen(that, conn, outBuff, outBuffer, ctx, buffer)
 	err = client.Get().Rep(true, agent.REQ_CONN, pAddr, id, data, false, false, 0)
 	if err != nil {
 		adap.Close(err)

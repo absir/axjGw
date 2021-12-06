@@ -133,12 +133,15 @@ func GetBufferBytes(size int, pBuffer **bytes.Buffer) []byte {
 		return KtBytes.EMPTY_BYTES
 	}
 
-	pool := getBufferPool(size)
-	if pool != nil {
-		buffer := pool.pool.Get().(*bytes.Buffer)
-		buffer.Reset()
-		KtBuffer.SetLen(buffer, size)
-		return buffer.Bytes()
+	if pBuffer != nil {
+		pool := getBufferPool(size)
+		if pool != nil {
+			buffer := pool.pool.Get().(*bytes.Buffer)
+			buffer.Reset()
+			KtBuffer.SetLen(buffer, size)
+			*pBuffer = buffer
+			return buffer.Bytes()
+		}
 	}
 
 	return make([]byte, size)

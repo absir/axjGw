@@ -16,8 +16,9 @@ type PrxAdap struct {
 	serv      *PrxServ
 	outConn   *net.TCPConn // 外部代理连接
 	outBuff   []byte
-	outCtx    interface{}
 	outBuffer *bytes.Buffer
+	outCtx    interface{}
+	buffer    *bytes.Buffer
 	passTime  int64        // 超时时间
 	inConn    *net.TCPConn // 内部处理连接
 }
@@ -37,6 +38,11 @@ func (that *PrxAdap) Close(err error) {
 	that.closed = true
 	inConnNil = that.inConn == nil
 	that.locker.Unlock()
+	if inConnNil {
+		Util.PutBuffer(that.outBuffer)
+		Util.PutBuffer(that.buffer)
+	}
+
 	PrxMng.connMap.Delete(that.id)
 	PrxMng.closeConn(that.outConn, inConnNil, nil)
 	PrxMng.closeConn(that.inConn, false, err)
@@ -58,7 +64,8 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 	that.inConn = inConn
 	that.locker.Unlock()
 	{
-		inBuff := make([]byte, that.serv.Proto.ReadBufferSize(that.serv.Cfg))
+		var inBuffer *bytes.Buffer
+		inBuff := Util.GetBufferBytes(that.serv.Proto.ReadBufferSize(that.serv.Cfg), &inBuffer)
 		Util.GoSubmit(func() {
 			// 数据转发
 			for {
@@ -76,6 +83,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				}
 			}
 
+			Util.PutBuffer(inBuffer)
 			if Config.CloseDelay > 0 {
 				ANet.CloseDelayTcp(that.outConn, Config.CloseDelay)
 			}
@@ -95,7 +103,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				that.OnKeep()
 				data := that.outBuff[:size]
 				if that.outCtx != nil {
-					data, err = that.serv.Proto.ProcServerData(that.serv.Cfg, that.outCtx, that.outBuffer, data, that.outConn)
+					data, err = that.serv.Proto.ProcServerData(that.serv.Cfg, that.outCtx, that.buffer, data, that.outConn)
 				}
 
 				if err != nil {
@@ -114,6 +122,8 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				}
 			}
 
+			Util.PutBuffer(that.outBuffer)
+			Util.PutBuffer(that.buffer)
 			if Config.CloseDelay > 0 {
 				ANet.CloseDelayTcp(that.inConn, Config.CloseDelay)
 			}
