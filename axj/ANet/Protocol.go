@@ -4,6 +4,7 @@ import (
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtIo"
 	"axj/Kt/KtUnsafe"
+	"bytes"
 	"errors"
 	"io"
 	"sync"
@@ -32,12 +33,13 @@ var ERR_MAX = errors.New("MAX")
 var ERR_FRAME_MAX = errors.New("FRAME_MAX")
 
 type ReqFrame struct {
-	Head byte
-	Req  int32
-	Uri  string
-	UriI int32
-	Fid  int64
-	Data []byte
+	Head   byte
+	Req    int32
+	Uri    string
+	UriI   int32
+	Fid    int64
+	Data   []byte
+	Buffer *bytes.Buffer
 }
 
 type FrameReader struct {
@@ -67,6 +69,8 @@ func (that *FrameReader) Reset() {
 	that.Uri = ""
 	that.UriI = 0
 	that.Fid = 0
+	that.Data = nil
+	that.Buffer = nil
 	that.readerB = 0
 	that.next()
 }

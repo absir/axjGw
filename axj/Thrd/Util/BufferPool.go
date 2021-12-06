@@ -1,6 +1,8 @@
 package Util
 
 import (
+	"axj/Kt/KtBuffer"
+	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
@@ -124,4 +126,20 @@ func PutBuffer(buffer *bytes.Buffer) {
 	if pool != nil {
 		pool.pool.Put(buffer)
 	}
+}
+
+func GetBufferBytes(size int, pBuffer **bytes.Buffer) []byte {
+	if size <= 0 {
+		return KtBytes.EMPTY_BYTES
+	}
+
+	pool := getBufferPool(size)
+	if pool != nil {
+		buffer := pool.pool.Get().(*bytes.Buffer)
+		buffer.Reset()
+		KtBuffer.SetLen(buffer, size)
+		return buffer.Bytes()
+	}
+
+	return make([]byte, size)
 }

@@ -1,4 +1,4 @@
-#Proxy: 47.102.86.20:18783
+Proxy: 47.102.86.20:18783
 ClientKey: 61A583A27A845A3835A32D4C
 Rules:
   http:
