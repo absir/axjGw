@@ -9,7 +9,7 @@ func SetLen(buffer *bytes.Buffer, len int) {
 		for bLen < len {
 			if bLen <= 0 {
 				buffer.WriteByte(0)
-				
+
 			} else {
 				gLen := len - bLen
 				if bLen > gLen {
