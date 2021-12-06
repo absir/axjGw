@@ -325,7 +325,7 @@ func CloseDelay(conn Conn, drt time.Duration) {
 	}
 
 	time.Sleep(drt)
-	conn.Close(false)
+	conn.Close(true)
 }
 
 func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {

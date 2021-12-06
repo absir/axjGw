@@ -11,7 +11,6 @@ import (
 	"container/list"
 	"encoding/json"
 	"go.uber.org/zap"
-	"golang.org/x/net/websocket"
 	"net"
 	"strings"
 	"sync"
@@ -180,12 +179,7 @@ func (that *Client) GetProcessor() interface{} {
 // interface{}保护，避免sdk导出类型复杂
 func (that *Client) DialConn() (interface{}, error) {
 	if that.ws {
-		conn, err := websocket.Dial(that.addr, "", that.addr)
-		if conn == nil || err != nil {
-			return nil, err
-		}
-
-		return ANet.NewConnWebsocket(conn), err
+		return wsDial(that.addr)
 
 	} else {
 		conn, err := net.Dial("tcp", that.addr)

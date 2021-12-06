@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ConnId struct {
@@ -23,6 +24,8 @@ type ConnId struct {
 }
 
 var Client *asdk.Client
+var CloseDelay time.Duration
+var CloseDelayIn int
 
 func ConnProxy(addr string, id int32, data []byte) {
 	connId := &ConnId{
@@ -162,13 +165,18 @@ func (that *ConnId) connLoop() {
 	buff := that.aConnBuff
 	for !that.closed {
 		n, err := that.conn.Read(buff)
-		if that.onError(err) {
-			return
+		if that.onError(err) || n <= 0 {
+			break
 		}
 
-		if n > 0 {
-			that.aConnWrite(n)
+		err = that.aConnWrite(n)
+		if that.onError(err) {
+			break
 		}
+	}
+
+	if CloseDelay > 0 {
+		ANet.CloseDelay(that.aConn, CloseDelay)
 	}
 }
 
@@ -180,7 +188,7 @@ func (that *ConnId) aConnLoop() {
 		// 循环写入
 		err, data, reader := that.aConn.ReadA()
 		if that.onError(err) {
-			return
+			break
 		}
 
 		if reader == nil {
@@ -193,16 +201,20 @@ func (that *ConnId) aConnLoop() {
 
 			n, err = reader.Read(buff)
 			if that.onError(err) {
-				return
+				break
 			}
 
 			if n > 0 {
 				_, err = that.conn.Write(buff[:n])
 				if that.onError(err) {
-					return
+					break
 				}
 			}
 		}
+	}
+
+	if CloseDelay > 0 {
+		ANet.CloseDelayTcp(that.conn, CloseDelay)
 	}
 }
 

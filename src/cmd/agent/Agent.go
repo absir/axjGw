@@ -29,6 +29,7 @@ type config struct {
 	CheckDrt    int
 	RqIMax      int
 	ConnDrt     time.Duration
+	CloseDelay  time.Duration // 关闭延迟秒数
 	Rules       map[string]*agent.RULE
 }
 
@@ -41,6 +42,7 @@ var Config = &config{
 	CheckDrt:    10,
 	RqIMax:      0,
 	ConnDrt:     30,
+	CloseDelay:  30,
 }
 
 var Machineid string
@@ -59,8 +61,10 @@ func main() {
 	APro.Load(nil, "agent.yml")
 	loadConfig()
 	Config.ConnDrt *= time.Second
+	Config.CloseDelay *= time.Second
 	Client = asdk.NewClient(Config.Proxy, Config.Out, Config.Encry, Config.CompressMin, Config.DataMax, Config.CheckDrt, Config.RqIMax, &Opt{})
 	agent.Client = Client
+	agent.CloseDelay = Config.CloseDelay
 	go func() {
 		for !APro.Stopped {
 			// 保持连接

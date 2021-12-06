@@ -5,6 +5,7 @@ import (
 	"golang.org/x/net/websocket"
 	"io"
 	"net"
+	"time"
 )
 
 type Reader interface {
@@ -23,6 +24,8 @@ type Conn interface {
 	Write(bs []byte) error
 	// 写入异步
 	IsWriteAsync() bool
+	// 状态延迟
+	SetLinger(sec int) error
 	// 关闭
 	Close(immed bool)
 	// 远程地址
@@ -36,6 +39,16 @@ type ConnSocket struct {
 	out   bool
 	wBuff []byte
 	rBuff []byte
+}
+
+func CloseDelayTcp(conn *net.TCPConn, drt time.Duration) {
+	if drt < 1 {
+		drt = 1
+	}
+
+	time.Sleep(drt)
+	conn.SetLinger(0)
+	conn.Close()
 }
 
 func NewConnSocket(conn *net.TCPConn, out bool) *ConnSocket {
@@ -97,6 +110,10 @@ func (that *ConnSocket) IsWriteAsync() bool {
 	return false
 }
 
+func (that *ConnSocket) SetLinger(sec int) error {
+	return that.Conn().SetLinger(sec)
+}
+
 func (that *ConnSocket) Close(immed bool) {
 	conn := that.Conn()
 	if immed {
@@ -154,6 +171,10 @@ func (that *ConnWebsocket) Write(bs []byte) error {
 
 func (that *ConnWebsocket) IsWriteAsync() bool {
 	return false
+}
+
+func (that *ConnWebsocket) SetLinger(sec int) error {
+	return nil
 }
 
 func (that *ConnWebsocket) Close(immed bool) {

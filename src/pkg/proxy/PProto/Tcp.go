@@ -22,6 +22,9 @@ func (t Tcp) NewCfg() interface{} {
 	}
 }
 
+func (t Tcp) InitCfg(cfg interface{}) {
+}
+
 func (t Tcp) ServAddr(cfg interface{}, sName string) string {
 	return ""
 }
@@ -43,7 +46,7 @@ func (t Tcp) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buff
 	return true, nil
 }
 
-func (t Tcp) ProcServerCtx(cfg interface{}, ctx interface{}, conn *net.TCPConn) interface{} {
+func (t Tcp) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, conn *net.TCPConn) interface{} {
 	return nil
 }
 

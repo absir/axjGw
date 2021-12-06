@@ -51,6 +51,7 @@ func StartServ(name string, addr string, proto PrxProto, cfg map[string]string) 
 		KtCvt.BindInterface(that.Cfg, cfg)
 	}
 
+	that.Proto.InitCfg(that.Cfg)
 	serv, err := net.Listen("tcp", addr)
 	if err != nil {
 		AZap.Logger.Error("PrxServ Start err", zap.Error(err))

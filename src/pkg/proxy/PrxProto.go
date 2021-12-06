@@ -12,6 +12,8 @@ type PrxProto interface {
 	Name() string
 	// 协议配置
 	NewCfg() interface{}
+	// 协议配置初始化
+	InitCfg(cfg interface{})
 	// 服务地址
 	ServAddr(cfg interface{}, sName string) string
 	// 读取缓冲区大小
@@ -23,7 +25,7 @@ type PrxProto interface {
 	// 读取服务名域名之类的
 	ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error)
 	// 数据加工
-	ProcServerCtx(cfg interface{}, ctx interface{}, conn *net.TCPConn) interface{}
+	ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, conn *net.TCPConn) interface{}
 	// 数据加工
 	ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, conn *net.TCPConn) ([]byte, error)
 }

@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"axj/ANet"
 	"axj/Thrd/Util"
 	"bytes"
 	"net"
@@ -26,6 +27,7 @@ func (that *PrxAdap) Close(err error) {
 		return
 	}
 
+	inConnNil := false
 	that.locker.Lock()
 	if that.closed {
 		that.locker.Unlock()
@@ -33,9 +35,10 @@ func (that *PrxAdap) Close(err error) {
 	}
 
 	that.closed = true
+	inConnNil = that.inConn == nil
 	that.locker.Unlock()
 	PrxMng.connMap.Delete(that.id)
-	PrxMng.closeConn(that.outConn, false, nil)
+	PrxMng.closeConn(that.outConn, inConnNil, nil)
 	PrxMng.closeConn(that.inConn, false, err)
 }
 
@@ -62,15 +65,19 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				size, err := that.inConn.Read(inBuff)
 				if err != nil {
 					that.Close(err)
-					return
+					break
 				}
 
 				that.OnKeep()
 				_, err = that.outConn.Write(inBuff[:size])
 				if err != nil {
 					that.Close(err)
-					return
+					break
 				}
+			}
+
+			if Config.CloseDelay > 0 {
+				ANet.CloseDelayTcp(that.outConn, Config.CloseDelay)
 			}
 		})
 	}
@@ -82,7 +89,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				size, err := that.outConn.Read(that.outBuff)
 				if err != nil {
 					that.Close(err)
-					return
+					break
 				}
 
 				that.OnKeep()
@@ -93,18 +100,22 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 
 				if err != nil {
 					that.Close(err)
-					return
+					break
 				}
 
 				if data == nil {
-					continue
+					break
 				}
 
 				_, err = that.inConn.Write(data)
 				if err != nil {
 					that.Close(err)
-					return
+					break
 				}
+			}
+
+			if Config.CloseDelay > 0 {
+				ANet.CloseDelayTcp(that.inConn, Config.CloseDelay)
 			}
 		})
 	}

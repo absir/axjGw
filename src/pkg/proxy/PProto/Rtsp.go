@@ -1,7 +1,6 @@
 package PProto
 
 import (
-	"axj/Kt/KtUnsafe"
 	"bytes"
 	"net"
 	"strings"
@@ -25,6 +24,9 @@ func (r Rtsp) NewCfg() interface{} {
 	}
 }
 
+func (t Rtsp) InitCfg(cfg interface{}) {
+}
+
 func (r Rtsp) ServAddr(cfg interface{}, sName string) string {
 	c := cfg.(*RtmpCfg)
 	if c.ServName != "" {
@@ -46,58 +48,33 @@ func (r Rtsp) ReadBufferMax(cfg interface{}) int {
 	return cfg.(*RtmpCfg).BuffSize
 }
 
-type RtspCtx struct {
-	i  int
-	si int
+func (r Rtsp) ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{} {
+	return &HostCtx{}
 }
 
 var OPTIONS = "OPTIONS "
 var OPTIONS_LEN = len(OPTIONS)
 
-func (r Rtsp) ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{} {
-	return &RtspCtx{}
+func urlHostName(name string) string {
+	idx := strings.Index(name, "//")
+	if idx >= 0 {
+		name = name[idx+2:]
+	}
+
+	idx = strings.IndexAny(name, " /")
+	if idx >= 0 {
+		name = name[:idx]
+	}
+
+	return name
 }
 
 func (r Rtsp) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error) {
-	buffer.Write(data)
-	bs := buffer.Bytes()
-	bLen := len(bs)
-	hCtx := ctx.(*RtspCtx)
-	si := hCtx.si
-	for i := hCtx.i; i < bLen; i++ {
-		b := bs[i]
-		hCtx.i = i
-		if b == '\r' || b == '\n' {
-			if i > si {
-				line := KtUnsafe.BytesToString(bs[si:i])
-				// println(line)
-				lLen := len(line)
-				if lLen > OPTIONS_LEN && strings.EqualFold(line[:OPTIONS_LEN], OPTIONS) {
-					name := strings.TrimSpace(line[OPTIONS_LEN:])
-					idx := strings.Index(name, "//")
-					if idx >= 0 {
-						name = name[idx+2:]
-					}
-
-					idx = strings.IndexAny(name, ":/")
-					if idx >= 0 {
-						name = name[:idx]
-					}
-
-					*pName = name
-					return true, nil
-				}
-			}
-
-			si = i + 1
-			hCtx.si = si
-		}
-	}
-
-	return false, nil
+	c := cfg.(*RtmpCfg)
+	return hostReadServerName(ctx, buffer, data, pName, OPTIONS, OPTIONS_LEN, c.ServName, urlHostName)
 }
 
-func (r Rtsp) ProcServerCtx(cfg interface{}, ctx interface{}, conn *net.TCPConn) interface{} {
+func (r Rtsp) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, conn *net.TCPConn) interface{} {
 	return nil
 }
 

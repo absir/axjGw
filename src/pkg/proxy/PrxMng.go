@@ -92,7 +92,7 @@ func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte
 	adap.serv = serv
 	adap.outConn = outConn
 	adap.outBuff = outBuff
-	adap.outCtx = adap.serv.Proto.ProcServerCtx(adap.serv.Cfg, outCtx, outConn)
+	adap.outCtx = adap.serv.Proto.ProcServerCtx(adap.serv.Cfg, outCtx, outBuffer, outConn)
 	if adap.outCtx != nil {
 		adap.outBuffer = outBuffer
 	}

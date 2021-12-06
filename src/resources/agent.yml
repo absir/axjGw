@@ -1,11 +1,11 @@
-Proxy: 47.102.86.20:18783
+#Proxy: 47.102.86.20:18783
 ClientKey: 61A583A27A845A3835A32D4C
 Rules:
   http:
     Addr: 192.168.50.41:80
   2:
     Serv: http
-    Addr: 192.168.50.41:80
+    Addr: 127.0.0.1:8787
   rtsp:
     Addr: 192.168.50.41:554
 #  http2:
