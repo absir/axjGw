@@ -2,10 +2,10 @@ package proxy
 
 import (
 	"axj/Kt/Kt"
+	"axj/Kt/KtBuffer"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
-	"bytes"
 	"go.uber.org/zap"
 	"io"
 	"net"
@@ -87,7 +87,7 @@ func (that *prxMng) checkRange(key, val interface{}) bool {
 	return true
 }
 
-func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte, outBuffer *bytes.Buffer, outCtx interface{}, buffer *bytes.Buffer) (int32, *PrxAdap) {
+func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte, outBuffer *KtBuffer.Buffer, outCtx interface{}, buffer *KtBuffer.Buffer) (int32, *PrxAdap) {
 	adap := new(PrxAdap)
 	adap.locker = new(sync.Mutex)
 	adap.serv = serv

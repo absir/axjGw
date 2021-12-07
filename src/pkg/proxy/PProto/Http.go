@@ -5,7 +5,6 @@ import (
 	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
-	"bytes"
 	lru "github.com/hashicorp/golang-lru"
 	"net"
 	"strings"
@@ -110,7 +109,7 @@ func (h Http) ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{} {
 	return &HttpCtx{}
 }
 
-func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error) {
+func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error) {
 	c := cfg.(*HttpCfg)
 	if c.lenRealIp <= 0 && c.lenCookieAddr <= 0 {
 		return hostReadServerName(ctx, buffer, data, pName, Host, HostLen, c.ServName, nil)
@@ -138,7 +137,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buf
 	return false, nil
 }
 
-func (h Http) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, conn *net.TCPConn) interface{} {
+func (h Http) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, conn *net.TCPConn) interface{} {
 	c := cfg.(*HttpCfg)
 	if c.lenRealIp <= 0 && c.lenCookieAddr <= 0 {
 		return nil
@@ -156,7 +155,7 @@ func (h Http) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buff
 	return ctx
 }
 
-func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, conn *net.TCPConn) ([]byte, error) {
+func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, data []byte, conn *net.TCPConn) ([]byte, error) {
 	hCtx := ctx.(*HttpCtx)
 	if hCtx.rnsLen > 0 {
 		// dLen 数据处理

@@ -1,6 +1,8 @@
 package ANet
 
-import "time"
+import (
+	"time"
+)
 
 type Handler interface {
 	OnOpen(client Client)

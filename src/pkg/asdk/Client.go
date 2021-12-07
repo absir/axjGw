@@ -2,6 +2,7 @@ package asdk
 
 import (
 	"axj/ANet"
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
@@ -28,6 +29,16 @@ const (
 
 var SUCC = make([]byte, 0)
 
+type Buffer *KtBuffer.Buffer
+
+func SetBufferPool(pool string) {
+	Util.SetBufferPoolsS(pool)
+}
+
+func BufferFree(buffer Buffer) {
+	Util.PutBuffer(buffer)
+}
+
 type Opt interface {
 	// 载入缓存，路由压缩字典
 	LoadStorage(name string) string
@@ -36,7 +47,7 @@ type Opt interface {
 	// 授权数据
 	LoginData(adapter *Adapter) []byte
 	// 推送数据处理 !uri && !data && tid 为 fid编号消息发送失败
-	OnPush(uri string, data []byte, tid int64)
+	OnPush(uri string, data []byte, tid int64, buffer Buffer)
 	// 推送消息管道通知 gid 管道编号 connVer 推送消息时，连接版本，调用逻辑服务器Disc方法，附加验证 continues 为发送推送数据时，附加通知
 	// 可以在附加消息逻辑 检测当前gid管道 是否监听， 不监听可调用逻辑服务器Disc方法， 防止之前调用逻辑服务器Disc可以未成功的情况
 	OnLast(gid string, connVer int32, continues bool)
@@ -52,16 +63,17 @@ type Opt interface {
 	       KICK: 5, // 被剔
 	   },
 	*/
-	OnState(adapter *Adapter, state int, err string, data []byte)
+	OnState(adapter *Adapter, state int, err string, data []byte, buffer Buffer)
 	// 保留通道消息处理
-	OnReserve(adapter *Adapter, req int32, uri string, uriI int32, data []byte)
+	OnReserve(adapter *Adapter, req int32, uri string, uriI int32, data []byte, buffer Buffer)
 }
 
 type Client struct {
 	locker      sync.Locker
 	addr        string
 	ws          bool
-	out         bool
+	sendP       bool // 写入内存池
+	readP       bool // 读取内存池
 	encry       bool
 	compress    bool
 	checkDrt    time.Duration
@@ -116,26 +128,27 @@ func (that *Adapter) IsKicked() bool {
 }
 
 func (that *Adapter) Rep(client *Client, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
-	return client.processor.Rep(that.locker, client.out, that.conn, that.decryKey, client.compress, req, uri, uriI, data, isolate, id)
+	return client.processor.Rep(client.sendP, that.conn, that.decryKey, client.compress, req, uri, uriI, data, isolate, id)
 }
 
 type rqDt struct {
 	adapter *Adapter
 	timeout int64
 	send    bool
-	back    func(string, []byte)
+	back    func(string, []byte, Buffer)
 	uri     string
 	data    []byte
 	encrypt bool
 	rqI     int32
 }
 
-func NewClient(addr string, out bool, encry bool, compressMin int, dataMax int, checkDrt int, rqIMax int, opt Opt) *Client {
+func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int, dataMax int, checkDrt int, rqIMax int, opt Opt) *Client {
 	that := new(Client)
 	that.locker = new(sync.Mutex)
 	that.addr = addr
 	that.ws = strings.HasPrefix(addr, "ws:") || strings.HasPrefix(addr, "wss:")
-	that.out = out
+	that.sendP = sendP
+	that.readP = readP
 	that.encry = encry
 	that.compress = compressMin > 0
 	// 检测间隔
@@ -187,7 +200,7 @@ func (that *Client) DialConn() (interface{}, error) {
 			return nil, err
 		}
 
-		return ANet.NewConnSocket(conn.(*net.TCPConn), that.out), err
+		return ANet.NewConnSocket(conn.(*net.TCPConn)), err
 	}
 }
 
@@ -235,7 +248,7 @@ func (that *Client) Conn() *Adapter {
 	adapter.conn = aConn
 	adapter.locker = new(sync.Mutex)
 	that.adapter = adapter
-	that.opt.OnState(adapter, CONN, "", nil)
+	that.opt.OnState(adapter, CONN, "", nil, nil)
 	go that.reqLoop(adapter)
 	return adapter
 }
@@ -247,16 +260,16 @@ func (that *Client) Close() {
 	go that.onError(that.adapter, ANet.ERR_CLOSED, true)
 }
 
-func (that *Client) Loop(timeout int32, back func(string, []byte)) {
+func (that *Client) Loop(timeout int32, back func(string, []byte, Buffer)) {
 	that.Req("", nil, false, timeout, back)
 }
 
-func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, back func(string, []byte)) {
+func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, back func(string, []byte, Buffer)) {
 	adapter := that.Conn()
 	if adapter == nil {
 		// 直接断开
 		if back != nil {
-			go back("closed", nil)
+			go back("closed", nil, nil)
 		}
 		return
 	}
@@ -302,7 +315,7 @@ func (that *Client) rqDelDict(rqI int32) {
 	that.locker.Unlock()
 }
 
-func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte) {
+func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte, buffer Buffer) {
 	if rq == nil {
 		rq = that.rqGet(rqI)
 
@@ -319,9 +332,12 @@ func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte) {
 			// 已回调
 			rq.back = nil
 			defer that.onRepRcvr()
-			back(err, data)
+			back(err, data, buffer)
+			return
 		}
 	}
+
+	BufferFree(buffer)
 }
 
 func (that *Client) onRepRcvr() {
@@ -404,11 +420,11 @@ func (that *Client) doChecks() {
 
 		if rq.adapter != adapter {
 			// 请求已关闭
-			that.onRep(0, rq, "closed", nil)
+			that.onRep(0, rq, "closed", nil, nil)
 
 		} else if rq.timeout <= time {
 			// 请求已关闭
-			that.onRep(0, rq, "timeout", nil)
+			that.onRep(0, rq, "timeout", nil, nil)
 
 		} else if !rq.send && looped {
 			// 发送请求
@@ -436,7 +452,7 @@ func (that *Client) rqSend(rq *rqDt) {
 	if rq.uri == "" && rq.data == nil {
 		// 无数据请求 loop回调
 		if rq.back != nil {
-			that.onRep(0, rq, "", SUCC)
+			that.onRep(0, rq, "", SUCC, nil)
 		}
 
 		return
@@ -447,7 +463,7 @@ func (that *Client) rqSend(rq *rqDt) {
 		decryKey = nil
 	}
 
-	err := that.processor.Rep(adapter.locker, that.out, adapter.conn, decryKey, that.compress, rq.rqI, rq.uri, 0, rq.data, false, 0)
+	err := that.processor.Rep(that.sendP, adapter.conn, decryKey, that.compress, rq.rqI, rq.uri, 0, rq.data, false, 0)
 	// 发送错误处理
 	that.onError(adapter, err, true)
 }
@@ -520,7 +536,7 @@ func (that *Client) onError(adapter *Adapter, err error, lock bool) bool {
 
 	if adapter == nil {
 		// 连接错误
-		that.opt.OnState(adapter, ERROR, err.Error(), nil)
+		that.opt.OnState(adapter, ERROR, err.Error(), nil, nil)
 
 	} else {
 		// 关闭连接
@@ -528,7 +544,7 @@ func (that *Client) onError(adapter *Adapter, err error, lock bool) bool {
 		if that.closeAdapter(adapter, lock) {
 			if !adapter.kicked {
 				// 未踢开，CLOSE状态通知
-				that.opt.OnState(adapter, CLOSE, err.Error(), nil)
+				that.opt.OnState(adapter, CLOSE, err.Error(), nil, nil)
 			}
 
 			that.checksAsync.StartLock(nil, lock)
@@ -550,26 +566,30 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			flag |= ANet.FLG_COMPRESS
 		}
 
-		if that.out {
-			flag |= ANet.FLG_OUT
-		}
-
-		err := that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, "", flag, nil, false, 0)
+		err := that.processor.Rep(that.sendP, adapter.conn, adapter.decryKey, that.compress, 0, "", flag, nil, false, 0)
 		if that.onError(adapter, err, true) {
 			return
 		}
 
-		that.opt.OnState(adapter, OPEN, "", nil)
+		that.opt.OnState(adapter, OPEN, "", nil, nil)
 	}
 
+	// 读取内存池
+	var buffer *KtBuffer.Buffer = nil
+	var pBuffer **KtBuffer.Buffer = nil
+	if that.readP {
+		pBuffer = &buffer
+	}
+
+	// catch err
+	defer that.reqLoopRcvr(adapter, buffer)
 	for adapter == that.adapter {
-		err, req, uri, uriI, pid, data := that.processor.ReqPId(adapter.conn, adapter.decryKey)
+		Util.PutBuffer(buffer)
+		buffer = nil
+		err, req, uri, uriI, pid, data := that.processor.ReqPId(pBuffer, adapter.conn, adapter.decryKey)
 		if that.onError(adapter, err, true) {
 			break
 		}
-
-		// catch err
-		defer that.reqLoopRcvr(adapter)
 
 		// 非返回值 才需要路由压缩解密
 		if req < ANet.REQ_ONEWAY {
@@ -582,18 +602,21 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		switch req {
 		case ANet.REQ_PUSH:
 			// 推送消息
-			that.opt.OnPush(uri, data, 0)
+			that.opt.OnPush(uri, data, 0, buffer)
+			buffer = nil
 			continue
 		case ANet.REQ_PUSHI:
 			// 推送消息I
-			that.opt.OnPush(uri, data, pid)
+			that.opt.OnPush(uri, data, pid, buffer)
+			buffer = nil
 			continue
 		case ANet.REQ_KICK:
 			// 被踢
 			adapter.kicked = true
 			that.adapter = nil
 			adapter.conn.Close(true)
-			that.opt.OnState(adapter, KICK, "", data)
+			that.opt.OnState(adapter, KICK, "", data, buffer)
+			buffer = nil
 			continue
 		case ANet.REQ_LAST:
 			// 推送状态
@@ -605,12 +628,16 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			continue
 		case ANet.REQ_KEY:
 			// 传输秘钥
+			if that.readP {
+				data = KtBytes.Copy(data)
+			}
+
 			adapter.decryKey = data
 			continue
 		case ANet.REQ_ACL:
 			// 登录请求
 			data = that.opt.LoginData(adapter)
-			err = that.processor.Rep(adapter.locker, that.out, adapter.conn, adapter.decryKey, that.compress, 0, that.uriMapHash, 1, data, false, 0)
+			err = that.processor.Rep(that.sendP, adapter.conn, adapter.decryKey, that.compress, 0, that.uriMapHash, 1, data, false, 0)
 			that.onError(adapter, err, true)
 			continue
 		case ANet.REQ_BEAT:
@@ -623,7 +650,8 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		case ANet.REQ_LOOP:
 			// 连接完成
 			that.onLoop(adapter, uri)
-			that.opt.OnState(adapter, LOOP, "", data)
+			that.opt.OnState(adapter, LOOP, "", data, buffer)
+			buffer = nil
 			continue
 		}
 
@@ -643,15 +671,21 @@ func (that *Client) reqLoop(adapter *Adapter) {
 				break
 			}
 
-			that.onRep(req, nil, errS, data)
+			that.onRep(req, nil, errS, data, buffer)
+			buffer = nil
 
 		} else {
-			that.opt.OnReserve(adapter, req, uri, uriI, data)
+			that.opt.OnReserve(adapter, req, uri, uriI, data, buffer)
+			buffer = nil
 		}
 	}
+
+	Util.PutBuffer(buffer)
 }
 
-func (that *Client) reqLoopRcvr(adapter *Adapter) {
+func (that *Client) reqLoopRcvr(adapter *Adapter, buffer *KtBuffer.Buffer) {
+	// 内存池回收
+	Util.PutBuffer(buffer)
 	if err := recover(); err != nil {
 		AZap.LoggerS.Warn("ReqLoop Err", zap.Reflect("err", err))
 	}

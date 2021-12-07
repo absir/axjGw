@@ -8,7 +8,6 @@ import (
 
 type config struct {
 	SocketAddr    string // socket服务地址
-	SocketOut     bool   // socket流写入
 	CompressMin   int    // 最短压缩
 	DataMax       int32  // 最大数据(请求)
 	Encrypt       bool   // 通讯加密

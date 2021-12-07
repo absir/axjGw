@@ -81,7 +81,7 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt int64, checkDrt time.
 	that.clientMap = cmap.NewCMapInit()
 	that.checkDrt = checkDrt
 	that.idleDrt = int64(idleDrt)
-	that.beatBytes, _ = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, 0, false, 0, 0)
+	that.beatBytes, _ = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, 0, false, 0, 0, nil)
 	return that
 }
 
@@ -192,13 +192,13 @@ func (that *Manager) checkClient(key interface{}, val interface{}) {
 	that.handlerM.Check(that.checkTime, client)
 }
 
-func (that *Manager) Open(conn Conn, encryKey []byte, compress bool, out bool, id int64) Client {
+func (that *Manager) Open(conn Conn, encryKey []byte, compress bool, id int64) Client {
 	client := that.handlerM.New(conn)
 	clientM := that.ClientM(client)
 	clientM.id = id
 	clientM.initTime = time.Now().UnixNano()
 	clientM.idleTime = clientM.initTime + that.idleDrt
-	client.Get().Open(client, conn, that, encryKey, compress, out)
+	client.Get().Open(client, conn, that, encryKey, compress)
 	that.OnOpen(client)
 	return client
 }

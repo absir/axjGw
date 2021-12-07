@@ -2,8 +2,8 @@ package PProto
 
 import (
 	"axj/Kt/Kt"
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtUnsafe"
-	"bytes"
 	"strings"
 )
 
@@ -14,7 +14,7 @@ type HostCtx struct {
 	si int
 }
 
-func hostReadServerName(ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, host string, hostLen int, servName string, nameFun func(name string) string) (bool, error) {
+func hostReadServerName(ctx interface{}, buffer *KtBuffer.Buffer, data []byte, pName *string, host string, hostLen int, servName string, nameFun func(name string) string) (bool, error) {
 	buffer.Write(data)
 	bs := buffer.Bytes()
 	bLen := len(bs)

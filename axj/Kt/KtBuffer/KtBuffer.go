@@ -2,7 +2,20 @@ package KtBuffer
 
 import "bytes"
 
-func SetLen(buffer *bytes.Buffer, len int) {
+func IndexByte(b []byte, c byte) int {
+	return bytes.IndexByte(b, c)
+}
+
+type IBuffer interface {
+	Len() int
+	WriteByte(c byte) error
+	Write(p []byte) (n int, err error)
+	Bytes() []byte
+	Grow(n int)
+	Truncate(n int)
+}
+
+func SetLen(buffer IBuffer, len int) {
 	bLen := buffer.Len()
 	if bLen < len {
 		buffer.Grow(len)
@@ -28,7 +41,7 @@ func SetLen(buffer *bytes.Buffer, len int) {
 	}
 }
 
-func SetRangeLen(buffer *bytes.Buffer, si int, ei int, rLen int) bool {
+func SetRangeLen(buffer IBuffer, si int, ei int, rLen int) bool {
 	sLen := ei - si
 	if sLen < 0 {
 		return false
@@ -55,4 +68,26 @@ func SetRangeLen(buffer *bytes.Buffer, si int, ei int, rLen int) bool {
 	}
 
 	return true
+}
+
+func SetGetBytesSize(buffer *Buffer, size int, max int) []byte {
+	buf := buffer.buf
+	bLen := cap(buf)
+	if bLen >= size {
+		return buf[:size]
+	}
+
+	mLen := size + smallBufferSize
+	tLen := bLen<<1 + smallBufferSize
+	if tLen < mLen {
+		tLen = mLen
+	}
+
+	if tLen > max {
+		tLen = max
+	}
+
+	buf = make([]byte, tLen)
+	buffer.buf = buf
+	return buf[:size]
 }

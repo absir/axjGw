@@ -25,7 +25,6 @@ type config struct {
 	HttpWs     bool     // 启用ws网关
 	HttpWsPath string   // ws连接地址
 	SocketAddr string   // socket服务地址
-	SocketOut  bool     // socketOut流写入
 	SocketPoll bool     // socketPoll读取
 	FrameMax   int      // 最大帧数
 	GrpcAddr   string   // grpc服务地址
@@ -38,7 +37,6 @@ var Config = &config{
 	HttpWs:     true,
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
-	SocketOut:  false,
 	SocketPoll: true,
 	GrpcAddr:   "127.0.0.1:8082",
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
@@ -53,6 +51,8 @@ func main() {
 	}, "../../resources")
 	APro.Load(nil, "config.yml")
 
+	// 内存池
+	Util.SetBufferPoolsS(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240").(string))
 	// 协程池
 
 	// 默认配置
@@ -92,7 +92,7 @@ func main() {
 				}
 
 				tConn := conn.(*net.TCPConn)
-				sConn := ANet.NewConnSocket(tConn, Config.SocketOut)
+				sConn := ANet.NewConnSocket(tConn)
 				if Config.SocketPoll {
 					// 优先ePoll模式
 					gateway.Server.ConnPoll(sConn)

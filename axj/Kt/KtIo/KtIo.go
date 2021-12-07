@@ -58,10 +58,10 @@ func GetInt64Reader(reader io.ByteReader) int64 {
 }
 
 func ReadBytesReader(reader io.Reader, bLen int) ([]byte, error) {
-	return readBytesReaderBsLen(reader, make([]byte, bLen), bLen)
+	return ReadBytesReaderBsLen(reader, make([]byte, bLen), bLen)
 }
 
-func readBytesReaderBsLen(reader io.Reader, bs []byte, bLen int) ([]byte, error) {
+func ReadBytesReaderBsLen(reader io.Reader, bs []byte, bLen int) ([]byte, error) {
 	var off int
 	var err error
 	for {

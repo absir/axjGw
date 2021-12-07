@@ -1,8 +1,8 @@
 package proxy
 
 import (
+	"axj/Kt/KtBuffer"
 	"axj/Thrd/Util"
-	"bytes"
 	"net"
 	"sync"
 	"time"
@@ -15,9 +15,9 @@ type PrxAdap struct {
 	serv      *PrxServ
 	outConn   *net.TCPConn // 外部代理连接
 	outBuff   []byte
-	outBuffer *bytes.Buffer
+	outBuffer *KtBuffer.Buffer
 	outCtx    interface{}
-	buffer    *bytes.Buffer
+	buffer    *KtBuffer.Buffer
 	passTime  int64        // 超时时间
 	inConn    *net.TCPConn // 内部处理连接
 }
@@ -63,7 +63,7 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 	that.inConn = inConn
 	that.locker.Unlock()
 	{
-		var inBuffer *bytes.Buffer
+		var inBuffer *KtBuffer.Buffer
 		inBuff := Util.GetBufferBytes(that.serv.Proto.ReadBufferSize(that.serv.Cfg), &inBuffer)
 		Util.GoSubmit(func() {
 			// 数据转发

@@ -2,11 +2,11 @@ package agent
 
 import (
 	"axj/ANet"
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/pkg/asdk"
-	"bytes"
 	"go.uber.org/zap"
 	"io"
 	"net"
@@ -22,14 +22,14 @@ type ConnId struct {
 	conn        *net.TCPConn
 	aConn       ANet.Conn
 	aConnBuff   []byte
-	aConnBuffer *bytes.Buffer
+	aConnBuffer *KtBuffer.Buffer
 }
 
 var Client *asdk.Client
 var CloseDelay int
 var CloseDelayIn int
 
-func ConnProxy(addr string, id int32, data []byte) {
+func ConnProxy(addr string, id int32, data []byte, buffer asdk.Buffer) {
 	connId := &ConnId{
 		id:     id,
 		locker: new(sync.Mutex),
@@ -77,17 +77,22 @@ func ConnProxy(addr string, id int32, data []byte) {
 			}
 
 			// 代理连接连接id请求
-			err = aProcessor.Rep(nil, true, aConn, nil, false, REQ_CONN, "", id, nil, false, 0)
+			err = aProcessor.Rep(true, aConn, nil, false, REQ_CONN, "", id, nil, false, 0)
 			if connId.onError(err) {
+				// 内存池释放
+				asdk.BufferFree(buffer)
 				return
 			}
 
+			// aConnBuff
 			connId.aConnBuff = Util.GetBufferBytes(buffSize, &connId.aConnBuffer)
 		}
 
 		// 连接数据写入
 		if data != nil {
 			_, err := connId.conn.Write(data)
+			// 内存池释放
+			asdk.BufferFree(buffer)
 			if connId.onError(err) {
 				// 内存池回收
 				Util.PutBuffer(connId.aConnBuffer)
@@ -188,7 +193,7 @@ func (that *ConnId) connLoop() {
 
 // aConn代理连接 数据接收 写入到 conn本地连接
 func (that *ConnId) aConnLoop() {
-	var buffer *bytes.Buffer = nil
+	var buffer *KtBuffer.Buffer = nil
 	var buff []byte = nil
 	var n int
 	for !that.closed {

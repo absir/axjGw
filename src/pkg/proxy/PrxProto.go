@@ -1,9 +1,9 @@
 package proxy
 
 import (
+	"axj/Kt/KtBuffer"
 	"axj/Thrd/AZap"
 	"axjGW/pkg/proxy/PProto"
-	"bytes"
 	"net"
 )
 
@@ -23,11 +23,11 @@ type PrxProto interface {
 	// 读取服务名域名版主对象
 	ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{}
 	// 读取服务名域名之类的
-	ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error)
+	ReadServerName(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error)
 	// 数据加工
-	ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, conn *net.TCPConn) interface{}
+	ProcServerCtx(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, conn *net.TCPConn) interface{}
 	// 数据加工
-	ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, conn *net.TCPConn) ([]byte, error)
+	ProcServerData(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, data []byte, conn *net.TCPConn) ([]byte, error)
 }
 
 var protos map[string]PrxProto

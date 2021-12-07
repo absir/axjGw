@@ -14,7 +14,8 @@ type ConnPoll struct {
 	client      Client
 }
 
-func (that *ConnPoll) Init(conn Conn) *ConnPoll {
+func NewConnPoll(conn Conn) *ConnPoll {
+	that := new(ConnPoll)
 	that.conn = conn
 	that.locker = new(sync.Mutex)
 	that.listAsync = Util.NewListAsync(nil, that.locker)
@@ -26,10 +27,10 @@ func (that *ConnPoll) IsClose() bool {
 	return that.conn == nil
 }
 
-func (that *ConnPoll) OnRead(processor *Processor, bs []byte) error {
+func (that *ConnPoll) OnRead(processor *Processor, bs []byte, bufferP bool) error {
 	pBs := &bs
 	for {
-		err := processor.Protocol.ReqFrame(pBs, that.frameReader, processor.DataMax)
+		err := processor.Protocol.ReqFrame(pBs, that.frameReader, processor.DataMax, bufferP)
 		if err != nil {
 			return err
 		}

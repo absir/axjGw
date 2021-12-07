@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"axj/Kt/KtUnsafe"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
@@ -50,12 +49,13 @@ func (Z zDevAcl) Req(ctx context.Context, in *gw.PassReq, opts ...grpc.CallOptio
 		// 向ZG组发送消息
 		var strs []string
 		json.Unmarshal(in.Data, &strs)
+		data := []byte(strs[1])
 		Util.GoSubmit(func() {
 			Server.gatewayISC.GPush(ctx, &gw.GPushReq{
 				Gid:  "ZG",
 				Qs:   3,
 				Uri:  strs[0],
-				Data: KtUnsafe.StringToBytes(strs[1]),
+				Data: data,
 			}, opts...)
 		})
 		return &gw.DataRep{}, nil

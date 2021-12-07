@@ -6,7 +6,6 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
-	"bytes"
 	"sort"
 	"sync"
 )
@@ -19,21 +18,21 @@ type bufferPool struct {
 var bufferPools []*bufferPool
 
 func newBuffer() interface{} {
-	return new(bytes.Buffer)
+	return new(KtBuffer.Buffer)
 }
 
-func SetBufferPoolsStr(str string) {
-	if str == "" {
+func SetBufferPoolsS(maxSizes string) {
+	if maxSizes == "" {
 		bufferPools = nil
 	}
 
-	strs := KtStr.SplitByte(str, ',', true, 0, 0)
-	maxSizes := make([]int, len(strs))
-	for i, s := range strs {
-		maxSizes[i] = int(KtCvt.ToInt32(s))
+	ss := KtStr.SplitByte(maxSizes, ',', true, 0, 0)
+	maxs := make([]int, len(ss))
+	for i, s := range ss {
+		maxs[i] = int(KtCvt.ToInt32(s))
 	}
 
-	SetBufferPools(maxSizes)
+	SetBufferPools(maxs)
 }
 
 func SetBufferPools(maxSizes []int) {
@@ -95,7 +94,7 @@ func getBufferPool(size int) *bufferPool {
 	return nil
 }
 
-func GetBuffer(size int, force bool) *bytes.Buffer {
+func GetBuffer(size int, force bool) *KtBuffer.Buffer {
 	if size < 0 {
 		size = 0
 	}
@@ -106,18 +105,19 @@ func GetBuffer(size int, force bool) *bytes.Buffer {
 			return nil
 		}
 
-		buffer := new(bytes.Buffer)
-		buffer.Grow(size)
+		buffer := new(KtBuffer.Buffer)
+		KtBuffer.SetGetBytesSize(buffer, size, size)
+		buffer.Reset()
 		return buffer
 	}
 
-	buffer := pool.pool.Get().(*bytes.Buffer)
+	buffer := pool.pool.Get().(*KtBuffer.Buffer)
+	KtBuffer.SetGetBytesSize(buffer, size, size)
 	buffer.Reset()
-	buffer.Grow(size)
 	return buffer
 }
 
-func PutBuffer(buffer *bytes.Buffer) {
+func PutBuffer(buffer *KtBuffer.Buffer) {
 	if buffer == nil {
 		return
 	}
@@ -128,19 +128,24 @@ func PutBuffer(buffer *bytes.Buffer) {
 	}
 }
 
-func GetBufferBytes(size int, pBuffer **bytes.Buffer) []byte {
+func GetBufferBytes(size int, pBuffer **KtBuffer.Buffer) []byte {
 	if size <= 0 {
 		return KtBytes.EMPTY_BYTES
 	}
 
 	if pBuffer != nil {
-		pool := getBufferPool(size)
-		if pool != nil {
-			buffer := pool.pool.Get().(*bytes.Buffer)
-			buffer.Reset()
-			KtBuffer.SetLen(buffer, size)
-			*pBuffer = buffer
-			return buffer.Bytes()
+		buffer := *pBuffer
+		if buffer == nil {
+			pool := getBufferPool(size)
+			if pool != nil {
+				buffer = pool.pool.Get().(*KtBuffer.Buffer)
+				bs := KtBuffer.SetGetBytesSize(buffer, size, pool.maxSize)
+				*pBuffer = buffer
+				return bs
+			}
+
+		} else {
+			return KtBuffer.SetGetBytesSize(buffer, size, size)
 		}
 	}
 

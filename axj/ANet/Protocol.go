@@ -1,13 +1,13 @@
 package ANet
 
 import (
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtIo"
 	"axj/Kt/KtUnsafe"
-	"bytes"
+	"axj/Thrd/Util"
 	"errors"
 	"io"
-	"sync"
 )
 
 const (
@@ -39,7 +39,7 @@ type ReqFrame struct {
 	UriI   int32
 	Fid    int64
 	Data   []byte
-	Buffer *bytes.Buffer
+	Buffer *KtBuffer.Buffer
 }
 
 type FrameReader struct {
@@ -69,7 +69,8 @@ func (that *FrameReader) Reset() {
 	that.Uri = ""
 	that.UriI = 0
 	that.Fid = 0
-	that.Data = nil
+	// next set nil
+	// that.Data = nil
 	that.Buffer = nil
 	that.readerB = 0
 	that.next()
@@ -176,14 +177,20 @@ func (that *FrameReader) readLong(pBs *[]byte) int64 {
 	return -1
 }
 
-func (that *FrameReader) readDataLen(pBs *[]byte, dataMax int32) (bool, error) {
+func (that *FrameReader) readDataLen(pBs *[]byte, dataMax int32, bufferP bool) (bool, error) {
 	dLen := that.readVInt(pBs)
 	if dLen >= 0 {
 		if dLen > dataMax {
 			return false, ERR_MAX
 		}
 
-		that.Data = make([]byte, dLen)
+		if bufferP {
+			that.Data = Util.GetBufferBytes(int(dLen), &that.Buffer)
+
+		} else {
+			that.Data = make([]byte, dLen)
+		}
+
 		that.i32 = dLen
 		return true, nil
 	}
@@ -217,18 +224,11 @@ type Protocol interface {
 	// 请求读取
 	Req(bs []byte, pid *int64) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 流请求读取
-	ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte)
+	ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32, pBuffer **KtBuffer.Buffer) (err error, head byte, req int32, uri string, uriI int32, data []byte)
 	// 帧请求读取
-	ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32) error
+	ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32, bufferP bool) error
 	// 返回数据 dLength data强制长度，不copydata
-	Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32)
-	// 返回流写入
-	RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error)
-	// 批量返回数据头
-	RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte
-	// 批量通过RepBH生成RepBs数据 dLength data强制长度，不copydata
-	RepBS(bh []byte, data []byte, dLength int32, sticky bool, head byte) ([]byte, int32)
-	RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error)
+	Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64, pBuffer **KtBuffer.Buffer) ([]byte, int32)
 }
 
 type ProtocolV struct {
@@ -289,7 +289,7 @@ func (that *ProtocolV) Req(bs []byte, pid *int64) (err error, head byte, req int
 	return
 }
 
-func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
+func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax int32, pBuffer **KtBuffer.Buffer) (err error, head byte, req int32, uri string, uriI int32, data []byte) {
 	head, err = reader.ReadByte()
 	if err != nil {
 		return
@@ -349,7 +349,14 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax
 				return
 			}
 
-			data, err = KtIo.ReadBytesReader(reader, int(bLen))
+			if pBuffer == nil {
+				data, err = KtIo.ReadBytesReader(reader, int(bLen))
+
+			} else {
+				dLen := int(bLen)
+				data = Util.GetBufferBytes(dLen, pBuffer)
+				data, err = KtIo.ReadBytesReaderBsLen(reader, data, dLen)
+			}
 
 		} else {
 			// 不粘包
@@ -360,7 +367,7 @@ func (that *ProtocolV) ReqReader(reader Reader, sticky bool, pid *int64, dataMax
 	return
 }
 
-func (that *ProtocolV) ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32) error {
+func (that *ProtocolV) ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32, bufferP bool) error {
 	for {
 		switch reader.readerB {
 		case 0:
@@ -391,7 +398,7 @@ func (that *ProtocolV) ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32)
 		case 2:
 			if (reader.Head & HEAD_URI) != 0 {
 				// 读取Uri
-				ok, err := reader.readDataLen(pBs, dataMax)
+				ok, err := reader.readDataLen(pBs, dataMax, false)
 				if err != nil {
 					return err
 				}
@@ -440,7 +447,7 @@ func (that *ProtocolV) ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32)
 		case 6:
 			if (reader.Head & HEAD_DATA) != 0 {
 				// 读取DATA
-				ok, err := reader.readDataLen(pBs, dataMax)
+				ok, err := reader.readDataLen(pBs, dataMax, bufferP)
 				if err != nil {
 					return err
 				}
@@ -475,7 +482,7 @@ func (that *ProtocolV) ReqFrame(pBs *[]byte, reader *FrameReader, dataMax int32)
 	}
 }
 
-func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64) ([]byte, int32) {
+func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, dLength int32, sticky bool, head byte, id int64, pBuffer **KtBuffer.Buffer) ([]byte, int32) {
 	if req == REQ_PUSHI {
 		if id == 0 {
 			req = REQ_PUSH
@@ -534,7 +541,7 @@ func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, dLeng
 		bLen += dLen
 	}
 
-	bs := make([]byte, bLen)
+	bs := Util.GetBufferBytes(int(bLen), pBuffer)
 	var off int32 = 1
 	if req > 0 {
 		// 请求
@@ -577,312 +584,4 @@ func (that *ProtocolV) Rep(req int32, uri string, uriI int32, data []byte, dLeng
 	head |= that.crc(head)
 	bs[0] = head
 	return bs, dOff
-}
-
-func (that *ProtocolV) RepOut(locker sync.Locker, conn Conn, buff *[]byte, req int32, uri string, uriI int32, data []byte, head byte, id int64) (err error) {
-	if req == REQ_PUSHI {
-		if id == 0 {
-			req = REQ_PUSH
-		}
-
-	} else {
-		id = 0
-	}
-
-	err = nil
-	// 头状态准备
-	if req > 0 {
-		head |= HEAD_REQ
-	}
-
-	uLen := int32(len(uri))
-	if uLen > 0 {
-		head |= HEAD_URI
-	}
-
-	if uriI > 0 {
-		head |= HEAD_URI_I
-	}
-
-	var dLen int32 = 0
-	if data != nil {
-		dLen = int32(len(data))
-	}
-
-	if dLen > 0 {
-		head |= HEAD_DATA
-	}
-
-	// 写入锁
-	if locker != nil {
-		locker.Lock()
-	}
-
-	// buff准备
-	_buff := *buff
-	if _buff == nil || len(_buff) < 4 {
-		_buff = make([]byte, 4)
-		*buff = _buff
-	}
-
-	// 写入头
-	head |= that.crc(head)
-	_buff[0] = head
-	err = conn.Write(_buff[0:1])
-	if err != nil {
-		// 写入锁释放
-		if locker != nil {
-			locker.Unlock()
-		}
-		return
-	}
-
-	var off int32 = 0
-	// 写入请求
-	if req > 0 {
-		KtBytes.SetVInt(_buff, 0, req, &off)
-		err = conn.Write(_buff[0:off])
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-	}
-
-	// 写入路由
-	if uLen > 0 {
-		KtBytes.SetVInt(_buff, 0, uLen, &off)
-		err = conn.Write(_buff[0:off])
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-
-		err = conn.Write(KtUnsafe.StringToBytes(uri))
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-	}
-
-	// 写入路由压缩
-	if uriI > 0 {
-		KtBytes.SetVInt(_buff, 0, uriI, &off)
-		err = conn.Write(_buff[0:off])
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-	}
-
-	// 写入消息编号
-	if req == REQ_PUSHI {
-		KtBytes.SetInt32(_buff, 0, int32(id), &off)
-		err = conn.Write(_buff[0:off])
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-
-		KtBytes.SetInt32(_buff, 0, int32(id>>32), &off)
-		err = conn.Write(_buff[0:off])
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-	}
-
-	// 写入数据
-	if dLen > 0 {
-		// 数据
-		if conn.Sticky() {
-			KtBytes.SetVInt(_buff, 0, dLen, &off)
-			err = conn.Write(_buff[0:off])
-			if err != nil {
-				// 写入锁释放
-				if locker != nil {
-					locker.Unlock()
-				}
-				return
-			}
-		}
-
-		err = conn.Write(data)
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-	}
-
-	// 写入锁释放
-	if locker != nil {
-		locker.Unlock()
-	}
-	return
-}
-
-func (that *ProtocolV) RepBH(req int32, uri string, uriI int32, data bool, head byte) []byte {
-	if data {
-		head |= HEAD_DATA
-	}
-
-	bs, _ := that.Rep(req, uri, uriI, nil, 0, false, head, 0)
-	return bs
-}
-
-func (that ProtocolV) RepBS(bh []byte, data []byte, dLength int32, sticky bool, head byte) ([]byte, int32) {
-	// 数据长度
-	var dLen int32 = 0
-	if data != nil {
-		if dLength > 0 {
-			dLen = dLength
-
-		} else {
-			dLen = int32(len(data))
-		}
-	}
-
-	if dLen > 0 {
-		off := int32(len(bh))
-		// 数据粘包
-		bLen := off + dLen
-		if sticky {
-			bLen += KtBytes.GetVIntLen(dLen)
-		}
-
-		// 新数据包
-		bs := make([]byte, bLen)
-		// 头数据
-		copy(bs, bh)
-
-		// 粘包
-		if sticky {
-			KtBytes.SetVInt(bs, off, dLen, &off)
-		}
-
-		var dOff int32 = 0
-
-		if dLength > 0 {
-			dOff = off
-
-		} else {
-			// 数据
-			copy(bs[off:], data)
-		}
-
-		// 头处理
-		head |= bs[0]
-		head |= HEAD_DATA
-		if head != bs[0] {
-			head = that.crc(head)
-			bs[0] = head
-		}
-
-		return bs, dOff
-	}
-
-	return bh, 0
-}
-
-func (that *ProtocolV) RepOutBS(locker sync.Locker, conn Conn, buff *[]byte, bh []byte, data []byte, head byte) (err error) {
-	err = nil
-	var dLen int32 = 0
-	if data != nil {
-		dLen = int32(len(data))
-	}
-
-	// 头处理
-	head |= bh[0]
-	if dLen > 0 {
-		head |= HEAD_DATA
-	}
-
-	if head != bh[0] {
-		head = that.crc(head)
-	}
-
-	// 写入锁
-	if locker != nil {
-		locker.Lock()
-	}
-
-	// buff准备
-	_buff := *buff
-	if _buff == nil {
-		_buff = make([]byte, 4)
-		*buff = _buff
-	}
-
-	// 写入批量头状态
-	_buff[0] = head
-	err = conn.Write(_buff[0:1])
-	if err != nil {
-		// 写入锁释放
-		if locker != nil {
-			locker.Unlock()
-		}
-		return
-	}
-
-	// 写入批量头
-	err = conn.Write(bh[1:])
-	if err != nil {
-		// 写入锁释放
-		if locker != nil {
-			locker.Unlock()
-		}
-		return
-	}
-
-	if dLen > 0 {
-		// 写入粘包
-		if conn.Sticky() {
-			var off int32
-			KtBytes.SetVInt(_buff, 0, dLen, &off)
-			err = conn.Write(_buff[0:off])
-			if err != nil {
-				// 写入锁释放
-				if locker != nil {
-					locker.Unlock()
-				}
-				return
-			}
-		}
-
-		// 写入数据
-		err = conn.Write(data)
-		if err != nil {
-			// 写入锁释放
-			if locker != nil {
-				locker.Unlock()
-			}
-			return
-		}
-	}
-
-	// 写入锁释放
-	if locker != nil {
-		locker.Unlock()
-	}
-	return
 }

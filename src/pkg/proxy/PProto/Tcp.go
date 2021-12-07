@@ -1,7 +1,7 @@
 package PProto
 
 import (
-	"bytes"
+	"axj/Kt/KtBuffer"
 	"net"
 )
 
@@ -41,15 +41,15 @@ func (t Tcp) ReadServerCtx(cfg interface{}, conn *net.TCPConn) interface{} {
 	return nil
 }
 
-func (t Tcp) ReadServerName(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error) {
+func (t Tcp) ReadServerName(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, data []byte, pName *string, conn *net.TCPConn) (bool, error) {
 	buffer.Write(data)
 	return true, nil
 }
 
-func (t Tcp) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, conn *net.TCPConn) interface{} {
+func (t Tcp) ProcServerCtx(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, conn *net.TCPConn) interface{} {
 	return nil
 }
 
-func (t Tcp) ProcServerData(cfg interface{}, ctx interface{}, buffer *bytes.Buffer, data []byte, conn *net.TCPConn) ([]byte, error) {
+func (t Tcp) ProcServerData(cfg interface{}, ctx interface{}, buffer *KtBuffer.Buffer, data []byte, conn *net.TCPConn) ([]byte, error) {
 	return data, nil
 }

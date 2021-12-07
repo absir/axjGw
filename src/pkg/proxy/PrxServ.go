@@ -4,13 +4,13 @@ import (
 	"axj/ANet"
 	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/proxy/PProto"
-	"bytes"
 	"go.uber.org/zap"
 	"net"
 	"strconv"
@@ -114,7 +114,7 @@ func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *a
 }
 
 func (that *PrxServ) accept(conn *net.TCPConn) {
-	var outBuffer *bytes.Buffer
+	var outBuffer *KtBuffer.Buffer
 	outBuff := Util.GetBufferBytes(that.Proto.ReadBufferSize(that.Cfg), &outBuffer)
 	buffer := Util.GetBuffer(that.Proto.ReadBufferSize(that.Cfg)+that.Proto.ReadBufferMax(that.Cfg), true)
 	name := ""
@@ -165,7 +165,7 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 	data := buffer.Bytes()
 	buffer.Reset()
 	id, adap := PrxMng.adapOpen(that, conn, outBuff, outBuffer, ctx, buffer)
-	err = client.Get().Rep(true, agent.REQ_CONN, pAddr, id, data, false, false, 0)
+	err = client.Get().Rep(true, agent.REQ_CONN, strconv.Itoa(that.Proto.ReadBufferSize(that.Cfg))+"/"+pAddr, id, data, false, false, 0)
 	if err != nil {
 		adap.Close(err)
 		return

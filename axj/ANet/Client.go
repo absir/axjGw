@@ -1,6 +1,7 @@
 package ANet
 
 import (
+	"axj/Kt/KtBuffer"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"errors"
@@ -39,7 +40,6 @@ const (
 const (
 	FLG_ENCRYPT  int32 = 1      // 加密
 	FLG_COMPRESS int32 = 1 << 2 // 压缩
-	FLG_OUT      int32 = 1 << 3 // 流写入
 )
 
 type Client interface {
@@ -53,7 +53,6 @@ type ClientCnn struct {
 	handler  Handler
 	encryKey []byte
 	compress bool
-	out      bool
 	locker   sync.Locker
 	closed   int8
 	limiter  Util.Limiter
@@ -79,7 +78,7 @@ func (that *ClientCnn) IsClosed() bool {
 	return that.closed != 0
 }
 
-func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey []byte, compress bool, out bool) {
+func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey []byte, compress bool) {
 	if client == nil {
 		client = that
 	}
@@ -89,7 +88,6 @@ func (that *ClientCnn) Open(client Client, conn Conn, handler Handler, encryKey 
 	that.handler = handler
 	that.encryKey = encryKey
 	that.compress = compress
-	that.out = out
 	that.locker = new(sync.Mutex)
 }
 
@@ -214,14 +212,21 @@ func (that *ClientCnn) closeRcvr() error {
 	return nil
 }
 
-func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {
+func (that *ClientCnn) Req(bufferP bool) (error, int32, string, int32, []byte, *KtBuffer.Buffer) {
 	if that.IsClosed() {
-		return ERR_CLOSED, 0, "", 0, nil
+		return ERR_CLOSED, 0, "", 0, nil, nil
+	}
+
+	// 内存池
+	var buffer *KtBuffer.Buffer = nil
+	var pBuffer **KtBuffer.Buffer = nil
+	if bufferP {
+		pBuffer = &buffer
 	}
 
 	handler := that.handler
 	// 获取请求
-	err, req, uri, uriI, data := handler.Processor().Req(that.conn, that.encryKey)
+	err, req, uri, uriI, data := handler.Processor().Req(pBuffer, that.conn, that.encryKey)
 	if uri == "" && uriI > 0 {
 		// 路由解压
 		uriDict := handler.UriDict()
@@ -230,12 +235,13 @@ func (that *ClientCnn) Req() (error, int32, string, int32, []byte) {
 		}
 	}
 
-	return err, req, uri, uriI, data
+	return err, req, uri, uriI, data, buffer
 }
 
-func (that *ClientCnn) ReqFrame(frame *ReqFrame) (error, int32, string, int32, []byte) {
+func (that *ClientCnn) ReqFrame(frame *ReqFrame) (error, int32, string, int32, []byte, *KtBuffer.Buffer) {
 	if that.IsClosed() {
-		return ERR_CLOSED, 0, "", 0, nil
+		Util.PutBuffer(frame.Buffer)
+		return ERR_CLOSED, 0, "", 0, nil, nil
 	}
 
 	handler := that.handler
@@ -249,14 +255,14 @@ func (that *ClientCnn) ReqFrame(frame *ReqFrame) (error, int32, string, int32, [
 		}
 	}
 
-	return err, req, uri, uriI, data
+	return err, req, uri, uriI, data, frame.Buffer
 }
 
-func (that *ClientCnn) Rep(out bool, req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, id int64) error {
-	return that.RepCData(out, req, uri, uriI, data, 0, isolate, encry, id)
+func (that *ClientCnn) Rep(bufferP bool, req int32, uri string, uriI int32, data []byte, isolate bool, encry bool, id int64) error {
+	return that.RepCData(bufferP, req, uri, uriI, data, 0, isolate, encry, id)
 }
 
-func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, data []byte, cData int32, isolate bool, encry bool, id int64) error {
+func (that *ClientCnn) RepCData(bufferP bool, req int32, uri string, uriI int32, data []byte, cData int32, isolate bool, encry bool, id int64) error {
 	handler := that.handler
 	if handler == nil {
 		return ERR_NOWAY
@@ -289,7 +295,6 @@ func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, dat
 		return ERR_CLOSED
 	}
 
-	out = out && that.out
 	var err error
 	if cData > 0 {
 		if cData == 1 {
@@ -299,16 +304,16 @@ func (that *ClientCnn) RepCData(out bool, req int32, uri string, uriI int32, dat
 				return ERR_NOWAY
 			}
 
-			err = handler.Processor().RepCData(nil, out, that.conn, encryKey, req, uri, uriI, data, isolate, id)
+			err = handler.Processor().RepCData(bufferP, that.conn, encryKey, req, uri, uriI, data, isolate, id)
 
 		} else {
 			// 无法压缩
-			err = handler.Processor().Rep(nil, out, that.conn, encryKey, false, req, uri, uriI, data, isolate, id)
+			err = handler.Processor().Rep(bufferP, that.conn, encryKey, false, req, uri, uriI, data, isolate, id)
 		}
 
 	} else {
 		// 自决压缩
-		err = handler.Processor().Rep(nil, out, that.conn, encryKey, that.compress, req, uri, uriI, data, isolate, id)
+		err = handler.Processor().Rep(bufferP, that.conn, encryKey, that.compress, req, uri, uriI, data, isolate, id)
 	}
 
 	that.locker.Unlock()
@@ -349,7 +354,7 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 		}
 
 		that.conn = nil
-		that.handler.Processor().Rep(nil, that.out, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
+		that.handler.Processor().Rep(true, conn, that.encryKey, that.compress, REQ_KICK, "", 0, data, isolate, 0)
 	}
 
 	that.Close(nil, nil)
@@ -358,14 +363,16 @@ func (that *ClientCnn) Kick(data []byte, isolate bool, drt time.Duration) {
 func (that *ClientCnn) ReqLoop() {
 	conn := that.conn
 	for conn == that.conn {
-		if !that.OnReq(that.Req()) {
+		if !that.OnReq(that.Req(true)) {
 			break
 		}
 	}
 }
 
-func (that *ClientCnn) OnReq(err error, req int32, uri string, uriI int32, data []byte) bool {
+func (that *ClientCnn) OnReq(err error, req int32, uri string, uriI int32, data []byte, buffer *KtBuffer.Buffer) bool {
 	if err != nil {
+		// 内存池回收
+		Util.PutBuffer(buffer)
 		that.Close(err, nil)
 		return false
 	}
@@ -373,34 +380,40 @@ func (that *ClientCnn) OnReq(err error, req int32, uri string, uriI int32, data 
 	handler := that.handler
 	// 保持连接
 	handler.OnKeep(that.client, false)
-	if !handler.OnReq(that, req, uri, uriI, data) {
-		limiter := that.limiter
-		if limiter == nil {
-			that.poolReqIO(nil, req, uri, uriI, data)
+	if handler.OnReq(that, req, uri, uriI, data) {
+		// 内存池回收
+		Util.PutBuffer(buffer)
+		return true
+	}
+
+	limiter := that.limiter
+	if limiter == nil {
+		that.poolReqIO(nil, req, uri, uriI, data, buffer)
+
+	} else {
+		if Util.GoPool == nil {
+			go that.poolReqIO(limiter, req, uri, uriI, data, buffer)
 
 		} else {
-			if Util.GoPool == nil {
-				go that.poolReqIO(limiter, req, uri, uriI, data)
+			Util.GoSubmit(func() {
+				that.poolReqIO(limiter, req, uri, uriI, data, buffer)
+			})
+		}
 
-			} else {
-				Util.GoSubmit(func() {
-					that.poolReqIO(limiter, req, uri, uriI, data)
-				})
-			}
-
-			if limiter != nil {
-				limiter.Add()
-			}
+		if limiter != nil {
+			limiter.Add()
 		}
 	}
 
 	return true
 }
 
-func (that *ClientCnn) poolReqIO(limiter Util.Limiter, req int32, uri string, uriI int32, data []byte) {
+func (that *ClientCnn) poolReqIO(limiter Util.Limiter, req int32, uri string, uriI int32, data []byte, buffer *KtBuffer.Buffer) {
 	if limiter != nil {
 		defer limiter.Done()
 	}
 
 	that.handler.OnReqIO(that.client, req, uri, uriI, data)
+	// 内存池回收
+	Util.PutBuffer(buffer)
 }

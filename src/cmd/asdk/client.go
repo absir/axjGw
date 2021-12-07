@@ -31,12 +31,13 @@ func (o Opt) LoginData(adapter *asdk.Adapter) []byte {
 	return KtUnsafe.StringToBytes(strconv.FormatInt(time.Now().UnixNano(), 10))
 }
 
-func (o Opt) OnPush(uri string, data []byte, tid int64) {
+func (o Opt) OnPush(uri string, data []byte, tid int64, buffer asdk.Buffer) {
 	if State.log {
 		fmt.Println("OnPush " + uri + ", " + strconv.FormatInt(tid, 10))
 	}
 
 	State.onRec(uri, data)
+	asdk.BufferFree(buffer)
 }
 
 func (o Opt) OnLast(gid string, connVer int32, continues bool) {
@@ -47,23 +48,27 @@ func (o Opt) OnLast(gid string, connVer int32, continues bool) {
 	State.onRec(gid, nil)
 }
 
-func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte) {
+func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte, buffer asdk.Buffer) {
 	if State.log || state == asdk.ERROR {
 		fmt.Println("OnState , " + strconv.Itoa(state) + ", " + err)
 	}
 
 	State.onState(state, data)
+	asdk.BufferFree(buffer)
 }
 
-func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32, data []byte) {
+func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32, data []byte, buffer asdk.Buffer) {
 	if State.log {
 		fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
 	}
+
+	asdk.BufferFree(buffer)
 }
 
 type clientsState struct {
 	addr       string
-	out        bool
+	sendP      bool
+	readP      bool
 	encry      bool
 	log        bool
 	locker     sync.Locker
@@ -87,8 +92,11 @@ func init() {
 	// 127.0.0.1:8683
 	// ws://127.0.0.1:8682/gw
 	// 47.102.86.20:18683
+	// 内存池
+	asdk.SetBufferPool(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240").(string))
 	that.addr = "127.0.0.1:8683"
 	that.log = false
+	that.encry = false
 	that.locker = new(sync.Mutex)
 	that.checkAsync = Util.NewNotifierAsync(that.check, that.locker, nil)
 	that.list = new(list.List)
@@ -106,7 +114,8 @@ func init() {
 func (that *clientsState) reset(check bool) {
 	that.locker.Lock()
 	that.log = false
-	that.out = true
+	that.sendP = true
+	that.readP = true
 	that.encry = true
 	that.num = 0
 	that.loopedNum = 0
@@ -180,7 +189,7 @@ func (that *clientsState) check() {
 	}
 
 	for num < tNum {
-		client := asdk.NewClient(that.addr, that.out, that.encry, 256, 256<<10, 3, 8320, &Opt{})
+		client := asdk.NewClient(that.addr, that.sendP, that.readP, that.encry, 256, 256<<10, 3, 8320, &Opt{})
 		that.push(client)
 		num++
 		tAdapters[num] = client.Conn()
@@ -238,8 +247,9 @@ func (that *clientsState) send(uri string) {
 	sTime := time.Now().UnixNano() / 1000000
 	sTimeS := strconv.FormatInt(sTime, 10)
 	jsonData, _ := json.Marshal([]string{uri, sTimeS})
-	client.Req("test/sendU", jsonData, true, 30, func(s string, bytes []byte) {
+	client.Req("test/sendU", jsonData, true, 30, func(s string, bytes []byte, buffer asdk.Buffer) {
 		fmt.Printf("send rep %s span %dms, err %s\n", sTimeS, (time.Now().UnixNano()/1000000 - sTime), s)
+		asdk.BufferFree(buffer)
 	})
 }
 
@@ -287,7 +297,8 @@ func (that *clientsState) onState(state int, data []byte) {
 func (that *clientsState) printStatus() {
 	fmt.Printf("addr: %s\n", that.addr)
 	fmt.Printf("log: %v\n", that.log)
-	fmt.Printf("out: %v\n", that.out)
+	fmt.Printf("sendP: %v\n", that.sendP)
+	fmt.Printf("readP: %v\n", that.readP)
 	fmt.Printf("encry: %v\n", that.encry)
 	fmt.Printf("num: %d\n", that.num)
 	fmt.Printf("loopedNum: %d\n", that.loopedNum)
@@ -329,10 +340,17 @@ func main() {
 			},
 		},
 		{
-			cmd:  "out",
-			help: "out $out//设置客户端协议Out流写入",
+			cmd:  "sendP",
+			help: "sendP $sendP//设置客户端发送内存池",
 			fun: func(str string) {
-				State.out = KtCvt.ToBool(str)
+				State.sendP = KtCvt.ToBool(str)
+			},
+		},
+		{
+			cmd:  "readP",
+			help: "readP $readP//设置客户端读取内存池",
+			fun: func(str string) {
+				State.readP = KtCvt.ToBool(str)
 			},
 		},
 		{

@@ -4,6 +4,7 @@ import (
 	"axj/ANet"
 	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
@@ -245,8 +246,11 @@ func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	conn := *pConn
 	var encryptKey []byte = nil
 	fun := that.connOpenFun(pConn, &encryptKey)
+	var buffer *KtBuffer.Buffer = nil
 	for {
-		done, client := fun(that.Manager.Processor().Req(conn, encryptKey))
+		done, client := fun(that.Manager.Processor().Req(&buffer, conn, encryptKey))
+		Util.PutBuffer(buffer)
+		buffer = nil
 		if done {
 			return client
 		}
@@ -275,14 +279,20 @@ func (that *server) ConnPoll(conn ANet.Conn) {
 
 		if !done {
 			done, client = fun(Processor.ReqFrame(frame, encryptKey))
+			// 内存池回收
+			Util.PutBuffer(frame.Buffer)
+			return
 		}
 
 		if done {
 			if client == nil {
+				// 内存池回收
+				Util.PutBuffer(frame.Buffer)
 				conn.Close(true)
 				return
 			}
 
+			// client.OnReq有内存池回收
 			connPoll.FrameReq(client, frame)
 			return
 		}
@@ -318,14 +328,14 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 					}
 
 					// 连接秘钥
-					err = processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
+					err = processor.Rep(true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
 					if err != nil {
 						return
 					}
 				}
 			}
 			// Acl准备
-			err = processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
+			err = processor.Rep(true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
 			if err != nil {
 				return
 			}
@@ -360,7 +370,7 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			// 登录踢出
 			if login.KickData != nil {
 				// 登录失败被踢
-				that.Manager.Processor().Rep(nil, true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
+				that.Manager.Processor().Rep(true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
 				*pConn = nil
 				ANet.CloseDelay(conn, Config.KickDrt)
 				return
@@ -374,7 +384,7 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 
 			// 客户端注册
 			manager := that.Manager
-			client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
+			client := manager.Open(conn, encryptKey, compress, cid)
 			clientG := Handler.ClientG(client)
 			// 用户状态设置
 			clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
@@ -401,7 +411,7 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			if uriRoute > 0 {
 				if uriHash != UriDict.UriMapHash {
 					// 路由缓存
-					manager.Processor().Rep(nil, true, conn, nil, compress, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
+					manager.Processor().Rep(true, conn, nil, compress, ANet.REQ_ROUTE, UriDict.UriMapHash, 0, UriDict.UriMapJsonData, false, 0)
 				}
 			}
 

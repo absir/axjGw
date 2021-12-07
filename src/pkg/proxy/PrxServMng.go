@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"axj/ANet"
+	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
@@ -88,9 +89,13 @@ func (that *prxServMng) Start() {
 }
 
 func (that *prxServMng) Accept(tConn *net.TCPConn) {
-	var conn ANet.Conn = ANet.NewConnSocket(tConn, Config.SocketOut)
+	var conn ANet.Conn = ANet.NewConnSocket(tConn)
 	Util.GoSubmit(func() {
-		client := that.open(tConn, &conn)
+		// 内存池
+		var buffer *KtBuffer.Buffer
+		client := that.open(&buffer, tConn, &conn)
+		// 内存池释放
+		Util.PutBuffer(buffer)
 		if client != nil {
 			client.Get().ReqLoop()
 
@@ -101,10 +106,10 @@ func (that *prxServMng) Accept(tConn *net.TCPConn) {
 	})
 }
 
-func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
+func (that *prxServMng) open(pBuffer **KtBuffer.Buffer, tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 	conn := *pConn
 	var encryptKey []byte
-	err, req, _, uriI, data := Processor.Req(conn, encryptKey)
+	err, req, _, uriI, data := Processor.Req(pBuffer, conn, encryptKey)
 	if err != nil {
 		conn.Close(true)
 		return nil
@@ -126,7 +131,7 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 		if sKey != nil && cKey != nil {
 			encryptKey = sKey
 			// 连接秘钥
-			err = Processor.Rep(nil, true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
+			err = Processor.Rep(true, conn, nil, compress, ANet.REQ_KEY, "", 0, encryptKey, false, 0)
 			if err != nil {
 				return nil
 			}
@@ -134,8 +139,11 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 	}
 
 	// Acl准备
-	err = Processor.Rep(nil, true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
-	err, req, _, uriI, data = Processor.Req(conn, encryptKey)
+	err = Processor.Rep(true, conn, nil, compress, ANet.REQ_ACL, "", 0, encryptKey, false, 0)
+	// 内存池释放
+	Util.PutBuffer(*pBuffer)
+	*pBuffer = nil
+	err, req, _, uriI, data = Processor.Req(pBuffer, conn, encryptKey)
 	cid := that.idWorker.Generate()
 	login, err := that.login(cid, data, conn)
 	if err != nil || login == nil {
@@ -157,7 +165,7 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 	// 登录踢出
 	if login.KickData != nil {
 		// 登录失败被踢
-		that.Manager.Processor().Rep(nil, true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
+		that.Manager.Processor().Rep(true, conn, nil, compress, ANet.REQ_KICK, "", 0, login.KickData, false, 0)
 		*pConn = nil
 		ANet.CloseDelay(conn, Config.KickDrt)
 		return nil
@@ -170,7 +178,7 @@ func (that *prxServMng) open(tConn *net.TCPConn, pConn *ANet.Conn) ANet.Client {
 
 	// 客户端注册
 	manager := that.Manager
-	client := manager.Open(conn, encryptKey, compress, (flag&ANet.FLG_OUT) != 0, cid)
+	client := manager.Open(conn, encryptKey, compress, cid)
 	clientG := Handler.ClientG(client)
 	// 用户状态设置
 	clientG.SetLogin(login)

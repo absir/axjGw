@@ -18,8 +18,6 @@ type Conn interface {
 	ReadA() (error, []byte, Reader)
 	// 粘包
 	Sticky() bool
-	// 流写入
-	Out() *[]byte
 	// 写入
 	Write(bs []byte) error
 	// 写入异步
@@ -36,8 +34,6 @@ type Conn interface {
 
 type ConnSocket struct {
 	conn  *net.TCPConn
-	out   bool
-	wBuff []byte
 	rBuff []byte
 }
 
@@ -51,14 +47,13 @@ func CloseDelayTcp(conn *net.TCPConn, drt time.Duration) {
 	conn.Close()
 }
 
-func NewConnSocket(conn *net.TCPConn, out bool) *ConnSocket {
+func NewConnSocket(conn *net.TCPConn) *ConnSocket {
 	if conn == nil {
 		return nil
 	}
 
 	that := new(ConnSocket)
 	that.conn = conn
-	that.out = out
 	return that
 }
 
@@ -91,14 +86,6 @@ func (that *ConnSocket) ReadA() (error, []byte, Reader) {
 
 func (that *ConnSocket) Sticky() bool {
 	return true
-}
-
-func (that *ConnSocket) Out() *[]byte {
-	if that.out {
-		return &that.wBuff
-	}
-
-	return nil
 }
 
 func (that *ConnSocket) Write(bs []byte) error {
@@ -159,10 +146,6 @@ func (that *ConnWebsocket) ReadA() (error, []byte, Reader) {
 
 func (that *ConnWebsocket) Sticky() bool {
 	return false
-}
-
-func (that *ConnWebsocket) Out() *[]byte {
-	return nil
 }
 
 func (that *ConnWebsocket) Write(bs []byte) error {
