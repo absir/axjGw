@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"axj/ANet"
 	"axj/Thrd/Util"
 	"bytes"
 	"net"
@@ -85,7 +84,8 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 
 			Util.PutBuffer(inBuffer)
 			if Config.CloseDelay > 0 {
-				ANet.CloseDelayTcp(that.outConn, Config.CloseDelay)
+				that.outConn.SetLinger(Config.CloseDelay)
+				that.outConn.Close()
 			}
 		})
 	}
@@ -125,7 +125,8 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 			Util.PutBuffer(that.outBuffer)
 			Util.PutBuffer(that.buffer)
 			if Config.CloseDelay > 0 {
-				ANet.CloseDelayTcp(that.inConn, Config.CloseDelay)
+				that.inConn.SetLinger(Config.CloseDelay)
+				that.inConn.Close()
 			}
 		})
 	}

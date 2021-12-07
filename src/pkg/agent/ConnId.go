@@ -4,27 +4,29 @@ import (
 	"axj/ANet"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
 	"axjGW/pkg/asdk"
+	"bytes"
 	"go.uber.org/zap"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type ConnId struct {
-	id        int32
-	locker    sync.Locker
-	closed    bool
-	conn      *net.TCPConn
-	aConn     ANet.Conn
-	aConnBuff []byte
+	id          int32
+	locker      sync.Locker
+	closed      bool
+	conn        *net.TCPConn
+	aConn       ANet.Conn
+	aConnBuff   []byte
+	aConnBuffer *bytes.Buffer
 }
 
 var Client *asdk.Client
-var CloseDelay time.Duration
+var CloseDelay int
 var CloseDelayIn int
 
 func ConnProxy(addr string, id int32, data []byte) {
@@ -80,13 +82,15 @@ func ConnProxy(addr string, id int32, data []byte) {
 				return
 			}
 
-			connId.aConnBuff = make([]byte, buffSize)
+			connId.aConnBuff = Util.GetBufferBytes(buffSize, &connId.aConnBuffer)
 		}
 
 		// 连接数据写入
 		if data != nil {
 			_, err := connId.conn.Write(data)
 			if connId.onError(err) {
+				// 内存池回收
+				Util.PutBuffer(connId.aConnBuffer)
 				return
 			}
 		}
@@ -175,13 +179,16 @@ func (that *ConnId) connLoop() {
 		}
 	}
 
+	Util.PutBuffer(that.aConnBuffer)
 	if CloseDelay > 0 {
-		ANet.CloseDelay(that.aConn, CloseDelay)
+		that.aConn.SetLinger(CloseDelay)
+		that.aConn.Close(false)
 	}
 }
 
 // aConn代理连接 数据接收 写入到 conn本地连接
 func (that *ConnId) aConnLoop() {
+	var buffer *bytes.Buffer = nil
 	var buff []byte = nil
 	var n int
 	for !that.closed {
@@ -196,7 +203,7 @@ func (that *ConnId) aConnLoop() {
 
 		} else {
 			if buff == nil {
-				buff = make([]byte, len(that.aConnBuff))
+				buff = Util.GetBufferBytes(len(that.aConnBuff), &buffer)
 			}
 
 			n, err = reader.Read(buff)
@@ -213,8 +220,11 @@ func (that *ConnId) aConnLoop() {
 		}
 	}
 
+	// 内存池回收
+	Util.PutBuffer(buffer)
 	if CloseDelay > 0 {
-		ANet.CloseDelayTcp(that.conn, CloseDelay)
+		that.conn.SetLinger(CloseDelay)
+		that.conn.Close()
 	}
 }
 

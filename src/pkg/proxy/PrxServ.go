@@ -116,7 +116,7 @@ func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *a
 func (that *PrxServ) accept(conn *net.TCPConn) {
 	var outBuffer *bytes.Buffer
 	outBuff := Util.GetBufferBytes(that.Proto.ReadBufferSize(that.Cfg), &outBuffer)
-	buffer := Util.GetBuffer(that.Proto.ReadBufferSize(that.Cfg), true)
+	buffer := Util.GetBuffer(that.Proto.ReadBufferSize(that.Cfg)+that.Proto.ReadBufferMax(that.Cfg), true)
 	name := ""
 	var size = 0
 	var err error

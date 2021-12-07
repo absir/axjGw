@@ -5,6 +5,7 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
+	"axj/Thrd/Util"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/asdk"
 	"encoding/json"
@@ -29,7 +30,7 @@ type config struct {
 	CheckDrt    int
 	RqIMax      int
 	ConnDrt     time.Duration
-	CloseDelay  time.Duration // 关闭延迟秒数
+	CloseDelay  int // 关闭延迟秒数
 	Rules       map[string]*agent.RULE
 }
 
@@ -61,7 +62,8 @@ func main() {
 	APro.Load(nil, "agent.yml")
 	loadConfig()
 	Config.ConnDrt *= time.Second
-	Config.CloseDelay *= time.Second
+	// 内存池
+	Util.SetBufferPoolsStr(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240").(string))
 	Client = asdk.NewClient(Config.Proxy, Config.Out, Config.Encry, Config.CompressMin, Config.DataMax, Config.CheckDrt, Config.RqIMax, &Opt{})
 	agent.Client = Client
 	agent.CloseDelay = Config.CloseDelay

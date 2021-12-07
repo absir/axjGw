@@ -19,7 +19,7 @@ type config struct {
 	AdapCheckBuff int               // 客户端Buff
 	AdapTimeout   int64             // 适配超时
 	AdapMaxId     int32             // 适配最大编号
-	CloseDelay    time.Duration     // 关闭延迟
+	CloseDelay    int               // 关闭延迟秒
 	Servs         map[string]*Serv  // 协议服务
 	ClientKeys    map[string]string // 客户端授权码
 	Acl           string            // Acl服务地址
@@ -58,7 +58,6 @@ func initConfig() {
 	Config.CheckDrt *= time.Millisecond
 	Config.AdapTimeout *= int64(time.Millisecond)
 	Config.AclTimeout *= time.Millisecond
-	Config.CloseDelay *= time.Second
 }
 
 func (that *config) AclCtx() context.Context {
