@@ -19,9 +19,3 @@ argi=2
 source $cliDir/mnt/mas/_ssh.sh
 
 scp $pPort -i ~/.ssh/$rKey -r $1 $rUser@$rIp:/opt/agent/agent
-
-ssh $sPort $rUser@$rIp -i ~/.ssh/$rKey "$sshBin" << remotessh
-  cp -rf /opt/agent/openWrt/agent.sh /etc/init.d/agent
-  chmod +x /etc/init.d/agent
-  ln -s /etc/init.d/agent /etc/rc.d/S93agent
-remotessh

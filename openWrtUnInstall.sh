@@ -10,11 +10,4 @@ fi
 
 export sshBin="/bin/ash"
 
-argi=1
-source $cliDir/mnt/mas/_ssh.sh
-
-ssh $sPort $rUser@$rIp -i ~/.ssh/$rKey "$sshBin" << remotessh
-  /opt/agent/serv.sh stop
-  rm -rf /etc/rc.d/S93agent
-  rm -rf /etc/init.d/agent
-remotessh
+$cliDir/mnt/mng/uninstall.sh agent $1 $2 $3 $4
