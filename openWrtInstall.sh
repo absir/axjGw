@@ -10,6 +10,8 @@ fi
 
 export bashBin="#!\/usr\/bin\/env ash"
 export sshBin="/bin/ash"
+# 运行内存限制10M
+export servEnv="ulimit -v 10240"
 
 $cliDir/mnt/mng/install.sh agent ./agent $2 $3 $4 $5
 
