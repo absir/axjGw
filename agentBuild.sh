@@ -10,6 +10,7 @@ export GOOS=linux
 export GOARCH=mipsle
 export GOMIPS=softfloat
 #export GOARM=5
+#export GODEBUG=madvdontneed=1
 go build -tags wsN -o ./agent-mips ../cmd/agent/Agent.go
 fi
 
