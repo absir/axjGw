@@ -122,7 +122,7 @@ func (h Http) ReadServerName(cfg interface{}, ctx interface{}, buffer *KtBuffer.
 
 	hCtx := ctx.(*HttpCtx)
 	if hCtx.name != "" {
-		if c.ServName != "" && !strings.HasSuffix(hCtx.name, c.ServName) {
+		if !allowName(hCtx.name, c.ServName) {
 			return true, SERV_NAME_ERR
 		}
 
@@ -232,7 +232,7 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *KtBuffer.
 								bs[off] = '\n'
 							}
 
-							// println(KtUnsafe.BytesToString(bs))
+							//println(KtUnsafe.BytesToString(bs))
 							bLen = len(bs)
 							hCtx.i += rLen
 							i = hCtx.i - 1
@@ -264,7 +264,7 @@ func (h Http) ProcServerData(cfg interface{}, ctx interface{}, buffer *KtBuffer.
 						}
 
 						if line != "" {
-							if strings.HasSuffix(hCtx.name, c.ServName) {
+							if allowName(hCtx.name, c.ServName) {
 								// 设置name缓存
 								c.lruCache.Add(string(KtUnsafe.StringToBytes(line)), hCtx.name)
 

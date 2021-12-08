@@ -14,6 +14,34 @@ type HostCtx struct {
 	si int
 }
 
+func allowName(name string, servName string) bool {
+	if servName == "" {
+		return true
+	}
+
+	sLen := strings.LastIndexByte(servName, ':')
+	if sLen == 0 {
+		return true
+	}
+
+	sName := servName
+	if sLen > 0 {
+		sName = servName[:sLen]
+	}
+
+	idx := strings.LastIndex(name, sName)
+	if idx < 0 {
+		return false
+	}
+
+	if sLen < 0 {
+		sLen = len(sName)
+	}
+
+	idx += sLen
+	return idx >= len(name) || name[idx] == ':'
+}
+
 func hostReadServerName(ctx interface{}, buffer *KtBuffer.Buffer, data []byte, pName *string, host string, hostLen int, servName string, nameFun func(name string) string) (bool, error) {
 	buffer.Write(data)
 	bs := buffer.Bytes()
@@ -35,7 +63,7 @@ func hostReadServerName(ctx interface{}, buffer *KtBuffer.Buffer, data []byte, p
 						name = nameFun(name)
 					}
 
-					if servName != "" && !strings.HasSuffix(name, servName) {
+					if !allowName(name, servName) {
 						return true, SERV_NAME_ERR
 					}
 

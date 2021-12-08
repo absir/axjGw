@@ -182,6 +182,7 @@ func (that *DiscoveryMng) SetDiscoveryS(disc string, name string, setFun func(pr
 	if idleTime <= 0 {
 		idleTime = discC.disc.IdleTime(discC.cfg)
 	}
+
 	discS.idleTime = int64(idleTime) * int64(time.Second)
 
 	err := discS.discC.WatcherProds(name, setFun)

@@ -2,12 +2,12 @@
 ClientKey: 61A583A27A845A3835A32D4C
 Rules:
   http:
-    Addr: 192.168.50.41:80
+    Addr: 192.168.44.142:80
   2:
     Serv: http
     Addr: 127.0.0.1:8787
   rtsp:
-    Addr: 192.168.50.41:554
+    Addr: 192.168.44.142:554
 #  http2:
 #    Addr: 192.168.50.41:80
 #    Proto: http
