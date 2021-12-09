@@ -27,6 +27,13 @@ scp $pPort -i ~/.ssh/$rKey -r $1 $rUser@$rIp:/opt/agent/agent
 ssh $sPort $rUser@$rIp -i ~/.ssh/$rKey "$sshBin" << remotessh
 
 chmod +x /opt/agent/agent
+if [[ -f /etc/storage/started_script.sh ]];then
+  mv /opt/agent/agent /etc/storage/agent/agent
+  /etc/storage/agent/serv.sh start
+  /sbin/mtd_storage.sh save
+  exit
+fi
+
 /opt/agent/serv.sh start
 
 exit
