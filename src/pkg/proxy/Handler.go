@@ -28,7 +28,7 @@ func (h handler) OnClose(client ANet.Client, err error, reason interface{}) {
 			PrxServMng.locker.Lock()
 			_, ok := PrxMng.gidMap.Load(clientG.gid)
 			if !ok {
-				PrxMng.gidMap.Store(clientG.Id(), oId)
+				PrxMng.gidMap.Store(clientG.gid, oId)
 			}
 
 			PrxServMng.locker.Unlock()
