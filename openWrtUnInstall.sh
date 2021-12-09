@@ -9,5 +9,6 @@ if [[ $1 ==  *help ]];then
 fi
 
 export sshBin="/bin/ash"
+export crontabStart="true"
 
 $cliDir/mnt/mng/uninstall.sh agent $1 $2 $3 $4
