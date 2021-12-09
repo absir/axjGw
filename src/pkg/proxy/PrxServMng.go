@@ -233,7 +233,7 @@ func (that *prxServMng) open(pBuffer **KtBuffer.Buffer, tConn *net.TCPConn, pCon
 		clientG.SetLimiter(int(login.Limit))
 	}
 
-	//AZap.Debug("Store gid %d %s", cid, clientG.gid)
+	//AZap.Debug("Login gid %s = %d", clientG.gid, cid)
 	if clientG.gid != "" {
 		PrxServMng.locker.Lock()
 		PrxMng.gidMap.Store(clientG.gid, clientG.Id())
