@@ -11,4 +11,14 @@ fi
 export sshBin="/bin/ash"
 export crontabStart="true"
 
+argi=1
+source $cliDir/mnt/mas/_ssh.sh
+
+ssh $sPort $rUser@$rIp -i ~/.ssh/$rKey "$sshBin" << remotessh
+
+/opt/agent/serv.sh stop
+
+exit
+remotessh
+
 $cliDir/mnt/mng/uninstall.sh agent $1 $2 $3 $4

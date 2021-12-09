@@ -8,6 +8,8 @@ if [[ $1 ==  *help ]];then
   exit
 fi
 
+chmod +x $1
+
 export bashBin="#!\/usr\/bin\/env ash"
 export sshBin="/bin/ash"
 # 运行内存限制10M
@@ -21,3 +23,11 @@ argi=2
 source $cliDir/mnt/mas/_ssh.sh
 
 scp $pPort -i ~/.ssh/$rKey -r $1 $rUser@$rIp:/opt/agent/agent
+
+ssh $sPort $rUser@$rIp -i ~/.ssh/$rKey "$sshBin" << remotessh
+
+chmod +x /opt/agent/agent
+/opt/agent/serv.sh start
+
+exit
+remotessh
