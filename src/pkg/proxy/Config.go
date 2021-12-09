@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"axj/Kt/KtBytes"
+	"axj/Kt/KtStr"
 	"context"
 	"time"
 )
@@ -24,6 +25,8 @@ type config struct {
 	Acl           string            // Acl服务地址
 	AclTry        time.Duration     // Acl服务地址
 	AclTimeout    time.Duration     // Acl调用超时
+	GrpcAddr      string            // grpc服务地址
+	GrpcIps       []string          // grpc调用Ip白名单，支持*通配
 }
 
 type Serv struct {
@@ -52,6 +55,8 @@ func initConfig() {
 		ClientKeys:    map[string]string{},
 		AclTry:        3000,
 		AclTimeout:    30000,
+		GrpcAddr:      "127.0.0.1:8082",
+		GrpcIps:       KtStr.SplitByte("*", ',', true, 0, 0),
 	}
 
 	Config.CheckDrt *= time.Millisecond

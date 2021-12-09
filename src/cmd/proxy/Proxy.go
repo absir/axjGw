@@ -60,6 +60,9 @@ func main() {
 		}()
 	}
 
+	// Grpc服务开启
+	proxy.PrxServMng.StartGrpc()
+
 	// 启动完成
 	AZap.Logger.Info("Proxy all AXJ started")
 	// 日志配置

@@ -2,14 +2,17 @@ package proxy
 
 import (
 	"axj/ANet"
+	"axj/Kt/Kt"
 	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
+	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
+	"context"
 	"encoding/json"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -86,6 +89,33 @@ func (that *prxServMng) Start() {
 
 	go that.Manager.CheckLoop()
 	go PrxMng.CheckLoop()
+}
+
+func (that *prxServMng) StartGrpc() {
+	AZap.Logger.Info("StartGrpc: " + Config.GrpcAddr)
+	lis, err := net.Listen("tcp", Config.GrpcAddr)
+	Kt.Panic(err)
+	recoverFun := func() {
+		if err := recover(); err != nil {
+			AZap.LoggerS.Warn("Grpc Recover Err", zap.Reflect("err", err))
+		}
+	}
+	serv := grpc.NewServer(
+		grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+			defer recoverFun()
+			return handler(ctx, req)
+		}),
+	)
+	gw.RegisterGatewayServer(serv, &GatewayS{})
+	matchers := KtStr.ForMatchers(Config.GrpcIps, false, true)
+	lisIps := ANet.NewListenerIps(lis, func(ip string) bool {
+		return KtStr.Matchers(matchers, ip, true)
+	})
+	go func() {
+		if err := serv.Serve(lisIps); err != nil {
+			AZap.Logger.Error("Grpc Serve Err "+Config.GrpcAddr, zap.Error(err))
+		}
+	}()
 }
 
 func (that *prxServMng) Accept(tConn *net.TCPConn) {
