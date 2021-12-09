@@ -26,9 +26,11 @@ func (h handler) OnClose(client ANet.Client, err error, reason interface{}) {
 	if clientG.gid != "" {
 		val, _ := PrxMng.gidMap.LoadAndDelete(clientG.gid)
 		oId, _ := val.(int64)
+		AZap.Debug("OnClose %s %d = %d", clientG.gid, oId, clientG.Id())
 		if oId != 0 && oId != clientG.Id() {
 			PrxServMng.locker.Lock()
 			_, ok := PrxMng.gidMap.Load(clientG.gid)
+			//AZap.Debug("Load %v", ok)
 			if !ok {
 				clientG.discBack = false
 				PrxMng.gidMap.Store(clientG.gid, oId)

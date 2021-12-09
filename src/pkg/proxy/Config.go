@@ -55,7 +55,7 @@ func initConfig() {
 		ClientKeys:    map[string]string{},
 		AclTry:        3000,
 		AclTimeout:    30000,
-		GrpcAddr:      "127.0.0.1:8082",
+		GrpcAddr:      "0.0.0.0:8082",
 		GrpcIps:       KtStr.SplitByte("*", ',', true, 0, 0),
 	}
 

@@ -38,7 +38,7 @@ var Config = &config{
 	HttpWsPath: "/gw",
 	SocketAddr: ":8683",
 	SocketPoll: true,
-	GrpcAddr:   "127.0.0.1:8082",
+	GrpcAddr:   "0.0.0.0:8082",
 	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
 }
 

@@ -201,6 +201,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 	} else if gid != "" {
 		val, _ := PrxMng.gidMap.Load(gid)
 		cid, _ := val.(int64)
+		//AZap.Debug("find gid %d", cid)
 		if cid <= 0 {
 			cid = KtCvt.ToInt64(gid)
 			if cid <= 0 {
@@ -214,6 +215,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 		}
 
 		clientG := Handler.ClientG(client)
+		//AZap.Debug("find ruleServs %v", clientG.ruleServs == nil)
 		if clientG.ruleServs != nil {
 			// 服务名一致，不需要别名
 			sName := sub
