@@ -287,6 +287,7 @@ type ClientG struct {
 	ANet.ClientMng
 	gid       string
 	unique    string
+	discBack  bool
 	ruleServs map[string]*RuleServ
 }
 
@@ -307,4 +308,5 @@ func (that *ClientG) SetLogin(login *gw.LoginRep) {
 
 	that.gid = gid
 	that.unique = login.Unique
+	that.discBack = login.DiscBack
 }

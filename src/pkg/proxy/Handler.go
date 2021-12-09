@@ -3,6 +3,8 @@ package proxy
 import (
 	"axj/ANet"
 	"axj/Thrd/AZap"
+	"axj/Thrd/Util"
+	"axjGW/gen/gw"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/gateway"
 	"encoding/json"
@@ -28,11 +30,23 @@ func (h handler) OnClose(client ANet.Client, err error, reason interface{}) {
 			PrxServMng.locker.Lock()
 			_, ok := PrxMng.gidMap.Load(clientG.gid)
 			if !ok {
+				clientG.discBack = false
 				PrxMng.gidMap.Store(clientG.gid, oId)
 			}
 
 			PrxServMng.locker.Unlock()
 		}
+	}
+
+	// 断开回调
+	if clientG.discBack && AclClient != nil {
+		Util.GoSubmit(func() {
+			AclClient.DiscBack(Config.AclCtx(), &gw.LoginBack{
+				Cid:    clientG.Id(),
+				Unique: clientG.unique,
+				Sid:    clientG.gid,
+			})
+		})
 	}
 }
 
