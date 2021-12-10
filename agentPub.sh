@@ -9,7 +9,7 @@ mkdir -p bin/mips
 rm -rf bin/mips/*
 cp src/bin/agent-mips bin/mips/agent
 cp install/agent.yml bin/mips/
-cp install/mipsRun.yml bin/mips/run.sh
+cp install/mipsRun.sh bin/mips/run.sh
 cd bin
 rm -rf mips.tar.gz
 tar -zcvf mips.tar.gz mips
