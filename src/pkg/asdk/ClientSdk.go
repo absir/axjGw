@@ -1,4 +1,4 @@
-// +build gomobile
+// +build sdk
 
 package asdk
 
