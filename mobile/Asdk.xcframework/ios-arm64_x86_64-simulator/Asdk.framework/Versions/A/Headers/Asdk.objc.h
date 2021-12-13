@@ -13,37 +13,51 @@
 
 @class AsdkAdapter;
 @class AsdkClient;
+@protocol AsdkBuffer;
+@class AsdkBuffer;
 @protocol AsdkOpt;
 @class AsdkOpt;
+
+@protocol AsdkBuffer <NSObject>
+@end
 
 @protocol AsdkOpt <NSObject>
 - (NSString* _Nonnull)loadStorage:(NSString* _Nullable)name;
 - (NSData* _Nullable)loginData:(AsdkAdapter* _Nullable)adapter;
 - (void)onLast:(NSString* _Nullable)gid connVer:(int32_t)connVer continues:(BOOL)continues;
-- (void)onPush:(NSString* _Nullable)uri data:(NSData* _Nullable)data tid:(int64_t)tid;
-- (void)onState:(AsdkAdapter* _Nullable)adapter state:(long)state err:(NSString* _Nullable)err data:(NSData* _Nullable)data;
+- (void)onPush:(NSString* _Nullable)uri data:(NSData* _Nullable)data tid:(int64_t)tid buffer:(id<AsdkBuffer> _Nullable)buffer;
+- (void)onReserve:(AsdkAdapter* _Nullable)adapter req:(int32_t)req uri:(NSString* _Nullable)uri uriI:(int32_t)uriI data:(NSData* _Nullable)data buffer:(id<AsdkBuffer> _Nullable)buffer;
+- (void)onState:(AsdkAdapter* _Nullable)adapter state:(long)state err:(NSString* _Nullable)err data:(NSData* _Nullable)data buffer:(id<AsdkBuffer> _Nullable)buffer;
 - (void)saveStorage:(NSString* _Nullable)name value:(NSString* _Nullable)value;
 @end
 
-@interface AsdkAdapter : NSObject <goSeqRefInterface> {
+@interface AsdkAdapter : NSObject <goSeqRefInterface, AsdkBuffer> {
 }
 @property(strong, readonly) _Nonnull id _ref;
 
 - (nonnull instancetype)initWithRef:(_Nonnull id)ref;
 - (nonnull instancetype)init;
 - (int64_t)getCid;
+- (NSString* _Nonnull)getGid;
 - (NSString* _Nonnull)getUnique;
+- (BOOL)isClosed;
+- (BOOL)isKicked;
 - (BOOL)isLooped;
+- (BOOL)rep:(AsdkClient* _Nullable)client req:(int32_t)req uri:(NSString* _Nullable)uri uriI:(int32_t)uriI data:(NSData* _Nullable)data isolate:(BOOL)isolate id_:(int64_t)id_ error:(NSError* _Nullable* _Nullable)error;
 @end
 
-@interface AsdkClient : NSObject <goSeqRefInterface> {
+@interface AsdkClient : NSObject <goSeqRefInterface, AsdkBuffer> {
 }
 @property(strong, readonly) _Nonnull id _ref;
 
 - (nonnull instancetype)initWithRef:(_Nonnull id)ref;
-- (nullable instancetype)init:(NSString* _Nullable)addr out_:(BOOL)out_ encry:(BOOL)encry compressMin:(long)compressMin dataMax:(long)dataMax checkDrt:(long)checkDrt rqIMax:(long)rqIMax opt:(id<AsdkOpt> _Nullable)opt;
+- (nullable instancetype)init:(NSString* _Nullable)addr sendP:(BOOL)sendP readP:(BOOL)readP encry:(BOOL)encry compressMin:(long)compressMin dataMax:(long)dataMax checkDrt:(long)checkDrt rqIMax:(long)rqIMax opt:(id<AsdkOpt> _Nullable)opt;
 - (void)close;
 - (AsdkAdapter* _Nullable)conn;
+// skipped method Client.DialConn with unsupported parameter or return types
+
+// skipped method Client.GetProcessor with unsupported parameter or return types
+
 // skipped method Client.Loop with unsupported parameter or return types
 
 // skipped method Client.Req with unsupported parameter or return types
@@ -63,9 +77,22 @@ FOUNDATION_EXPORT const int64_t AsdkOPEN;
 
 @end
 
-FOUNDATION_EXPORT AsdkClient* _Nullable AsdkNewClient(NSString* _Nullable addr, BOOL out_, BOOL encry, long compressMin, long dataMax, long checkDrt, long rqIMax, id<AsdkOpt> _Nullable opt);
+FOUNDATION_EXPORT void AsdkBufferFree(id<AsdkBuffer> _Nullable buffer);
+
+FOUNDATION_EXPORT AsdkClient* _Nullable AsdkNewClient(NSString* _Nullable addr, BOOL sendP, BOOL readP, BOOL encry, long compressMin, long dataMax, long checkDrt, long rqIMax, id<AsdkOpt> _Nullable opt);
+
+FOUNDATION_EXPORT void AsdkSetBufferPool(NSString* _Nullable pool);
+
+@class AsdkBuffer;
 
 @class AsdkOpt;
+
+@interface AsdkBuffer : NSObject <goSeqRefInterface, AsdkBuffer> {
+}
+@property(strong, readonly) _Nonnull id _ref;
+
+- (nonnull instancetype)initWithRef:(_Nonnull id)ref;
+@end
 
 @interface AsdkOpt : NSObject <goSeqRefInterface, AsdkOpt> {
 }
@@ -88,7 +115,11 @@ FOUNDATION_EXPORT AsdkClient* _Nullable AsdkNewClient(NSString* _Nullable addr, 
 /**
  * 推送数据处理 !uri && !data && tid 为 fid编号消息发送失败
  */
-- (void)onPush:(NSString* _Nullable)uri data:(NSData* _Nullable)data tid:(int64_t)tid;
+- (void)onPush:(NSString* _Nullable)uri data:(NSData* _Nullable)data tid:(int64_t)tid buffer:(id<AsdkBuffer> _Nullable)buffer;
+/**
+ * 保留通道消息处理
+ */
+- (void)onReserve:(AsdkAdapter* _Nullable)adapter req:(int32_t)req uri:(NSString* _Nullable)uri uriI:(int32_t)uriI data:(NSData* _Nullable)data buffer:(id<AsdkBuffer> _Nullable)buffer;
 /**
  * 监听client连接状态编号
 
@@ -102,7 +133,7 @@ FOUNDATION_EXPORT AsdkClient* _Nullable AsdkNewClient(NSString* _Nullable addr, 
 	       KICK: 5, // 被剔
 	   },
  */
-- (void)onState:(AsdkAdapter* _Nullable)adapter state:(long)state err:(NSString* _Nullable)err data:(NSData* _Nullable)data;
+- (void)onState:(AsdkAdapter* _Nullable)adapter state:(long)state err:(NSString* _Nullable)err data:(NSData* _Nullable)data buffer:(id<AsdkBuffer> _Nullable)buffer;
 /**
  * 保存缓存
  */
