@@ -29,14 +29,8 @@ const (
 
 var SUCC = make([]byte, 0)
 
-type Buffer *KtBuffer.Buffer
-
 func SetBufferPool(pool string) {
 	Util.SetBufferPoolsS(pool)
-}
-
-func BufferFree(buffer Buffer) {
-	Util.PutBuffer(buffer)
 }
 
 type Opt interface {
