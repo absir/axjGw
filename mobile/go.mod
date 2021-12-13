@@ -1,12 +1,13 @@
 module mobile
 
-go 1.16
+go 1.17
 
 require (
 	axj v0.0.0
-	golang.org/x/mobile v0.0.0-20211109191125-d61a72f26a1a // indirect
 	gw v0.0.0
 )
+
+require golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
 
 replace axj v0.0.0 => ./../axj
 
