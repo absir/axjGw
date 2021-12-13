@@ -10,8 +10,8 @@ rm -rf bin/mips/*
 cp src/bin/agent-mips bin/mips/agent
 cp install/agent.yml bin/mips/
 cp install/mipsRun.sh bin/mips/run.sh
-cd bin
+cd bin/mips
 rm -rf mips.tar.gz
-tar -zcvf mips.tar.gz mips
+tar -zcvf mips.tar.gz ./
 $cliDir/mnt/mng/deployMng.sh agent-mips mips.tar.gz /opt/mng dev-1
 fi

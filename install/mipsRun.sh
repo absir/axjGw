@@ -5,6 +5,7 @@ currDir=$(pwd)
 export servEnv="ulimit -v 20000"
 
 #后台启动
+chmod +x agent
 nohup $currDir/agent &
 
 #pid保存
