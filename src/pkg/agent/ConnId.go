@@ -2,6 +2,8 @@ package agent
 
 import (
 	"axj/ANet"
+	"axj/ANets"
+	"axj/Kt/Kt"
 	"axj/Kt/KtBuffer"
 	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
@@ -52,6 +54,22 @@ func ConnProxy(addr string, id int32, data []byte, buffer asdk.Buffer) {
 
 		// 本地连接
 		{
+			if strings.HasPrefix(addr, "-") {
+				// arp mac -> ip
+				idx := strings.LastIndexByte(addr, ':')
+				if idx > 0 {
+					mac := addr[0:idx]
+					ip := ANets.Config.FindIp(mac, 0)
+					if ip == "" {
+						connId.onError(Kt.NewErrReason("Find No Ip " + mac))
+						return
+
+					} else {
+						addr = ip + addr[idx:]
+					}
+				}
+			}
+
 			conn, err := net.Dial("tcp", addr)
 			if connId.onError(err) || conn == nil {
 				return

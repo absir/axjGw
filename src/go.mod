@@ -22,6 +22,7 @@ require (
 	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/mostlygeek/arp v0.0.0-20170424181311-541a2129847a // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	go.uber.org/atomic v1.8.0 // indirect
