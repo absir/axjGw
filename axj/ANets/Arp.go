@@ -52,7 +52,7 @@ func init() {
 	Config.addrMap = new(sync.Map)
 }
 
-type HwAddr struct {
+type AddrIp struct {
 	ip       string
 	passTime int64
 }
@@ -68,9 +68,9 @@ func (that *config) FindIp(addr string, timeout time.Duration) string {
 	addr = sAddr(addr)
 	now := time.Now().UnixNano()
 	if val, _ := that.addrMap.Load(addr); val != nil {
-		hwAddr, _ := val.(*HwAddr)
-		if hwAddr != nil && hwAddr.passTime > now {
-			return hwAddr.ip
+		addrIp, _ := val.(*AddrIp)
+		if addrIp != nil && addrIp.passTime > now {
+			return addrIp.ip
 		}
 	}
 
@@ -87,19 +87,19 @@ func (that *config) FindIp(addr string, timeout time.Duration) string {
 		timeout = that.Timeout
 	}
 
-	var hwAddr *HwAddr = nil
+	var addrIp *AddrIp = nil
 	for ; timeout > 0; timeout -= that.CheckDrt {
 		time.Sleep(that.CheckDrt)
 		if val, _ := that.addrMap.Load(addr); val != nil {
-			hwAddr, _ = val.(*HwAddr)
-			if hwAddr != nil && (hwAddr.passTime > now || that.PassDrt <= 0) {
-				return hwAddr.ip
+			addrIp, _ = val.(*AddrIp)
+			if addrIp != nil && (addrIp.passTime > now || that.PassDrt <= 0) {
+				return addrIp.ip
 			}
 		}
 	}
 
-	if hwAddr != nil {
-		return hwAddr.ip
+	if addrIp != nil {
+		return addrIp.ip
 	}
 
 	return ""
@@ -120,7 +120,7 @@ func (that *config) scanLoop() {
 
 	that.addrMap = new(sync.Map)
 	for ip, addr := range arp.Table() {
-		that.addrMap.Store(sAddr(addr), &HwAddr{
+		that.addrMap.Store(sAddr(addr), &AddrIp{
 			ip:       ip,
 			passTime: time.Now().UnixNano() + that.PassDrt,
 		})
