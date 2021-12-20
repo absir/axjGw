@@ -12,16 +12,16 @@ import (
 )
 
 type config struct {
-	ScanDrt  int64         // arp重启
-	DelayDrt time.Duration // arp扫描间隔
-	PassDrt  int64         // arp缓存过期
-	CheckDrt time.Duration // 检查时间
-	Timeout  time.Duration // 获取超时
-	Debug    bool
-	locker   sync.Locker
-	addrMap  *sync.Map
-	scanning bool
-	scanPass int64
+	ScanDrt   int64         // 扫描间隔
+	PassDrt   int64         // 过期间隔
+	CheckDrt  time.Duration // 检查间隔
+	UpdateDrt time.Duration // 更新间隔
+	Timeout   time.Duration // 获取超时
+	Debug     bool
+	locker    sync.Locker
+	addrMap   *sync.Map
+	scanning  bool
+	scanTime  int64
 }
 
 func (that *config) Write(p []byte) (n int, err error) {
@@ -34,19 +34,19 @@ var Config *config
 
 func init() {
 	Config = &config{
-		ScanDrt:  600,
-		DelayDrt: 60,
-		PassDrt:  30,
-		CheckDrt: 100,
-		Timeout:  200,
-		Debug:    true,
+		ScanDrt:   600,
+		PassDrt:   30,
+		CheckDrt:  100,
+		UpdateDrt: 300,
+		Timeout:   5000,
+		Debug:     true,
 	}
 
 	APro.SubCfgBind("arp", Config)
 	Config.ScanDrt *= int64(time.Second)
-	Config.DelayDrt *= time.Second
 	Config.PassDrt *= int64(time.Second)
 	Config.CheckDrt *= time.Millisecond
+	Config.UpdateDrt *= time.Millisecond
 	Config.Timeout *= time.Millisecond
 	Config.locker = new(sync.Mutex)
 	Config.addrMap = new(sync.Map)
@@ -54,6 +54,7 @@ func init() {
 
 type AddrIp struct {
 	ip       string
+	scanTime int64
 	passTime int64
 }
 
@@ -67,32 +68,40 @@ func sAddr(addr string) string {
 func (that *config) FindIp(addr string, timeout time.Duration) string {
 	addr = sAddr(addr)
 	now := time.Now().UnixNano()
+	var pTime int64 = 0
 	if val, _ := that.addrMap.Load(addr); val != nil {
 		addrIp, _ := val.(*AddrIp)
-		if addrIp != nil && addrIp.passTime > now {
-			return addrIp.ip
+		if addrIp != nil {
+			if addrIp.passTime > now {
+				return addrIp.ip
+			}
+
+			if addrIp.scanTime > now {
+				// 扫描开启
+				that.scanStart()
+				return addrIp.ip
+			}
+
+			pTime = addrIp.passTime
 		}
 	}
 
-	if that.scanPass <= now {
-		that.scanStop()
-		that.scanPass = now + that.ScanDrt
-	}
+	// 扫描开启
+	that.scanStart()
 
-	if !that.scanning {
-		Util.GoSubmit(that.scanLoop)
-	}
-
+	// 获取超时
 	if timeout <= 0 {
 		timeout = that.Timeout
 	}
 
 	var addrIp *AddrIp = nil
+	var wait time.Duration = 0
 	for ; timeout > 0; timeout -= that.CheckDrt {
 		time.Sleep(that.CheckDrt)
+		wait += that.CheckDrt
 		if val, _ := that.addrMap.Load(addr); val != nil {
 			addrIp, _ = val.(*AddrIp)
-			if addrIp != nil && (addrIp.passTime > now || that.PassDrt <= 0) {
+			if addrIp != nil && (wait >= that.UpdateDrt || addrIp.passTime != pTime) {
 				return addrIp.ip
 			}
 		}
@@ -105,27 +114,41 @@ func (that *config) FindIp(addr string, timeout time.Duration) string {
 	return ""
 }
 
-func (that *config) scanStop() {
-	that.locker.Lock()
-	that.scanning = false
-	that.locker.Unlock()
+func (that *config) scanStart() {
+	if !that.scanning {
+		Util.GoSubmit(that.scanRun)
+	}
 }
 
-func (that *config) scanLoop() {
+func (that *config) scanRun() {
 	that.locker.Lock()
 	if that.scanning {
 		that.locker.Unlock()
 		return
 	}
 
-	that.addrMap = new(sync.Map)
-	for ip, addr := range arp.Table() {
+	that.scanning = true
+	table := arp.Table()
+	now := time.Now().UnixNano()
+	for ip, addr := range table {
 		that.addrMap.Store(sAddr(addr), &AddrIp{
 			ip:       ip,
-			passTime: time.Now().UnixNano() + that.PassDrt,
+			scanTime: now + that.ScanDrt,
+			passTime: now + that.PassDrt,
 		})
 	}
 
-	that.scanning = true
+	// 扫描过期清理
+	clearPass := now - that.ScanDrt
+	that.addrMap.Range(func(key, value interface{}) bool {
+		addrIp, _ := value.(*AddrIp)
+		if addrIp == nil || addrIp.passTime <= clearPass {
+			that.addrMap.Delete(key)
+		}
+
+		return true
+	})
+
+	that.scanning = false
 	that.locker.Unlock()
 }
