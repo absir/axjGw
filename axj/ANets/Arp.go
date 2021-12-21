@@ -141,7 +141,10 @@ func (that *config) scanRange(key, value interface{}) bool {
 }
 
 func (that *config) scanRecr(arp *layers.ARP) {
-	that.addrMap.Store(sAddr(net.HardwareAddr(arp.SourceHwAddress).String()), net.IP(arp.SourceProtAddress).String())
+	that.addrMap.Store(sAddr(net.HardwareAddr(arp.SourceHwAddress).String()), &AddrIp{
+		ip:       net.IP(arp.SourceProtAddress).String(),
+		passTime: time.Now().UnixNano() + that.PassDrt,
+	})
 }
 
 func (that *config) scanErr(iface *net.Interface, err error) {
