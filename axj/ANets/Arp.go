@@ -5,7 +5,14 @@ import (
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"github.com/mostlygeek/arp"
+	"bytes"
+	"github.com/google/gopacket/layers"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
+	"io/ioutil"
+	"net"
+	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +29,7 @@ type config struct {
 	scanning  bool
 	scanTime  int64
 	resetTime int64
+	scans     *ArpScans
 }
 
 func (that *config) Write(p []byte) (n int, err error) {
@@ -48,6 +56,7 @@ func init() {
 	Config.Timeout *= time.Millisecond
 	Config.locker = new(sync.Mutex)
 	Config.addrMap = new(sync.Map)
+	Config.scans = NewArpScans(Config.scanRecr, Config.scanErr, time.Duration(Config.ResetDrt))
 }
 
 type AddrIp struct {
@@ -107,16 +116,11 @@ func (that *config) scanRun() {
 		return
 	}
 
+	// 扫描开启
 	that.scanning = true
-	table := arp.Table()
+	that.scans.Start()
 	now := time.Now().UnixNano()
 	that.scanTime = now + that.PassDrt
-	for ip, addr := range table {
-		that.addrMap.Store(sAddr(addr), &AddrIp{
-			ip:       ip,
-			passTime: now + that.PassDrt,
-		})
-	}
 
 	// 重置清理
 	that.resetTime = now - that.ResetDrt
@@ -134,4 +138,31 @@ func (that *config) scanRange(key, value interface{}) bool {
 	}
 
 	return true
+}
+
+func (that *config) scanRecr(arp *layers.ARP) {
+	that.addrMap.Store(sAddr(net.HardwareAddr(arp.SourceHwAddress).String()), net.IP(arp.SourceProtAddress).String())
+}
+
+func (that *config) scanErr(iface *net.Interface, err error) {
+	if that.Debug {
+		errS := err.Error()
+		os.Getenv("LANG")
+		if runtime.GOOS == "windows" {
+			bs := KtUnsafe.StringToBytes(errS)
+			from := bytes.NewReader(bs)
+			to := transform.NewReader(from, simplifiedchinese.GBK.NewDecoder())
+			bs, _ = ioutil.ReadAll(to)
+			if bs != nil {
+				errS = KtUnsafe.BytesToString(bs)
+			}
+		}
+
+		if iface == nil {
+			AZap.LoggerS.Error("Scan Err (Nil) " + errS)
+
+		} else {
+			AZap.LoggerS.Error("Scan Err (" + iface.HardwareAddr.String() + "." + iface.Name + ") " + errS)
+		}
+	}
 }
