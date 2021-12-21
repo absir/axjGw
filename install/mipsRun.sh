@@ -6,7 +6,11 @@ ulimit -v 20000
 
 #后台启动
 chmod +x agent
-nohup $currDir/agent &
+if [[ $nohupN -ge 1 ]];then
+  $currDir/agent &
+else
+  nohup $currDir/agent &
+fi
 
 #pid保存
 pid=$!
