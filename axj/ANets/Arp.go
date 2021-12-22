@@ -62,6 +62,7 @@ func sAddr(addr string) string {
 	addr = strings.ReplaceAll(addr, ":", "")
 	addr = strings.ReplaceAll(addr, "-", "")
 	addr = strings.ReplaceAll(addr, "_", "")
+	addr = strings.ToLower(addr)
 	return addr
 }
 
