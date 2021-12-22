@@ -49,18 +49,18 @@ func Debug(msg string, args ...interface{}) {
 
 func Info(msg string, args ...interface{}) {
 	if LoggerS.Core().Enabled(zap.InfoLevel) {
-		LoggerS.Debug(fmt.Sprintf(msg, args...))
+		LoggerS.Info(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Warn(msg string, args ...interface{}) {
 	if LoggerS.Core().Enabled(zap.WarnLevel) {
-		LoggerS.Debug(fmt.Sprintf(msg, args...))
+		LoggerS.Warn(fmt.Sprintf(msg, args...))
 	}
 }
 
 func Error(msg string, args ...interface{}) {
 	if LoggerS.Core().Enabled(zap.ErrorLevel) {
-		LoggerS.Debug(fmt.Sprintf(msg, args...))
+		LoggerS.Error(fmt.Sprintf(msg, args...))
 	}
 }

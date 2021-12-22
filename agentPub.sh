@@ -4,6 +4,8 @@ cliDir="/e/open/axj/axj-cli"
 cd `dirname $0`
 args=$*
 
+sed -i 's/const Version = .*/const Version = "'$(date +%g.%m%d.%H%M)'"/g' src/pkg/agent/Version.go
+
 if [[ $args =~ "mips" ]];then
 mkdir -p bin/mips
 rm -rf bin/mips/*

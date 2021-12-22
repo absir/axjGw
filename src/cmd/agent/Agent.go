@@ -5,6 +5,7 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
+	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/asdk"
@@ -76,6 +77,8 @@ func main() {
 			time.Sleep(Config.ConnDrt)
 		}
 	}()
+	// 启动完成
+	AZap.Info("Agent %s all AXJ started", agent.Version)
 	APro.Signal()
 }
 
@@ -124,7 +127,7 @@ func (o Opt) SaveStorage(name string, value string) {
 }
 
 func (o Opt) LoginData(adapter *asdk.Adapter) []byte {
-	data, err := json.Marshal([]string{Config.ClientKey, Config.ClientCert, Config.ClientId, Machineid})
+	data, err := json.Marshal([]string{Config.ClientKey, Config.ClientCert, Config.ClientId, Machineid, agent.Version})
 	Kt.Err(err, true)
 	return data
 }
