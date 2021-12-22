@@ -5,14 +5,8 @@ import (
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"bytes"
-	"github.com/google/gopacket/layers"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/transform"
-	"io/ioutil"
+	"go.uber.org/zap"
 	"net"
-	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -140,32 +134,20 @@ func (that *config) scanRange(key, value interface{}) bool {
 	return true
 }
 
-func (that *config) scanRecr(arp *layers.ARP) {
-	that.addrMap.Store(sAddr(net.HardwareAddr(arp.SourceHwAddress).String()), &AddrIp{
-		ip:       net.IP(arp.SourceProtAddress).String(),
+func (that *config) scanRecr(ip net.IP, addr net.HardwareAddr) {
+	that.addrMap.Store(sAddr(addr.String()), &AddrIp{
+		ip:       ip.String(),
 		passTime: time.Now().UnixNano() + that.PassDrt,
 	})
 }
 
-func (that *config) scanErr(iface *net.Interface, err error) {
-	if that.Debug {
-		errS := err.Error()
-		os.Getenv("LANG")
-		if runtime.GOOS == "windows" {
-			bs := KtUnsafe.StringToBytes(errS)
-			from := bytes.NewReader(bs)
-			to := transform.NewReader(from, simplifiedchinese.GBK.NewDecoder())
-			bs, _ = ioutil.ReadAll(to)
-			if bs != nil {
-				errS = KtUnsafe.BytesToString(bs)
-			}
+func (that *config) scanErr(reason string, iface *net.Interface, err error) {
+	if err == nil {
+		if that.Debug {
+			AZap.Warn("Scan Err " + reason + "  (" + iface.HardwareAddr.String() + "." + iface.Name + ") ")
 		}
 
-		if iface == nil {
-			AZap.LoggerS.Error("Scan Err (Nil) " + errS)
-
-		} else {
-			AZap.LoggerS.Error("Scan Err (" + iface.HardwareAddr.String() + "." + iface.Name + ") " + errS)
-		}
+	} else {
+		AZap.LoggerS.Error("Scan Err "+reason+"  ("+iface.HardwareAddr.String()+"."+iface.Name+") ", zap.Error(err))
 	}
 }

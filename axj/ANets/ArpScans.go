@@ -3,7 +3,6 @@ package ANets
 import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"github.com/google/gopacket/layers"
 	"go.uber.org/zap"
 	"net"
 	"sync"
@@ -13,13 +12,13 @@ import (
 type ArpScans struct {
 	locker    sync.Locker
 	ifaces    *sync.Map
-	rcvr      func(arp *layers.ARP)
-	err       func(iface *net.Interface, err error)
+	rcvr      func(ip net.IP, addr net.HardwareAddr)
+	err       func(reason string, iface *net.Interface, err error)
 	stopDrt   time.Duration
 	startTime int64
 }
 
-func NewArpScans(rcvr func(arp *layers.ARP), err func(iface *net.Interface, err error), stopDrt time.Duration) *ArpScans {
+func NewArpScans(rcvr func(ip net.IP, addr net.HardwareAddr), err func(reason string, iface *net.Interface, err error), stopDrt time.Duration) *ArpScans {
 	that := new(ArpScans)
 	that.locker = new(sync.Mutex)
 	that.ifaces = new(sync.Map)

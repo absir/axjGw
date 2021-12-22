@@ -18,9 +18,11 @@ require (
 require (
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/gopacket v1.1.19 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.2 // indirect
+	github.com/mdlayher/arp v0.0.0-20191213142603-f72070a231fc // indirect
+	github.com/mdlayher/ethernet v0.0.0-20190313224307-5b5fc417d966 // indirect
+	github.com/mdlayher/raw v0.0.0-20190313224157-43dbcdd7739d // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible // indirect

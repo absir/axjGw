@@ -7,7 +7,7 @@ ulimit -v 20000
 #后台启动
 chmod +x agent
 if [[ $nohupN -ge 1 ]];then
-  $currDir/agent &
+  $currDir/agent > nohup.out &
 else
   nohup $currDir/agent &
 fi

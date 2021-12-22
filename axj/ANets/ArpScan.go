@@ -3,12 +3,8 @@ package ANets
 import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"bytes"
 	"encoding/binary"
-	"errors"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"github.com/mdlayher/arp"
 	"go.uber.org/zap"
 	"net"
 	"sync"
@@ -18,16 +14,16 @@ import (
 type ArpScan struct {
 	locker    sync.Locker
 	iface     *net.Interface
-	rcvr      func(arp *layers.ARP)
-	err       func(iface *net.Interface, err error)
+	rcvr      func(ip net.IP, addr net.HardwareAddr)
+	err       func(reason string, iface *net.Interface, err error)
+	startTime int64
 	stopDrt   time.Duration
 	addr      *net.IPNet
-	handle    *pcap.Handle
+	client    *arp.Client
 	stop      chan struct{}
-	startTime int64
 }
 
-func NewArpScan(iface *net.Interface, rcvr func(arp *layers.ARP), err func(iface *net.Interface, err error), stopDrt time.Duration) *ArpScan {
+func NewArpScan(iface *net.Interface, rcvr func(ip net.IP, addr net.HardwareAddr), err func(reason string, iface *net.Interface, err error), stopDrt time.Duration) *ArpScan {
 	that := new(ArpScan)
 	that.locker = new(sync.Mutex)
 	that.iface = iface
@@ -38,19 +34,10 @@ func NewArpScan(iface *net.Interface, rcvr func(arp *layers.ARP), err func(iface
 }
 
 func (that *ArpScan) Start() {
-	var err error = nil
 	that.locker.Lock()
 	that.startTime = time.Now().UnixNano()
-	err = that.scan(that.iface)
+	that.scan()
 	that.locker.Unlock()
-	if err != nil {
-		if that.err == nil {
-			AZap.Logger.Error("Scan Err", zap.Error(err))
-
-		} else {
-			that.err(that.iface, err)
-		}
-	}
 }
 
 func (that *ArpScan) Stop() {
@@ -62,12 +49,11 @@ func (that *ArpScan) stopDo(locker bool) {
 		that.locker.Lock()
 	}
 
-	if that.stop != nil {
-		close(that.stop)
-		that.handle.Close()
-		that.stop = nil
-		that.handle = nil
+	client := that.client
+	if client != nil {
 		that.addr = nil
+		that.client = nil
+		client.Close()
 	}
 
 	if locker {
@@ -75,34 +61,61 @@ func (that *ArpScan) stopDo(locker bool) {
 	}
 }
 
-func (that *ArpScan) stopDrtDo(handle *pcap.Handle) {
+func (that *ArpScan) stopDrtDo(client *arp.Client) {
+	var brk bool
 	for {
+		brk = true
 		time.Sleep(that.stopDrt)
 		that.locker.Lock()
-		if that.handle == handle {
-			if that.startTime < time.Now().UnixNano()-int64(that.stopDrt) {
-				that.stopDo(false)
-				break
-			}
+		if client == that.client {
+			if that.startTime > time.Now().UnixNano()-int64(that.stopDrt) {
+				brk = false
 
-		} else {
+			} else {
+				that.stopDo(false)
+			}
+		}
+
+		that.locker.Unlock()
+		if brk {
 			break
+		}
+	}
+}
+
+func (that *ArpScan) stopClient(client *arp.Client) {
+	if client == that.client {
+		that.locker.Lock()
+		if client == that.client {
+			that.stopDo(false)
 		}
 
 		that.locker.Unlock()
 	}
 }
 
-// scan scans an individual interface's local network for machines using ARP requests/replies.
-//
-// scan loops forever, sending packets out regularly.  It returns an error if
-// it's ever unable to write a packet.
-func (that *ArpScan) scan(iface *net.Interface) error {
-	// We just look for IPv4 addresses, so try to find if the interface has one.
-	if that.stop == nil {
+func (that *ArpScan) onErr(reason string, err error) {
+	if that.err == nil {
+		iface := that.iface
+		if err == nil {
+			AZap.Warn(reason + "  (" + iface.HardwareAddr.String() + "." + iface.Name + ") ")
+
+		} else {
+			AZap.LoggerS.Error(reason+"  ("+iface.HardwareAddr.String()+"."+iface.Name+") ", zap.Error(err))
+		}
+
+	} else {
+		that.err(reason, that.iface, err)
+	}
+}
+
+func (that *ArpScan) scan() {
+	if that.client == nil {
 		var addr *net.IPNet
-		if addrs, err := iface.Addrs(); err != nil {
-			return err
+		if addrs, err := that.iface.Addrs(); err != nil {
+			that.onErr("Addrs", err)
+			return
+
 		} else {
 			for _, a := range addrs {
 				if ipnet, ok := a.(*net.IPNet); ok {
@@ -116,137 +129,90 @@ func (that *ArpScan) scan(iface *net.Interface) error {
 				}
 			}
 		}
+
 		// Sanity-check that the interface has a good address.
 		if addr == nil {
-			return errors.New("no good IP network found")
-		} else if addr.IP[0] == 127 {
-			return errors.New("skipping localhost")
-		} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
-			return errors.New("mask means network is too large")
-		}
-		//log.Printf("Using network range %v for interface %v", addr, iface.Name)
+			that.onErr("no good IP network found", nil)
+			return
 
-		// Open up a pcap handle for packet reads/writes.
-		handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
-		if err != nil {
-			return err
+		} else if addr.IP[0] == 127 {
+			that.onErr("skipping localhost", nil)
+			return
+
+		} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
+			that.onErr("mask means network is too large", nil)
+			return
 		}
 
 		that.addr = addr
-		that.handle = handle
-		that.stop = make(chan struct{})
-		// Start up a goroutine to read in packet data.
+		client, err := arp.Dial(that.iface)
+		if err != nil {
+			that.onErr("Dial", err)
+			return
+		}
+
+		that.client = client
+		// 读取返回
 		Util.GoSubmit(func() {
-			that.readARP(that.handle, iface, that.stop)
+			that.readARP(that.client)
 		})
 
 		// 自动关闭
 		if that.stopDrt > 0 {
 			Util.GoSubmit(func() {
-				that.stopDrtDo(that.handle)
+				that.stopDrtDo(that.client)
 			})
 		}
 	}
 
-	// Write our scan packets out to the handle.
-	if err := that.writeARP(that.handle, iface, that.addr); err != nil {
+	// 发送查询请求
+	if err := that.writeARP(that.client, that.addr); err != nil {
 		that.stopDo(false)
-		if that.err == nil {
-			AZap.Error("error writing packets on %v: %v", iface.Name, err)
+		that.onErr("writeARP", err)
+	}
+}
+
+func (that *ArpScan) readARP(client *arp.Client) {
+	for {
+		pack, _, err := client.Read()
+		if err != nil {
+			that.onErr("readARP", err)
+			if client == that.client {
+
+			}
+
+			break
+		}
+
+		if pack == nil || pack.Operation != arp.OperationReply {
+			continue
+		}
+
+		if that.rcvr == nil {
+			AZap.Info("IP %v is at %v", pack.SenderIP, pack.SenderHardwareAddr)
 
 		} else {
-			that.err(iface, err)
-		}
-
-		return err
-	}
-
-	return nil
-}
-
-// readARP watches a handle for incoming ARP responses we might care about, and prints them.
-//
-// readARP loops until 'stop' is closed.
-func (that *ArpScan) readARP(handle *pcap.Handle, iface *net.Interface, stop chan struct{}) {
-	src := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
-	in := src.Packets()
-	for {
-		var packet gopacket.Packet
-		select {
-		case <-stop:
-			return
-		case packet = <-in:
-			arpLayer := packet.Layer(layers.LayerTypeARP)
-			if arpLayer == nil {
-				continue
-			}
-			arp := arpLayer.(*layers.ARP)
-			if arp.Operation != layers.ARPReply || bytes.Equal([]byte(iface.HardwareAddr), arp.SourceHwAddress) {
-				// This is a packet I sent.
-				continue
-			}
-			// Note:  we might get some packets here that aren't responses to ones we've sent,
-			// if for example someone else sends US an ARP request.  Doesn't much matter, though...
-			// all information is good information :)
-			if that.rcvr == nil {
-				AZap.Info("IP %v is at %v", net.IP(arp.SourceProtAddress), net.HardwareAddr(arp.SourceHwAddress))
-
-			} else {
-				that.rcvr(arp)
-			}
+			that.rcvr(pack.SenderIP, pack.SenderHardwareAddr)
 		}
 	}
 }
 
-// writeARP writes an ARP request for each address on our local network to the
-// pcap handle.
-func (that *ArpScan) writeARP(handle *pcap.Handle, iface *net.Interface, addr *net.IPNet) error {
-	// Set up all the layers' fields we can.
-	eth := layers.Ethernet{
-		SrcMAC:       iface.HardwareAddr,
-		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		EthernetType: layers.EthernetTypeARP,
-	}
-	arp := layers.ARP{
-		AddrType:          layers.LinkTypeEthernet,
-		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     6,
-		ProtAddressSize:   4,
-		Operation:         layers.ARPRequest,
-		SourceHwAddress:   []byte(iface.HardwareAddr),
-		SourceProtAddress: []byte(addr.IP),
-		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
-	}
-	// Set up buffer and options for serialization.
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-	// Send one packet for every address.
-	for _, ip := range that.ips(addr) {
-		arp.DstProtAddress = []byte(ip)
-		gopacket.SerializeLayers(buf, opts, &eth, &arp)
-		if err := handle.WritePacketData(buf.Bytes()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// ips is a simple and not very good method for getting all IPv4 addresses from a
-// net.IPNet.  It returns all IPs it can over the channel it sends back, closing
-// the channel when done.
-func (that *ArpScan) ips(n *net.IPNet) (out []net.IP) {
-	num := binary.BigEndian.Uint32([]byte(n.IP))
-	mask := binary.BigEndian.Uint32([]byte(n.Mask))
+func (that *ArpScan) writeARP(client *arp.Client, addr *net.IPNet) error {
+	num := binary.BigEndian.Uint32(addr.IP)
+	mask := binary.BigEndian.Uint32(addr.Mask)
 	num &= mask
+	var err error = nil
 	for mask < 0xffffffff {
 		var buf [4]byte
 		binary.BigEndian.PutUint32(buf[:], num)
-		out = append(out, net.IP(buf[:]))
+		err = client.Request(net.IP(buf[:]))
+		if err != nil {
+			break
+		}
+
 		mask++
 		num++
 	}
-	return
+
+	return err
 }
