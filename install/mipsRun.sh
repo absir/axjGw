@@ -9,7 +9,7 @@ chmod +x agent
 if [[ $nohupN -ge 1 ]];then
   $currDir/agent > nohup.out &
 else
-  nohup $currDir/agent &
+  nohup $currDir/agent > nohup.out &
 fi
 
 #pid保存
