@@ -37,7 +37,7 @@ var Config *config
 func init() {
 	Config = &config{
 		ResetDrt: 600,
-		PassDrt:  60,
+		PassDrt:  30,
 		CheckDrt: 200,
 		Timeout:  5000,
 		Debug:    true,
@@ -54,8 +54,26 @@ func init() {
 }
 
 type AddrIp struct {
-	ip       string
-	passTime int64
+	ip        net.IP
+	ipS       *string
+	passTime  int64
+	pass2Time int64
+	scan      *ArpScan
+}
+
+func (that *AddrIp) IpStr() string {
+	if that.ipS == nil {
+		ipS := that.ip.String()
+		that.ipS = &ipS
+	}
+
+	return *that.ipS
+}
+
+func (that *AddrIp) ReqIp() {
+	if that.scan != nil {
+		that.scan.ReqIp(that.ip)
+	}
 }
 
 func sAddr(addr string) string {
@@ -73,17 +91,23 @@ func (that *config) FindIp(addr string, timeout time.Duration) string {
 	if val, _ := that.addrMap.Load(addr); val != nil {
 		addrIp, _ = val.(*AddrIp)
 		if addrIp != nil && addrIp.passTime > now {
-			return addrIp.ip
+			return addrIp.IpStr()
 		}
 	}
 
-	// 扫描开启
-	if !that.scanning && (addrIp == nil || that.scanTime <= now) {
-		Util.GoSubmit(that.scanRun)
+	if addrIp != nil && addrIp.pass2Time > now {
+		// IP检查
+		Util.GoSubmit(addrIp.ReqIp)
+
+	} else if !that.scanning {
+		// 扫描
+		if addrIp == nil || that.scanTime <= now {
+			Util.GoSubmit(that.scanRun)
+		}
 	}
 
 	if addrIp != nil {
-		return addrIp.ip
+		return addrIp.IpStr()
 	}
 
 	// 获取超时
@@ -96,7 +120,7 @@ func (that *config) FindIp(addr string, timeout time.Duration) string {
 		if val, _ := that.addrMap.Load(addr); val != nil {
 			addrIp, _ = val.(*AddrIp)
 			if addrIp != nil {
-				return addrIp.ip
+				return addrIp.IpStr()
 			}
 		}
 	}
@@ -113,7 +137,7 @@ func (that *config) scanRun() {
 
 	// 扫描开启
 	that.scanning = true
-	that.scans.Start()
+	that.scans.ScanAll()
 	now := time.Now().UnixNano()
 	that.scanTime = now + that.PassDrt
 
@@ -135,20 +159,23 @@ func (that *config) scanRange(key, value interface{}) bool {
 	return true
 }
 
-func (that *config) scanRecr(ip net.IP, addr net.HardwareAddr) {
+func (that *config) scanRecr(scan *ArpScan, ip net.IP, addr net.HardwareAddr) {
+	passTime := time.Now().UnixNano() + that.PassDrt
 	that.addrMap.Store(sAddr(addr.String()), &AddrIp{
-		ip:       ip.String(),
-		passTime: time.Now().UnixNano() + that.PassDrt,
+		ip:        ip,
+		passTime:  passTime,
+		pass2Time: passTime + that.PassDrt,
+		scan:      scan,
 	})
 }
 
 func (that *config) scanErr(reason string, iface *net.Interface, err error) {
 	if err == nil {
 		if that.Debug {
-			AZap.Warn("Scan Err " + reason + "  (" + iface.HardwareAddr.String() + "." + iface.Name + ") ")
+			AZap.Warn("ScanAll Err " + reason + "  (" + iface.HardwareAddr.String() + "." + iface.Name + ") ")
 		}
 
 	} else {
-		AZap.LoggerS.Error("Scan Err "+reason+"  ("+iface.HardwareAddr.String()+"."+iface.Name+") ", zap.Error(err))
+		AZap.LoggerS.Error("ScanAll Err "+reason+"  ("+iface.HardwareAddr.String()+"."+iface.Name+") ", zap.Error(err))
 	}
 }
