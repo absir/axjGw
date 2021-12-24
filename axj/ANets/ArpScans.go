@@ -13,12 +13,12 @@ type ArpScans struct {
 	locker    sync.Locker
 	ifaces    *sync.Map
 	rcvr      func(scan *ArpScan, ip net.IP, addr net.HardwareAddr)
-	err       func(reason string, iface *net.Interface, err error)
+	err       func(reason string, iface *net.Interface, err error, ig bool)
 	stopDrt   time.Duration
 	startTime int64
 }
 
-func NewArpScans(rcvr func(scan *ArpScan, ip net.IP, addr net.HardwareAddr), err func(reason string, iface *net.Interface, err error), stopDrt time.Duration) *ArpScans {
+func NewArpScans(rcvr func(scan *ArpScan, ip net.IP, addr net.HardwareAddr), err func(reason string, iface *net.Interface, err error, ig bool), stopDrt time.Duration) *ArpScans {
 	that := new(ArpScans)
 	that.locker = new(sync.Mutex)
 	that.ifaces = new(sync.Map)

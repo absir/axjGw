@@ -15,7 +15,7 @@ type ArpScan struct {
 	locker  sync.Locker
 	iface   *net.Interface
 	rcvr    func(scan *ArpScan, ip net.IP, addr net.HardwareAddr)
-	err     func(reason string, iface *net.Interface, err error)
+	err     func(reason string, iface *net.Interface, err error, ig bool)
 	stopDrt time.Duration
 	reqTime int64
 	addr    *net.IPNet
@@ -23,7 +23,7 @@ type ArpScan struct {
 	stop    chan struct{}
 }
 
-func NewArpScan(iface *net.Interface, rcvr func(scan *ArpScan, ip net.IP, addr net.HardwareAddr), err func(reason string, iface *net.Interface, err error), stopDrt time.Duration) *ArpScan {
+func NewArpScan(iface *net.Interface, rcvr func(scan *ArpScan, ip net.IP, addr net.HardwareAddr), err func(reason string, iface *net.Interface, err error, ig bool), stopDrt time.Duration) *ArpScan {
 	that := new(ArpScan)
 	that.locker = new(sync.Mutex)
 	that.iface = iface
@@ -55,25 +55,18 @@ func (that *ArpScan) stopDo(locker bool) {
 }
 
 func (that *ArpScan) stopDrtDo(client *arp.Client) {
-	var brk bool
 	for {
-		brk = true
 		time.Sleep(that.stopDrt)
-		that.locker.Lock()
-		if client == that.client {
-			if that.reqTime > time.Now().UnixNano()-int64(that.stopDrt) {
-				brk = false
-
-			} else {
-				that.stopDo(false)
-			}
+		if client != that.client {
+			return
 		}
 
-		that.locker.Unlock()
-		if brk {
+		if that.reqTime <= time.Now().UnixNano()-int64(that.stopDrt) {
 			break
 		}
 	}
+
+	that.stopClient(client)
 }
 
 func (that *ArpScan) stopClient(client *arp.Client) {
@@ -87,7 +80,7 @@ func (that *ArpScan) stopClient(client *arp.Client) {
 	}
 }
 
-func (that *ArpScan) onErr(reason string, err error) {
+func (that *ArpScan) onErr(reason string, err error, ig bool) {
 	if that.err == nil {
 		iface := that.iface
 		if err == nil {
@@ -98,7 +91,7 @@ func (that *ArpScan) onErr(reason string, err error) {
 		}
 
 	} else {
-		that.err(reason, that.iface, err)
+		that.err(reason, that.iface, err, ig)
 	}
 }
 
@@ -107,7 +100,7 @@ func (that *ArpScan) conn() *arp.Client {
 	if client == nil {
 		var addr *net.IPNet
 		if addrs, err := that.iface.Addrs(); err != nil {
-			that.onErr("Addrs", err)
+			that.onErr("Addrs", err, false)
 			return nil
 
 		} else {
@@ -126,15 +119,15 @@ func (that *ArpScan) conn() *arp.Client {
 
 		// Sanity-check that the interface has a good address.
 		if addr == nil {
-			that.onErr("no good IP network found", nil)
+			that.onErr("no good IP network found", nil, true)
 			return nil
 
 		} else if addr.IP[0] == 127 {
-			that.onErr("skipping localhost", nil)
+			that.onErr("skipping localhost", nil, true)
 			return nil
 
 		} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
-			that.onErr("mask means network is too large", nil)
+			that.onErr(" mask means network is too large", nil, true)
 			return nil
 		}
 
@@ -142,7 +135,7 @@ func (that *ArpScan) conn() *arp.Client {
 		var err error
 		client, err = arp.Dial(that.iface)
 		if err != nil {
-			that.onErr("Dial", err)
+			that.onErr("Dial", err, false)
 			return nil
 		}
 
@@ -186,11 +179,7 @@ func (that *ArpScan) readARP(client *arp.Client) {
 	for {
 		pack, _, err := client.Read()
 		if err != nil {
-			that.onErr("readARP", err)
-			if client == that.client {
-
-			}
-
+			that.onErr("readARP", err, false)
 			break
 		}
 
@@ -205,6 +194,8 @@ func (that *ArpScan) readARP(client *arp.Client) {
 			that.rcvr(that, pack.SenderIP, pack.SenderHardwareAddr)
 		}
 	}
+
+	that.stopClient(client)
 }
 
 func (that *ArpScan) ReqAll() {
@@ -216,7 +207,7 @@ func (that *ArpScan) ReqAll() {
 	// 发送查询请求
 	if err := that.writeARPAll(client, that.addr); err != nil {
 		that.stopDo(false)
-		that.onErr("ReqAll", err)
+		that.onErr("ReqAll", err, false)
 	}
 }
 
@@ -249,6 +240,6 @@ func (that *ArpScan) ReqIp(ip net.IP) {
 	// 发送查询请求
 	if err := client.Request(ip); err != nil {
 		that.stopDo(false)
-		that.onErr("ReqIp "+ip.String(), err)
+		that.onErr("ReqIp "+ip.String(), err, false)
 	}
 }

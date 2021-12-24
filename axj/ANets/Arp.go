@@ -169,9 +169,13 @@ func (that *config) scanRecr(scan *ArpScan, ip net.IP, addr net.HardwareAddr) {
 	})
 }
 
-func (that *config) scanErr(reason string, iface *net.Interface, err error) {
+func (that *config) scanErr(reason string, iface *net.Interface, err error, ig bool) {
 	if err == nil {
 		if that.Debug {
+			if ig {
+				return
+			}
+
 			AZap.Warn("ScanAll Err " + reason + "  (" + iface.HardwareAddr.String() + "." + iface.Name + ") ")
 		}
 
