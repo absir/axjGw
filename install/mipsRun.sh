@@ -1,8 +1,11 @@
 cd $(dirname $0)
 currDir=$(pwd)
 
-#运行内存限制
-ulimit -v 20000
+#运行内存限制 4g路由 ulimit -v can't resolve symbol ‘_ashldi3’
+ulimitV=$(ulimit -v 20000 | wc -l)
+if [[ "$ulimitV" -ge 1 ]];then
+	ulimit -v 20000
+fi
 
 #后台启动
 chmod +x agent
