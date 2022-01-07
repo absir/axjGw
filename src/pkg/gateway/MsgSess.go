@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"axj/ANet"
+	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
@@ -511,6 +512,7 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 		return
 	}
 
+	AZap.Debug("Grp SubLast %s : %d, %d, %d", that.grp.gid, client.cid, lastId, continuous)
 	// lastId <= 0 && lastId <= 0
 	if continuous <= 0 && lastId <= 0 {
 		// 只监听last通知，不接受subLast消息推送
