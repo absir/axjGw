@@ -2,6 +2,7 @@ package asdk
 
 import (
 	"axj/ANet"
+	"axj/Kt/Kt"
 	"axj/Kt/KtBuffer"
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
@@ -83,6 +84,8 @@ type Client struct {
 	rqAry       *list.List
 	rqDict      map[int32]*rqDt
 	rqI         int32
+	beatIdle    int64
+	idleTimeout int64
 }
 
 type Adapter struct {
@@ -95,6 +98,7 @@ type Adapter struct {
 	gid      string
 	closed   bool
 	kicked   bool
+	lastTime int64
 }
 
 func (that *Adapter) IsLooped() bool {
@@ -175,7 +179,14 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 	that.loadUriMapUriI()
 	that.rqAry = new(list.List)
 	that.rqDict = map[int32]*rqDt{}
+	that.SetIdleTime(30, 0)
 	return that
+}
+
+// 空闲检查配置
+func (that *Client) SetIdleTime(beatIdle int32, idleTimeout int32) {
+	that.beatIdle = int64(beatIdle) * int64(time.Nanosecond)
+	that.idleTimeout = int64(idleTimeout) * int64(time.Nanosecond)
 }
 
 // interface{}保护，避免sdk导出类型复杂
@@ -241,6 +252,12 @@ func (that *Client) Conn() *Adapter {
 	adapter := new(Adapter)
 	adapter.conn = aConn
 	adapter.locker = new(sync.Mutex)
+	// 空闲检查
+	adapter.lastTime = time.Now().UnixNano()
+	if that.idleTimeout > 0 {
+		that.checkStart()
+	}
+
 	that.adapter = adapter
 	that.opt.OnState(adapter, CONN, "", nil, nil)
 	go that.reqLoop(adapter)
@@ -421,6 +438,8 @@ func (that *Client) doChecks() {
 			that.onRep(0, rq, "timeout", nil, nil)
 
 		} else if !rq.send && looped {
+			// 发送时间
+			adapter.lastTime = time
 			// 发送请求
 			that.rqSend(rq)
 		}
@@ -428,6 +447,19 @@ func (that *Client) doChecks() {
 		if rq.send && rq.back == nil {
 			// 已发送返回, 队列删除
 			that.rqDelAry(el)
+		}
+	}
+
+	if adapter != nil {
+		// 心跳超时检查
+		if adapter.looped && that.beatIdle > 0 && adapter.lastTime < (time-that.beatIdle) {
+			adapter.lastTime = time
+			that.processor.Rep(that.sendP, adapter.conn, nil, that.compress, ANet.REQ_BEAT, "", 0, nil, false, 0)
+		}
+
+		// 接收超时检查
+		if that.idleTimeout > 0 && adapter.lastTime < (time-that.idleTimeout) {
+			that.onError(adapter, Kt.NewErrReason("idleTimeout"), true)
 		}
 	}
 }
@@ -585,6 +617,8 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			break
 		}
 
+		// 接收时间
+		adapter.lastTime = time.Now().UnixNano()
 		// 非返回值 才需要路由压缩解密
 		if req < ANet.REQ_ONEWAY {
 			if uri == "" && uriI > 0 {
@@ -646,6 +680,10 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			that.onLoop(adapter, uri)
 			that.opt.OnState(adapter, LOOP, "", data, buffer)
 			buffer = nil
+			// 心跳检查
+			if that.beatIdle > 0 {
+				that.checkStart()
+			}
 			continue
 		}
 
