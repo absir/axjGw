@@ -62,6 +62,10 @@
 
 // skipped method Client.Req with unsupported parameter or return types
 
+/**
+ * 空闲检查配置
+ */
+- (void)setIdleTime:(int32_t)beatIdle idleTimeout:(int32_t)idleTimeout;
 @end
 
 FOUNDATION_EXPORT const int64_t AsdkCLOSE;
