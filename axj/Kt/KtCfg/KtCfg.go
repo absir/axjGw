@@ -294,7 +294,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 		index := KtStr.IndexBytes(str, splits, 0)
 		if index > 0 && index < sLen {
 			chr = str[index-1]
-			if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' {
+			if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' || chr == '$' {
 				if index < 1 {
 					return
 				}
@@ -440,6 +440,9 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			case '-':
 				mp.Remove(name)
 				break
+			case '$':
+				// 配置复用
+				mp.Put(name, Get(cfg, str))
 			default:
 				mp.Put(name, str)
 				break

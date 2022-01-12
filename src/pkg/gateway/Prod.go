@@ -5,7 +5,7 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
-	"axj/Thrd/Disc"
+	"axj/Thrd/Dscv"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
@@ -196,11 +196,13 @@ type Prods struct {
 	// 外部服务
 	Out bool
 	// 服务发现
-	Disc string
+	Dscv string
+	// 服务发现名
+	DscvName string
 	// 服务发现间隔
-	DiscIdle int
-	// 服务发现注册
-	discS bool
+	DscvIdle int
+	// 服务发现成功
+	discSucc bool
 }
 
 func (that *Prods) TimeoutCtx() context.Context {
@@ -212,14 +214,14 @@ func (that *Prods) TimeoutCtx() context.Context {
 	return ctx
 }
 
-func (that *Prods) Set(prods []Disc.Prod) {
+func (that *Prods) Set(prods []*Dscv.Prod) {
 	if prods == nil {
 		return
 	}
 
 	prodsIn := new(ProdsIn)
 	for _, prod := range prods {
-		prodsIn.addIn(KtCvt.ToInt32(prod.Id), prod.Addr)
+		prodsIn.addIn(KtCvt.ToInt32(prod.Id), prod.Addr+":"+strconv.Itoa(prod.GetPort(Config.ProdPortKey, Config.ProdPort)))
 	}
 
 	that.ProdsIn = prodsIn

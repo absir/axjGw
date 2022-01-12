@@ -8,7 +8,7 @@ import (
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
-	"axj/Thrd/Disc"
+	"axj/Thrd/Dscv"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
@@ -23,17 +23,16 @@ import (
 )
 
 type server struct {
-	Locker       sync.Locker
-	Manager      *ANet.Manager
-	Context      context.Context
-	prodsMap     map[string]*Prods
-	prodsDiscMng *Disc.DiscoveryMng
-	prodsGw      *Prods
-	gatewayISC   *gatewayISC
-	cron         *cron.Cron
-	started      bool
-	connLimiter  Util.Limiter
-	liveLimiter  Util.Limiter
+	Locker      sync.Locker
+	Manager     *ANet.Manager
+	Context     context.Context
+	prodsMap    map[string]*Prods
+	prodsGw     *Prods
+	gatewayISC  *gatewayISC
+	cron        *cron.Cron
+	started     bool
+	connLimiter Util.Limiter
+	liveLimiter Util.Limiter
 }
 
 var Server = new(server)
@@ -67,10 +66,13 @@ func (that *server) CidCompress(cid int64) bool {
 	return (cid & 0X01) == 1
 }
 
-func (that *server) Cron() *cron.Cron {
+func (that *server) Cron(locker bool) *cron.Cron {
 	if that.cron == nil {
-		that.Locker.Lock()
-		defer that.Locker.Unlock()
+		if locker {
+			that.Locker.Lock()
+			defer that.Locker.Unlock()
+		}
+
 		if that.cron == nil {
 			that.cron = cron.New(cron.WithParser(cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)))
 			if that.started {
@@ -169,9 +171,7 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 		})
 
 		// 服务发现启动发现线程
-		if that.prodsDiscMng != nil && !that.prodsDiscMng.CheckEmpty() {
-			go that.prodsDiscMng.CheckLoop(Config.ProdCheckDrt)
-		}
+		Dscv.InstMngStart(false)
 	}
 
 	// 无服务配置
@@ -190,11 +190,6 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 	}
 }
 
-func (that *server) initProdsDiscMng() {
-	that.prodsDiscMng = new(Disc.DiscoveryMng).Init()
-	that.prodsDiscMng.RegDefs()
-}
-
 func (that *server) initProdsReg(name string, prods *Prods) {
 	if prods == nil {
 		delete(that.prodsMap, name)
@@ -208,13 +203,14 @@ func (that *server) initProdsReg(name string, prods *Prods) {
 			prods.Timeout = Config.ProdTimeout
 		}
 
-		if prods.Disc != "" {
-			if that.prodsDiscMng == nil {
-				that.initProdsDiscMng()
+		if prods.Dscv != "" {
+			// 服务发现
+			dscvName := prods.DscvName
+			if dscvName == "" {
+				dscvName = name
 			}
 
-			// 服务发现
-			prods.discS = that.prodsDiscMng.SetDiscoveryS(prods.Disc, name, prods.Set, prods.DiscIdle, true) != nil
+			prods.discSucc = Dscv.InstMng().SetDiscoveryS(prods.Dscv, dscvName, prods.Set, prods.DscvIdle, true) != nil
 		}
 
 		that.prodsMap[name] = prods

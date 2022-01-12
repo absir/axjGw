@@ -25,6 +25,8 @@ type config struct {
 	TeamMax      int           // 群组最大缓存
 	ClientPMax   int           // 客户端Map遍历最大预增缓冲
 	zDevAcl      bool          // 网关服务测试模式
+	ProdPort     int           // 微服务默认服务端口
+	ProdPortKey  string        // 微服务默认服务端口发现KEY
 }
 
 var Config *config
@@ -44,6 +46,8 @@ func initConfig(workId int32) {
 		ProdCheckDrt: 30 * time.Second,
 		TeamMax:      65535,
 		ClientPMax:   16,
+		ProdPort:     8083,
+		ProdPortKey:  "gwPort",
 	}
 
 	Config.PassProd = Config.AclProd

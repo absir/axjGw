@@ -80,7 +80,7 @@ func initMsgMng() {
 	}
 
 	// 配置处理
-	APro.SubCfgBind("msg", _msgMng)
+	APro.SubCfgBind("msg", that)
 	that.LastLoad = that.LastLoad && that.LastMax > 0
 	that.CheckDrt = that.CheckDrt * time.Millisecond
 	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
@@ -106,7 +106,7 @@ func initMsgMng() {
 		msgGorm.AutoMigrate()
 		that.Db = msgGorm
 		if that.ClearCron != "" && !strings.HasPrefix(that.ClearCron, "#") {
-			Server.Cron().AddFunc(that.ClearCron, that.ClearPass)
+			Server.Cron(false).AddFunc(that.ClearCron, that.ClearPass)
 			that.ClearPass()
 		}
 	}
