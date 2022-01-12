@@ -16,6 +16,7 @@ type DscvCfg struct {
 	Group     string
 	Ip        string
 	CheckDrt  time.Duration
+	MissWait  time.Duration
 	RegChkDrt int64
 }
 
@@ -35,7 +36,12 @@ func GetDscvCfg() *DscvCfg {
 			cfg.Ip = APro.GetLocalIp()
 		}
 
+		if cfg.MissWait <= 0 {
+			cfg.MissWait = 10
+		}
+
 		cfg.CheckDrt *= time.Second
+		cfg.MissWait *= time.Second
 		cfg.RegChkDrt *= int64(time.Second)
 		dscvCfg = cfg
 	}

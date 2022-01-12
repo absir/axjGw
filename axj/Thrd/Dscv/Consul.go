@@ -192,11 +192,18 @@ func (c consul) RegMiss(cfg interface{}) bool {
 	for {
 		pair, _, err := cCfg.client.KV().Get(REG_CHECK_KEY, &api.QueryOptions{})
 		if err != nil {
-			AZap.Error("REG_CHECK_KEY Err", zap.Error(err))
+			AZap.Error("REG_CHECK_KEY Get Err", zap.Error(err))
 			return false
 		}
 
-		if pair == nil {
+		if pair == nil || pair.Value == nil {
+			_, err = cCfg.client.KV().Put(&api.KVPair{
+				Key:   REG_CHECK_KEY,
+				Value: KtUnsafe.StringToBytes(strconv.FormatInt(time.Now().UnixNano(), 10)),
+			}, &api.WriteOptions{})
+			if err != nil {
+				AZap.Error("REG_CHECK_KEY Put Err", zap.Error(err))
+			}
 
 			time.Sleep(time.Second)
 			continue
@@ -230,6 +237,19 @@ func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]
 
 func (c consul) RegProd(cfg interface{}, ctx interface{}) error {
 	cCfg := cfg.(*consulCfg)
+	for {
+		c.RegMiss(cfg)
+		if cCfg.regCheck == "" {
+			if GetDscvCfg().MissWait > 0 {
+				time.Sleep(GetDscvCfg().MissWait)
+			}
+
+			continue
+		}
+
+		break
+	}
+
 	service := ctx.(*api.AgentServiceRegistration)
 	return cCfg.client.Agent().ServiceRegister(service)
 }
