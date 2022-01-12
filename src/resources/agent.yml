@@ -1,8 +1,8 @@
-#Proxy: 47.102.86.20:18783
-ClientKey: 61A583A27A845A3835A32D4C
+Proxy: 47.102.86.20:18783
+#ClientKey: 61A583A27A845A3835A32D4C
 Rules:
   http:
-    Addr: 192.168.44.142:80
+    Addr: -24-4b-fe-d3-fa-50:80
   2:
     Serv: http
     Addr: 127.0.0.1:8787

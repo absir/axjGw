@@ -109,6 +109,10 @@ message LoginRep {
     bool discBack = 11;
     // 登录失败
     bytes kickData = 12;
+    // 获取管道
+    optional GLastsReq lastsReq = 13;
+    // 获取管道
+    repeated GLastsReq lastsReqs = 14;
 }
 
 message LoginBack {

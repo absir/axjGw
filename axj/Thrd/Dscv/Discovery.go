@@ -6,6 +6,7 @@ import (
 	"axj/Kt/KtJson"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
+	"container/list"
 	"errors"
 	"go.uber.org/zap"
 	"strings"
@@ -46,8 +47,11 @@ type Discovery interface {
 }
 
 type discoveryC struct {
-	dscv Discovery
-	cfg  interface{}
+	mng      *DiscoveryMng
+	dscv     Discovery
+	cfg      interface{}
+	regs     *list.List
+	regsTime int64
 }
 
 func (that *discoveryC) CtxProds() interface{} {
@@ -60,6 +64,16 @@ func (that *discoveryC) ListProds(ctx interface{}, name string) ([]*Prod, error)
 
 func (that *discoveryC) WatcherProds(ctx interface{}, name string, idleTime *int64, fun func([]*Prod, error)) (bool, error) {
 	return that.dscv.WatcherProds(that.cfg, ctx, name, idleTime, fun)
+}
+
+func (that *discoveryC) addRegs(reg *prodReg) {
+	that.mng.locker.Lock()
+	if that.regs == nil {
+		that.regs = new(list.List)
+	}
+
+	that.regs.PushBack(reg)
+	that.mng.locker.Unlock()
 }
 
 type discoveryS struct {
@@ -169,6 +183,7 @@ func (that *DiscoveryMng) GetDiscoveryD(prt string, paras string) *discoveryC {
 		dscv := that.dscvs[puKey]
 		if dscv != nil {
 			dscvC = &discoveryC{
+				mng:  that,
 				dscv: dscv,
 				cfg:  dscv.Cfg(unique, paras),
 			}
@@ -189,6 +204,7 @@ func (that *DiscoveryMng) GetDiscoveryD(prt string, paras string) *discoveryC {
 	}
 
 	dscvC = &discoveryC{
+		mng:  that,
 		dscv: dscv,
 		cfg:  dscv.Cfg(unique, paras),
 	}

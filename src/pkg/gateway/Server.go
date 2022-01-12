@@ -29,6 +29,7 @@ type server struct {
 	prodsMap    map[string]*Prods
 	prodsGw     *Prods
 	gatewayISC  *gatewayISC
+	gateway     gw.GatewayServer
 	cron        *cron.Cron
 	started     bool
 	connLimiter Util.Limiter
@@ -341,7 +342,8 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			cid := that.CidGen(compress)
 			aclProds := that.GetProds(Config.AclProd)
 			aclClient := aclProds.GetProdHash(Config.WorkHash).GetAclClient()
-			login, err := aclClient.Login(aclProds.TimeoutCtx(), &gw.LoginReq{
+			var login *gw.LoginRep
+			login, err = aclClient.Login(aclProds.TimeoutCtx(), &gw.LoginReq{
 				Cid:  cid,
 				Data: data,
 				Addr: conn.RemoteAddr(),
@@ -412,9 +414,10 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			}
 
 			// 消息处理 单用户登录
+			var rep *gw.Id32Rep = nil
 			if clientG.Gid() != "" && clientG.unique == "" {
 				// 消息队列清理开启
-				rep, err := Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
+				rep, err = Server.GetProdClient(clientG).GetGWIClient().GQueue(Server.Context, &gw.IGQueueReq{
 					Gid:    clientG.gid,
 					Cid:    clientG.Id(),
 					Unique: clientG.Unique(),
@@ -424,6 +427,25 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 				if Server.Id32(rep) < R_SUCC_MIN {
 					clientG.Close(err, nil)
 					return true, nil
+				}
+			}
+
+			// GLasts管道
+			if login.LastsReq != nil {
+				rep, err = that.gateway.GLasts(that.Context, login.LastsReq)
+				if Server.Id32(rep) < R_SUCC_MIN {
+					clientG.Close(err, nil)
+					return true, nil
+				}
+			}
+
+			if login.LastsReqs != nil {
+				for _, lastsReqs := range login.LastsReqs {
+					rep, err = that.gateway.GLasts(that.Context, lastsReqs)
+					if Server.Id32(rep) < R_SUCC_MIN {
+						clientG.Close(err, nil)
+						return true, nil
+					}
 				}
 			}
 
@@ -484,6 +506,7 @@ func (that *server) StartGrpc(addr string, ips []string, gateway gw.GatewayServe
 			return handler(ctx, req)
 		}),
 	)
+	that.gateway = gateway
 	gw.RegisterGatewayIServer(serv, that.gatewayISC.Server)
 	gw.RegisterGatewayServer(serv, gateway)
 	matchers := KtStr.ForMatchers(ips, false, true)

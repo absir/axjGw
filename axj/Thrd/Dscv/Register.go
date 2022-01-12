@@ -7,14 +7,16 @@ import (
 )
 
 type Register interface {
+	RegMiss(cfg interface{}) bool                                                                // 注册中心过期，重启等
 	RegCtx(cfg interface{}, name string, port int, metas map[string]string) (interface{}, error) // 注册Context
 	RegProd(cfg interface{}, ctx interface{}) error                                              // 注册服务
 }
 
 type DscvCfg struct {
-	Group    string
-	Ip       string
-	CheckDrt time.Duration
+	Group     string
+	Ip        string
+	CheckDrt  time.Duration
+	RegChkDrt int64
 }
 
 var dscvCfg *DscvCfg
@@ -22,7 +24,8 @@ var dscvCfg *DscvCfg
 func GetDscvCfg() *DscvCfg {
 	if dscvCfg == nil {
 		cfg := &DscvCfg{
-			CheckDrt: 30,
+			CheckDrt:  30,
+			RegChkDrt: 600,
 		}
 		if APro.Cfg != nil {
 			APro.SubCfgBind("dscv", cfg)
@@ -33,13 +36,14 @@ func GetDscvCfg() *DscvCfg {
 		}
 
 		cfg.CheckDrt *= time.Second
+		cfg.RegChkDrt *= int64(time.Second)
 		dscvCfg = cfg
 	}
 
 	return dscvCfg
 }
 
-type regProd struct {
+type prodReg struct {
 	dscvC *discoveryC
 	reg   Register
 	ctx   interface{}

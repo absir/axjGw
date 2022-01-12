@@ -26,7 +26,10 @@ type consulCfg struct {
 	Check      *api.AgentServiceCheck
 	CheckPort  int
 	client     *api.Client
+	regCheck   string
 }
+
+const REG_CHECK_KEY = "AXJ_CHECK_KEY"
 
 type consulCtx struct {
 	hash     string
@@ -184,7 +187,33 @@ func (c consul) WatcherProds(cfg interface{}, ctx interface{}, name string, idle
 	return true, nil
 }
 
-func (c consul) Reg(cfg interface{}, name string, port int, metas map[string]string) bool {
+func (c consul) RegMiss(cfg interface{}) bool {
+	cCfg := cfg.(*consulCfg)
+	for {
+		pair, _, err := cCfg.client.KV().Get(REG_CHECK_KEY, &api.QueryOptions{})
+		if err != nil {
+			AZap.Error("REG_CHECK_KEY Err", zap.Error(err))
+			return false
+		}
+
+		if pair == nil {
+
+			time.Sleep(time.Second)
+			continue
+
+		} else {
+			regCheck := KtUnsafe.BytesToString(pair.Value)
+			if cCfg.regCheck != regCheck {
+				cCfg.regCheck = regCheck
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]string) (interface{}, error) {
 	cCfg := cfg.(*consulCfg)
 	service := &api.AgentServiceRegistration{}
 	service.Name = GetDscvCfg().Group + name
@@ -196,11 +225,11 @@ func (c consul) Reg(cfg interface{}, name string, port int, metas map[string]str
 	}
 
 	service.Check = cCfg.Check
-	err := cCfg.client.Agent().ServiceRegister(service)
-	if err == nil {
-		return true
-	}
+	return service, nil
+}
 
-	AZap.Error("Reg err", zap.Error(err))
-	return false
+func (c consul) RegProd(cfg interface{}, ctx interface{}) error {
+	cCfg := cfg.(*consulCfg)
+	service := ctx.(*api.AgentServiceRegistration)
+	return cCfg.client.Agent().ServiceRegister(service)
 }
