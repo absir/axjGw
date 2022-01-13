@@ -11,3 +11,15 @@ log:
 #    1: 127.0.0.1:8083
 msg:
   LastUri: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local
+
+consul.0:
+  Config: 127.0.0.1:8500
+
+dscv:
+  cfg:
+    HttpPort: 8682
+  reg: true
+  regs:
+    gw:
+      Dscv: consul:0
+      Port: 8683

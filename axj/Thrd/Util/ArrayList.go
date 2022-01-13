@@ -25,7 +25,6 @@ func (that *ArrayList) Add(values ...interface{}) {
 		that.elements[that.size] = value
 		that.size++
 	}
-
 }
 
 func (that *ArrayList) Remove(index int) interface{} {

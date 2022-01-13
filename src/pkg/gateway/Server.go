@@ -170,9 +170,6 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 
 			return true
 		})
-
-		// 服务发现启动发现线程
-		Dscv.InstMngStart(false)
 	}
 
 	// 无服务配置
@@ -189,6 +186,9 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 		prods.Add(APro.WorkId(), "")
 		that.initProdsReg(Config.GwProd, prods)
 	}
+
+	// 服务发现启动发现线程
+	Dscv.InstMngStart(false)
 }
 
 func (that *server) initProdsReg(name string, prods *Prods) {

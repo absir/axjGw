@@ -1,12 +1,13 @@
 package Dscv
 
 import (
+	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtCfg"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtJson"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"container/list"
 	"errors"
 	"go.uber.org/zap"
 	"strings"
@@ -47,11 +48,12 @@ type Discovery interface {
 }
 
 type discoveryC struct {
-	mng      *DiscoveryMng
-	dscv     Discovery
-	cfg      interface{}
-	regs     *list.List
-	regsTime int64
+	mng       *DiscoveryMng
+	dscv      Discovery
+	cfg       interface{}
+	regs      []*prodReg
+	regsTime  int64
+	regsAsync *Util.NotifierAsync
 }
 
 func (that *discoveryC) CtxProds() interface{} {
@@ -67,13 +69,36 @@ func (that *discoveryC) WatcherProds(ctx interface{}, name string, idleTime *int
 }
 
 func (that *discoveryC) addRegs(reg *prodReg) {
-	that.mng.locker.Lock()
 	if that.regs == nil {
-		that.regs = new(list.List)
+		that.regs = make([]*prodReg, 1)[:0]
 	}
 
-	that.regs.PushBack(reg)
-	that.mng.locker.Unlock()
+	if that.regsAsync == nil {
+		that.regsAsync = Util.NewNotifierAsync(that.doRegs, nil, nil)
+	}
+
+	that.regs = append(that.regs, reg)
+}
+
+func (that *discoveryC) doRegs() {
+	that.regsTime = time.Now().UnixNano() + GetDscvCfg().RegChkDrt
+	for i, reg := range that.regs {
+		if i == 0 {
+			if !reg.reg.RegMiss(that.cfg) {
+				break
+			}
+		}
+
+		for {
+			err := reg.reg.RegProd(that.cfg, reg.ctx)
+			if err == nil {
+				break
+			}
+
+			AZap.Error("doRegs err", zap.Error(err))
+			time.Sleep(GetDscvCfg().RegWait)
+		}
+	}
 }
 
 type discoveryS struct {
@@ -142,8 +167,32 @@ func InstMng() *DiscoveryMng {
 	return instMng
 }
 
+type dscvReg struct {
+	Dscv  string
+	Port  int
+	Metas map[string]string
+}
+
 func InstMngStart(create bool) {
-	if (instMng != nil || create) && GetDscvCfg().CheckDrt > 0 {
+	dReg := APro.Cfg != nil && KtCvt.ToBool(KtCfg.Get(APro.Cfg, "dscv.reg"))
+	if (instMng != nil || create || dReg) && GetDscvCfg().CheckDrt > 0 {
+		// 服务注册
+		if dReg {
+			if mp, _ := KtCfg.Get(APro.Cfg, "dscv.regs").(*Kt.LinkedMap); mp != nil {
+				reg := &dscvReg{}
+				mp.Range(func(key interface{}, val interface{}) bool {
+					reg.Dscv = ""
+					KtCvt.BindInterface(reg, val)
+					if reg.Dscv != "" {
+						err := InstMng().RegProd(reg.Dscv, KtCvt.ToString(key), reg.Port, reg.Metas)
+						Kt.Panic(err)
+					}
+
+					return true
+				})
+			}
+		}
+
 		go InstMng().CheckLoop(GetDscvCfg().CheckDrt)
 	}
 }
@@ -156,51 +205,37 @@ func (that *DiscoveryMng) GetDiscovery(dscv string) *discoveryC {
 
 	idx := strings.IndexByte(dscv, ':')
 	if idx > 0 {
-		return that.GetDiscoveryD(dscv[0:idx], dscv[idx+1:])
+		return that.GetDiscoveryD(dscv, strings.TrimSpace(dscv[0:idx]), strings.TrimSpace(dscv[idx+1:]))
 	}
 
-	return that.GetDiscoveryD(dscv, "")
+	return that.GetDiscoveryD(dscv, dscv, "")
 }
 
-func (that *DiscoveryMng) GetDiscoveryD(prt string, paras string) *discoveryC {
-	key := prt + ":" + paras
+func (that *DiscoveryMng) GetDiscoveryD(key string, prt string, paras string) *discoveryC {
 	dscvC := that.dscvCs[key]
 	if dscvC != nil {
 		return dscvC
 	}
 
-	fact := that.facts[prt]
-	if fact == nil {
-		return nil
-	}
+	dscv := that.dscvs[prt]
+	if dscv == nil {
+		fact := that.facts[prt]
+		if fact == nil {
+			return nil
+		}
 
-	pDscv := that.dscvs[prt]
-	unique := ""
-	puKey := ""
-	if pDscv != nil {
-		unique = pDscv.Unique(paras)
-		puKey = prt + ":" + unique
-		dscv := that.dscvs[puKey]
-		if dscv != nil {
-			dscvC = &discoveryC{
-				mng:  that,
-				dscv: dscv,
-				cfg:  dscv.Cfg(unique, paras),
-			}
-
-			that.dscvCs[key] = dscvC
-			return dscvC
+		dscv = fact(paras)
+		if dscv == nil {
+			return nil
 		}
 	}
 
-	dscv := fact(paras)
-	if dscv == nil {
-		return nil
-	}
-
-	if pDscv == nil {
-		unique = dscv.Unique(paras)
-		puKey = prt + ":" + unique
+	unique := dscv.Unique(paras)
+	uKey := prt + ":" + unique
+	dscvC = that.dscvCs[uKey]
+	if dscvC != nil {
+		that.dscvCs[key] = dscvC
+		return dscvC
 	}
 
 	dscvC = &discoveryC{
@@ -210,8 +245,7 @@ func (that *DiscoveryMng) GetDiscoveryD(prt string, paras string) *discoveryC {
 	}
 
 	// 缓存协议解析
-	that.dscvs[prt] = dscv
-	that.dscvs[puKey] = dscv
+	that.dscvCs[uKey] = dscvC
 	that.dscvCs[key] = dscvC
 	return dscvC
 }
@@ -296,20 +330,30 @@ func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
 	that.checkTime = checkTime
 	that.locker.Unlock()
 	for checkTime == that.checkTime {
-		time.Sleep(checkDrt)
+		now := time.Now().UnixNano()
 		if that.dscvSs != nil {
-			time := time.Now().UnixNano()
 			that.dscvSs.Range(func(key, value interface{}) bool {
 				dscvS, _ := key.(*discoveryS)
 				// 定时刷新prods
-				if dscvS.passTime <= time && dscvS.idleTime > 0 {
-					dscvS.passTime = time + dscvS.idleTime
+				if dscvS.passTime <= now && dscvS.idleTime > 0 {
+					dscvS.passTime = now + dscvS.idleTime
 					dscvS.setAsync.Start(nil)
 				}
 
 				return true
 			})
 		}
+
+		if that.dscvCs != nil {
+			for _, dscvC := range that.dscvCs {
+				if dscvC.regsAsync != nil && dscvC.regsTime <= now && GetDscvCfg().RegChkDrt > 0 {
+					dscvC.regsTime = now + GetDscvCfg().RegChkDrt
+					dscvC.regsAsync.Start(nil)
+				}
+			}
+		}
+
+		time.Sleep(checkDrt)
 	}
 }
 

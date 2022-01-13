@@ -23,13 +23,13 @@ type consulCfg struct {
 	IdleTime   int
 	WaitTime   time.Duration
 	WatcherDrt time.Duration
+	CheckHttp  bool
 	Check      *api.AgentServiceCheck
-	CheckPort  int
 	client     *api.Client
 	regCheck   string
 }
 
-const REG_CHECK_KEY = "AXJ_CHECK_KEY"
+const REG_KEY = "AXJ_REG_KEY"
 
 type consulCtx struct {
 	hash     string
@@ -50,18 +50,18 @@ func (c consul) Cfg(unique string, paras string) interface{} {
 		IdleTime:   600,
 		WaitTime:   30,
 		WatcherDrt: 3,
+		CheckHttp:  true,
 		Check: &api.AgentServiceCheck{
 			//HTTP:                           "http://127.0.0.1:8682/",
 			Status:                         "passing",
 			Interval:                       "30s",
 			DeregisterCriticalServiceAfter: "600s",
 		},
-		CheckPort: 8682,
 	}
 
-	APro.SubCfgBind("consule-"+paras, cCfg)
-	if cCfg.CheckPort > 0 {
-		http.Handle("/consul/check", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	APro.SubCfgBind("consul."+paras, cCfg)
+	if cCfg.CheckHttp && GetDscvCfg().HttpPort > 0 {
+		http.Handle("/consul_check", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			id := request.URL.Query().Get("id")
 			if KtCvt.ToInt32(id) == APro.WorkId() {
 				writer.Write(KtUnsafe.StringToBytes("ok"))
@@ -72,7 +72,7 @@ func (c consul) Cfg(unique string, paras string) interface{} {
 			writer.WriteHeader(400)
 			writer.Write(KtUnsafe.StringToBytes("fail"))
 		}))
-		cCfg.Check.HTTP = "http://" + GetDscvCfg().Ip + ":8682/consul/check?id=" + strconv.Itoa(int(APro.WorkId()))
+		cCfg.Check.HTTP = "http://" + GetDscvCfg().Ip + ":" + strconv.Itoa(GetDscvCfg().HttpPort) + "/consul_check?id=" + strconv.Itoa(int(APro.WorkId()))
 	}
 
 	cCfg.WaitTime *= time.Second
@@ -190,19 +190,19 @@ func (c consul) WatcherProds(cfg interface{}, ctx interface{}, name string, idle
 func (c consul) RegMiss(cfg interface{}) bool {
 	cCfg := cfg.(*consulCfg)
 	for {
-		pair, _, err := cCfg.client.KV().Get(REG_CHECK_KEY, &api.QueryOptions{})
+		pair, _, err := cCfg.client.KV().Get(REG_KEY, &api.QueryOptions{})
 		if err != nil {
-			AZap.Error("REG_CHECK_KEY Get Err", zap.Error(err))
+			AZap.Error("REG_KEY Get Err", zap.Error(err))
 			return false
 		}
 
 		if pair == nil || pair.Value == nil {
 			_, err = cCfg.client.KV().Put(&api.KVPair{
-				Key:   REG_CHECK_KEY,
+				Key:   REG_KEY,
 				Value: KtUnsafe.StringToBytes(strconv.FormatInt(time.Now().UnixNano(), 10)),
 			}, &api.WriteOptions{})
 			if err != nil {
-				AZap.Error("REG_CHECK_KEY Put Err", zap.Error(err))
+				AZap.Error("REG_KEY Put Err", zap.Error(err))
 			}
 
 			time.Sleep(time.Second)
@@ -214,16 +214,16 @@ func (c consul) RegMiss(cfg interface{}) bool {
 				cCfg.regCheck = regCheck
 				return true
 			}
+
+			return false
 		}
 	}
-
-	return false
 }
 
 func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]string) (interface{}, error) {
 	cCfg := cfg.(*consulCfg)
 	service := &api.AgentServiceRegistration{}
-	service.Name = GetDscvCfg().Group + name
+	service.Name = name
 	service.ID = service.Name + "-" + strconv.Itoa(int(APro.WorkId()))
 	service.Address = GetDscvCfg().Ip
 	service.Port = port
@@ -240,8 +240,8 @@ func (c consul) RegProd(cfg interface{}, ctx interface{}) error {
 	for {
 		c.RegMiss(cfg)
 		if cCfg.regCheck == "" {
-			if GetDscvCfg().MissWait > 0 {
-				time.Sleep(GetDscvCfg().MissWait)
+			if GetDscvCfg().RegWait > 0 {
+				time.Sleep(GetDscvCfg().RegWait)
 			}
 
 			continue

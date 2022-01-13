@@ -15,8 +15,9 @@ type Register interface {
 type DscvCfg struct {
 	Group     string
 	Ip        string
+	HttpPort  int
 	CheckDrt  time.Duration
-	MissWait  time.Duration
+	RegWait   time.Duration
 	RegChkDrt int64
 }
 
@@ -25,6 +26,8 @@ var dscvCfg *DscvCfg
 func GetDscvCfg() *DscvCfg {
 	if dscvCfg == nil {
 		cfg := &DscvCfg{
+			Group:     "axj",
+			HttpPort:  8682,
 			CheckDrt:  30,
 			RegChkDrt: 600,
 		}
@@ -36,12 +39,12 @@ func GetDscvCfg() *DscvCfg {
 			cfg.Ip = APro.GetLocalIp()
 		}
 
-		if cfg.MissWait <= 0 {
-			cfg.MissWait = 10
+		if cfg.RegWait <= 0 {
+			cfg.RegWait = 30
 		}
 
 		cfg.CheckDrt *= time.Second
-		cfg.MissWait *= time.Second
+		cfg.RegWait *= time.Second
 		cfg.RegChkDrt *= int64(time.Second)
 		dscvCfg = cfg
 	}
@@ -66,16 +69,16 @@ func (that *DiscoveryMng) RegProd(dscv string, name string, port int, metas map[
 		return Kt.NewErrReason("Dscv Reg Not Found " + dscv)
 	}
 
-	_, err := reg.RegCtx(dscvC.cfg, name, port, metas)
+	ctx, err := reg.RegCtx(dscvC.cfg, name, port, metas)
 	if err != nil {
 		return err
 	}
 
-	//regProd := &regProd{
-	//	dscvC: dscvC,
-	//	reg:   reg,
-	//	ctx:   ctx,
-	//}
+	dscvC.addRegs(&prodReg{
+		dscvC: dscvC,
+		reg:   reg,
+		ctx:   ctx,
+	})
 
 	return nil
 }
