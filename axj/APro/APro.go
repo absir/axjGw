@@ -348,14 +348,86 @@ func WorkId() int32 {
 	return workId
 }
 
+var startRuns []func()
+
+func StartAdd(run func()) {
+	if Kt.Started {
+		panic("APro Is Started")
+	}
+
+	if run == nil {
+		return
+	}
+
+	if startRuns == nil {
+		startRuns = []func(){run}
+
+	} else {
+		startRuns = append(startRuns, run)
+	}
+}
+
+func Start() {
+	if Kt.Started {
+		return
+	}
+
+	if stopRuns != nil {
+		for _, run := range startRuns {
+			run()
+		}
+
+		startRuns = nil
+	}
+
+	Kt.Started = true
+}
+
 var Stopped bool
 
-// 关闭信号
+var stopRuns []func()
+
+// 开启关闭信号
 func Signal() os.Signal {
+	Start()
 	c := make(chan os.Signal, 0)
 	signal.Notify(c, syscall.SIGTERM)
 	s := <-c
 	fmt.Printf("exit pro ------- signal:[%v]", s)
-	Stopped = true
+	Stop()
 	return s
+}
+
+func StopAdd(run func()) {
+	if Stopped {
+		panic("APro Is Stopped")
+	}
+
+	if run == nil {
+		return
+	}
+
+	if stopRuns == nil {
+		stopRuns = []func(){run}
+
+	} else {
+		stopRuns = append(stopRuns, run)
+	}
+}
+
+func Stop() {
+	if Stopped {
+		return
+	}
+
+	Kt.Active = false
+	if stopRuns != nil {
+		for _, run := range stopRuns {
+			run()
+		}
+
+		stopRuns = nil
+	}
+
+	Stopped = true
 }

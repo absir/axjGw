@@ -3,13 +3,8 @@ package Dscv
 import (
 	"axj/APro"
 	"axj/Kt/Kt"
-	"axj/Kt/KtCvt"
-	"axj/Kt/KtUnsafe"
-	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"github.com/hashicorp/consul/api"
-	"go.uber.org/zap"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -26,15 +21,14 @@ type consulCfg struct {
 	CheckHttp  bool
 	Check      *api.AgentServiceCheck
 	client     *api.Client
-	regCheck   string
+	RegChkDrt  int64
+	regChkTime int64
 }
 
-const REG_KEY = "AXJ_REG_KEY"
-
 type consulCtx struct {
-	hash     string
-	idleTime int64
-	passTime int64
+	lastIndex uint64
+	idleTime  int64
+	passTime  int64
 }
 
 func (c consul) Unique(paras string) string {
@@ -52,31 +46,18 @@ func (c consul) Cfg(unique string, paras string) interface{} {
 		WatcherDrt: 3,
 		CheckHttp:  true,
 		Check: &api.AgentServiceCheck{
-			//HTTP:                           "http://127.0.0.1:8682/",
 			Status:                         "passing",
-			Interval:                       "30s",
-			DeregisterCriticalServiceAfter: "600s",
+			DeregisterCriticalServiceAfter: "5s",
+			TTL:                            "45s",
 		},
+		RegChkDrt: 30,
 	}
 
 	APro.SubCfgBind("consul."+paras, cCfg)
-	if cCfg.CheckHttp && GetDscvCfg().HttpPort > 0 {
-		http.Handle("/consul_check", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			id := request.URL.Query().Get("id")
-			if KtCvt.ToInt32(id) == APro.WorkId() {
-				writer.Write(KtUnsafe.StringToBytes("ok"))
-				return
-			}
-
-			// WorkId校验失败
-			writer.WriteHeader(400)
-			writer.Write(KtUnsafe.StringToBytes("fail"))
-		}))
-		cCfg.Check.HTTP = "http://" + GetDscvCfg().Ip + ":" + strconv.Itoa(GetDscvCfg().HttpPort) + "/consul_check?id=" + strconv.Itoa(int(APro.WorkId()))
-	}
 
 	cCfg.WaitTime *= time.Second
 	cCfg.WatcherDrt *= time.Second
+	cCfg.RegChkDrt *= int64(time.Second)
 
 	// 初始化client
 	client, err := api.NewClient(cCfg.Config)
@@ -97,39 +78,42 @@ func (c consul) CtxProds(cfg interface{}) interface{} {
 func (c consul) ListProds(cfg interface{}, ctx interface{}, name string) ([]*Prod, error) {
 	cCfg := cfg.(*consulCfg)
 	cCtx := ctx.(*consulCtx)
-	return c.ReqProds(cCfg, cCtx, name, false)
+	return c.ReqProds(cCfg, cCtx, name, nil)
 }
 
-func (c consul) ReqProds(cCfg *consulCfg, cCtx *consulCtx, name string, wait bool) ([]*Prod, error) {
-	var hash = ""
-	var infos []api.AgentServiceChecksInfo = nil
-	var err error = nil
-	if wait && cCfg.WaitTime > 0 {
-		q := &api.QueryOptions{
-			WaitHash: cCtx.hash,
-			WaitTime: cCfg.WaitTime,
+func (c consul) ReqProds(cCfg *consulCfg, cCtx *consulCtx, name string, wait *api.QueryOptions) ([]*Prod, error) {
+	if wait != nil {
+		q := wait
+		now := time.Now().UnixNano()
+		if cCfg.WaitTime > 0 && cCtx.passTime > now {
+			q.WaitIndex = cCtx.lastIndex
+			q.WaitTime = cCfg.WaitTime
+
+		} else {
+			q.WaitIndex = 0
+			q.WaitTime = 0
 		}
 
-		hash, infos, err = cCfg.client.Agent().AgentHealthServiceByNameOpts(name, q)
+		_, meta, err := cCfg.client.Catalog().Service(name, "", q)
+		if err != nil {
+			return nil, err
+		}
 
-	} else {
-		hash, infos, err = cCfg.client.Agent().AgentHealthServiceByName(name)
+		if meta != nil {
+			if cCtx.lastIndex == meta.LastIndex && q.WaitTime > 0 {
+				return nil, nil
+			}
+
+			cCtx.lastIndex = meta.LastIndex
+			if cCtx.idleTime > 0 {
+				cCtx.passTime = now + cCtx.idleTime
+			}
+		}
 	}
 
+	_, infos, err := cCfg.client.Agent().AgentHealthServiceByName(name)
 	if err != nil {
 		return nil, err
-	}
-
-	// hash 未改变
-	if hash == cCtx.hash {
-		return nil, nil
-	}
-
-	if hash != "" {
-		cCtx.hash = hash
-		if cCtx.idleTime > 0 {
-			cCtx.passTime = time.Now().UnixNano() + cCtx.idleTime
-		}
 	}
 
 	if infos == nil {
@@ -137,7 +121,12 @@ func (c consul) ReqProds(cCfg *consulCfg, cCtx *consulCtx, name string, wait boo
 	}
 
 	prods := make([]*Prod, len(infos))
-	for idx, info := range infos {
+	prods = prods[:0]
+	for _, info := range infos {
+		if info.AggregatedStatus != "passing" {
+			break
+		}
+
 		service := info.Service
 		id := service.ID
 		i := strings.LastIndexByte(id, '-')
@@ -152,7 +141,7 @@ func (c consul) ReqProds(cCfg *consulCfg, cCtx *consulCtx, name string, wait boo
 			Metas: service.Meta,
 		}
 
-		prods[idx] = prod
+		prods = append(prods, prod)
 	}
 
 	return prods, nil
@@ -168,14 +157,10 @@ func (c consul) WatcherProds(cfg interface{}, ctx interface{}, name string, idle
 		}
 
 		Util.GoSubmit(func() {
-			for {
+			wait := &api.QueryOptions{}
+			for Kt.Active {
 				time.Sleep(cCfg.WatcherDrt)
-				if cCtx.idleTime > 0 && cCtx.passTime <= time.Now().UnixNano() {
-					fun(c.ReqProds(cCfg, cCtx, name, false))
-
-				} else {
-					fun(c.ReqProds(cCfg, cCtx, name, true))
-				}
+				fun(c.ReqProds(cCfg, cCtx, name, wait))
 			}
 		})
 
@@ -187,37 +172,23 @@ func (c consul) WatcherProds(cfg interface{}, ctx interface{}, name string, idle
 	return true, nil
 }
 
-func (c consul) RegMiss(cfg interface{}) bool {
+func (c consul) RegCheck(cfg interface{}, now int64) bool {
 	cCfg := cfg.(*consulCfg)
-	for {
-		pair, _, err := cCfg.client.KV().Get(REG_KEY, &api.QueryOptions{})
-		if err != nil {
-			AZap.Error("REG_KEY Get Err", zap.Error(err))
-			return false
-		}
-
-		if pair == nil || pair.Value == nil {
-			_, err = cCfg.client.KV().Put(&api.KVPair{
-				Key:   REG_KEY,
-				Value: KtUnsafe.StringToBytes(strconv.FormatInt(time.Now().UnixNano(), 10)),
-			}, &api.WriteOptions{})
-			if err != nil {
-				AZap.Error("REG_KEY Put Err", zap.Error(err))
-			}
-
-			time.Sleep(time.Second)
-			continue
-
-		} else {
-			regCheck := KtUnsafe.BytesToString(pair.Value)
-			if cCfg.regCheck != regCheck {
-				cCfg.regCheck = regCheck
-				return true
-			}
-
-			return false
-		}
+	if cCfg.RegChkDrt > 0 && cCfg.regChkTime <= now {
+		cCfg.regChkTime = now + cCfg.RegChkDrt
+		return true
 	}
+
+	return false
+}
+
+func (c consul) RegMiss(cfg interface{}) bool {
+	return false
+}
+
+type consulCtxReg struct {
+	service *api.AgentServiceRegistration
+	checkId string
 }
 
 func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]string) (interface{}, error) {
@@ -232,24 +203,31 @@ func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]
 	}
 
 	service.Check = cCfg.Check
-	return service, nil
+	APro.StopAdd(func() {
+		cCfg.client.Agent().DisableServiceMaintenance(service.ID)
+	})
+
+	return &consulCtxReg{
+		service: service,
+		checkId: "service:" + service.ID,
+	}, nil
 }
 
-func (c consul) RegProd(cfg interface{}, ctx interface{}) error {
+func (c consul) RegProd(cfg interface{}, ctx interface{}, reged bool) error {
 	cCfg := cfg.(*consulCfg)
-	for {
-		c.RegMiss(cfg)
-		if cCfg.regCheck == "" {
-			if GetDscvCfg().RegWait > 0 {
-				time.Sleep(GetDscvCfg().RegWait)
-			}
-
-			continue
+	reg := ctx.(*consulCtxReg)
+	var err error = nil
+	if reged {
+		err = cCfg.client.Agent().PassTTL(reg.checkId, "")
+		if err == nil {
+			return nil
 		}
-
-		break
 	}
 
-	service := ctx.(*api.AgentServiceRegistration)
-	return cCfg.client.Agent().ServiceRegister(service)
+	err = cCfg.client.Agent().ServiceRegister(reg.service)
+	if err != nil {
+		return err
+	}
+
+	return cCfg.client.Agent().PassTTL(reg.checkId, "")
 }

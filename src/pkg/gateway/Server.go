@@ -164,7 +164,7 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 				})
 
 				if prods != nil {
-					that.initProdsReg(name, prods)
+					that.initProdsDscv(name, prods)
 				}
 			}
 
@@ -172,26 +172,27 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 		})
 	}
 
-	// 无服务配置
-	if len(that.prodsMap) <= 0 {
+	// 无服务开发配置
+	prodsLen := len(that.prodsMap)
+	if prodsLen <= 0 || (prodsLen == 1 && that.prodsMap[Config.GwProd] != nil) {
 		Config.zDevAcl = true
 		prods := new(Prods)
 		prods.Add(0, "")
-		that.initProdsReg(Config.AclProd, prods)
+		that.initProdsDscv(Config.AclProd, prods)
 	}
 
 	// Gw服务默认配置
 	if that.prodsMap[Config.GwProd] == nil {
 		prods := new(Prods)
 		prods.Add(APro.WorkId(), "")
-		that.initProdsReg(Config.GwProd, prods)
+		that.initProdsDscv(Config.GwProd, prods)
 	}
 
 	// 服务发现启动发现线程
 	Dscv.InstMngStart(false)
 }
 
-func (that *server) initProdsReg(name string, prods *Prods) {
+func (that *server) initProdsDscv(name string, prods *Prods) {
 	if prods == nil {
 		delete(that.prodsMap, name)
 

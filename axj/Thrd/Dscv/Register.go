@@ -7,9 +7,10 @@ import (
 )
 
 type Register interface {
+	RegCheck(cfg interface{}, now int64) bool                                                    // 注册检查
 	RegMiss(cfg interface{}) bool                                                                // 注册中心过期，重启等
 	RegCtx(cfg interface{}, name string, port int, metas map[string]string) (interface{}, error) // 注册Context
-	RegProd(cfg interface{}, ctx interface{}) error                                              // 注册服务
+	RegProd(cfg interface{}, ctx interface{}, reged bool) error                                  // 注册服务
 }
 
 type DscvCfg struct {
@@ -28,8 +29,8 @@ func GetDscvCfg() *DscvCfg {
 		cfg := &DscvCfg{
 			Group:     "axj",
 			HttpPort:  8682,
-			CheckDrt:  30,
-			RegChkDrt: 600,
+			CheckDrt:  10,
+			RegChkDrt: 60,
 		}
 		if APro.Cfg != nil {
 			APro.SubCfgBind("dscv", cfg)
@@ -56,6 +57,7 @@ type prodReg struct {
 	dscvC *discoveryC
 	reg   Register
 	ctx   interface{}
+	reged bool
 }
 
 func (that *DiscoveryMng) RegProd(dscv string, name string, port int, metas map[string]string) error {

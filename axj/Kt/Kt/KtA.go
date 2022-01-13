@@ -27,7 +27,7 @@ var Env = Develop
 
 var Active = true
 
-var Started = true
+var Started = false
 
 // 信息日志
 func Info(info string) {

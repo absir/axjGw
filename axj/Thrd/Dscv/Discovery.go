@@ -8,7 +8,6 @@ import (
 	"axj/Kt/KtJson"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
-	"errors"
 	"go.uber.org/zap"
 	"strings"
 	"sync"
@@ -54,6 +53,7 @@ type discoveryC struct {
 	regs      []*prodReg
 	regsTime  int64
 	regsAsync *Util.NotifierAsync
+	regsCheck bool
 }
 
 func (that *discoveryC) CtxProds() interface{} {
@@ -84,14 +84,18 @@ func (that *discoveryC) doRegs() {
 	that.regsTime = time.Now().UnixNano() + GetDscvCfg().RegChkDrt
 	for i, reg := range that.regs {
 		if i == 0 {
-			if !reg.reg.RegMiss(that.cfg) {
+			if that.regsCheck {
+				that.regsCheck = false
+
+			} else if !reg.reg.RegMiss(that.cfg) {
 				break
 			}
 		}
 
-		for {
-			err := reg.reg.RegProd(that.cfg, reg.ctx)
+		for Kt.Active {
+			err := reg.reg.RegProd(that.cfg, reg.ctx, reg.reged)
 			if err == nil {
+				reg.reged = true
 				break
 			}
 
@@ -102,14 +106,14 @@ func (that *discoveryC) doRegs() {
 }
 
 type discoveryS struct {
-	dscvC     *discoveryC
-	name      string
-	setFun    func(prods []*Prod)
-	setAsync  *Util.NotifierAsync
-	ctx       interface{}
-	idleTime  int64
-	passTime  int64
-	prodsHash string
+	dscvC          *discoveryC
+	name           string
+	setFuns        []func(prods []*Prod)
+	ListProdsAsync *Util.NotifierAsync
+	ctx            interface{}
+	idleTime       int64
+	passTime       int64
+	prodsHash      string
 }
 
 func (that *discoveryS) ListProds() {
@@ -122,7 +126,7 @@ func (that *discoveryS) SetProds(prods []*Prod, err error) {
 		AZap.Logger.Error("SetProds Err "+that.name, zap.Error(err))
 	}
 
-	if prods == nil {
+	if prods == nil || len(prods) == 0 {
 		return
 	}
 
@@ -133,7 +137,10 @@ func (that *discoveryS) SetProds(prods []*Prod, err error) {
 	}
 
 	if err != nil || that.prodsHash != hash {
-		that.setFun(prods)
+		for _, setFun := range that.setFuns {
+			setFun(prods)
+		}
+
 		that.prodsHash = hash
 	}
 }
@@ -144,6 +151,7 @@ type DiscoveryMng struct {
 	facts     map[string]func(paras string) Discovery
 	dscvCs    map[string]*discoveryC
 	dscvSs    *sync.Map
+	nowTime   int64
 	checkTime int64
 }
 
@@ -257,16 +265,10 @@ func (that *DiscoveryMng) SetDiscoveryS(dscv string, name string, setFun func(pr
 	}
 
 	// 已载入检测
-	val, has := that.dscvSs.Load(name)
+	val, _ := that.dscvSs.Load(name)
 	dscvS, _ := val.(*discoveryS)
-	if has {
-		if panic {
-			Kt.Panic(errors.New("dscvSs Has " + name))
-
-		} else {
-			AZap.Logger.Error("dscvSs Has " + name)
-		}
-
+	if dscvS != nil {
+		dscvS.setFuns = append(dscvS.setFuns, setFun)
 		return dscvS
 	}
 
@@ -276,13 +278,13 @@ func (that *DiscoveryMng) SetDiscoveryS(dscv string, name string, setFun func(pr
 	}
 
 	dscvS = &discoveryS{
-		dscvC:  dscvC,
-		name:   name,
-		setFun: setFun,
+		dscvC:   dscvC,
+		name:    name,
+		setFuns: []func(prods []*Prod){setFun},
 	}
 
-	// setAsync idleTime
-	dscvS.setAsync = Util.NewNotifierAsync(dscvS.ListProds, nil, nil)
+	// ListProdsAsync idleTime
+	dscvS.ListProdsAsync = Util.NewNotifierAsync(dscvS.ListProds, nil, nil)
 	if idleTime <= 0 {
 		idleTime = dscvC.dscv.IdleTime(dscvC.cfg)
 	}
@@ -331,22 +333,19 @@ func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
 	that.locker.Unlock()
 	for checkTime == that.checkTime {
 		now := time.Now().UnixNano()
+		that.checkTime = now
 		if that.dscvSs != nil {
-			that.dscvSs.Range(func(key, value interface{}) bool {
-				dscvS, _ := key.(*discoveryS)
-				// 定时刷新prods
-				if dscvS.passTime <= now && dscvS.idleTime > 0 {
-					dscvS.passTime = now + dscvS.idleTime
-					dscvS.setAsync.Start(nil)
-				}
-
-				return true
-			})
+			that.dscvSs.Range(that.checkRange)
 		}
 
 		if that.dscvCs != nil {
 			for _, dscvC := range that.dscvCs {
-				if dscvC.regsAsync != nil && dscvC.regsTime <= now && GetDscvCfg().RegChkDrt > 0 {
+				if dscvC.regsAsync == nil {
+					continue
+				}
+
+				dscvC.regsCheck = dscvC.regsTime == 0 || dscvC.regs[0].reg.RegCheck(dscvC.cfg, now)
+				if dscvC.regsCheck || (dscvC.regsTime <= now && GetDscvCfg().RegChkDrt > 0) {
 					dscvC.regsTime = now + GetDscvCfg().RegChkDrt
 					dscvC.regsAsync.Start(nil)
 				}
@@ -355,6 +354,17 @@ func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
 
 		time.Sleep(checkDrt)
 	}
+}
+
+func (that *DiscoveryMng) checkRange(key, value interface{}) bool {
+	dscvS, _ := value.(*discoveryS)
+	// 定时刷新prods
+	if dscvS.passTime <= that.nowTime && dscvS.idleTime > 0 {
+		dscvS.passTime = that.nowTime + dscvS.idleTime
+		dscvS.ListProdsAsync.Start(nil)
+	}
+
+	return true
 }
 
 // 注册默认发现类
