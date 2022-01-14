@@ -528,7 +528,7 @@ func (that *Client) checkLoop() {
 	}
 
 	defer that.checkOut()
-	for checkTime == that.checkTime {
+	for Kt.Active && checkTime == that.checkTime {
 		time.Sleep(that.checkDrt)
 		that.checksAsync.Start(nil)
 	}

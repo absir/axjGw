@@ -3,6 +3,7 @@ package gateway
 import (
 	"axj/ANet"
 	"axj/APro"
+	"axj/Kt/Kt"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
@@ -81,7 +82,7 @@ func (that *chatMng) CheckLoop() {
 
 	checkLoop := time.Now().UnixNano()
 	that.checkLoop = checkLoop
-	for checkLoop == that.checkLoop {
+	for Kt.Active && checkLoop == that.checkLoop {
 		time.Sleep(that.FDrt)
 		checkTime := time.Now().UnixNano()
 		that.checkTime = checkTime

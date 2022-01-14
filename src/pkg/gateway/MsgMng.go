@@ -130,7 +130,7 @@ func (that *msgMng) CheckStop() {
 func (that *msgMng) CheckLoop() {
 	checkLoop := time.Now().UnixNano()
 	that.checkLoop = checkLoop
-	for checkLoop == that.checkLoop {
+	for Kt.Active && checkLoop == that.checkLoop {
 		time.Sleep(that.CheckDrt)
 		that.checkTime = time.Now().UnixNano()
 		that.grpMap.RangeBuff(that.checkRange, &that.checkBuff, 1024)

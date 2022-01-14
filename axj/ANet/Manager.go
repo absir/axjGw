@@ -1,6 +1,7 @@
 package ANet
 
 import (
+	"axj/Kt/Kt"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
 	"time"
@@ -142,7 +143,7 @@ func (that *Manager) CheckStop() {
 func (that *Manager) CheckLoop() {
 	checkLoop := time.Now().UnixNano()
 	that.checkLoop = checkLoop
-	for checkLoop == that.checkLoop {
+	for Kt.Active && checkLoop == that.checkLoop {
 		time.Sleep(that.checkDrt)
 		that.checkTime = time.Now().UnixNano()
 		that.clientMap.RangeBuff(that.checkRange, &that.clientBuff, 1024)

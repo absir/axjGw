@@ -381,22 +381,12 @@ func Start() {
 	}
 
 	Kt.Started = true
+	Kt.Log("APro Started")
 }
 
 var Stopped bool
 
 var stopRuns []func()
-
-// 开启关闭信号
-func Signal() os.Signal {
-	Start()
-	c := make(chan os.Signal, 0)
-	signal.Notify(c, syscall.SIGTERM)
-	s := <-c
-	fmt.Printf("exit pro ------- signal:[%v]", s)
-	Stop()
-	return s
-}
 
 func StopAdd(run func()) {
 	if Stopped {
@@ -430,4 +420,21 @@ func Stop() {
 	}
 
 	Stopped = true
+	Kt.Log("APro Stopped")
+}
+
+// 开启关闭信号
+func Signal() {
+	Start()
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGILL)
+	s := <-c
+	Kt.Log(fmt.Sprintf("exit pro ------- signal:[%v]", s))
+	defer Exit(0)
+	Stop()
+}
+
+func Exit(code int) {
+	Kt.Log(fmt.Sprintf("os.Exit:[%d]", code))
+	os.Exit(code)
 }

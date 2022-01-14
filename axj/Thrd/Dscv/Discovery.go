@@ -152,7 +152,7 @@ type DiscoveryMng struct {
 	dscvCs    map[string]*discoveryC
 	dscvSs    *sync.Map
 	nowTime   int64
-	checkTime int64
+	checkLoop int64
 }
 
 func NewMng() *DiscoveryMng {
@@ -292,8 +292,6 @@ func (that *DiscoveryMng) SetDiscoveryS(dscv string, name string, setFun func(pr
 	dscvS.idleTime = int64(idleTime) * int64(time.Second)
 	dscvS.ctx = dscvS.dscvC.CtxProds()
 
-	// ListProds
-	dscvS.ListProds()
 	// WatcherProds
 	_, err := dscvS.dscvC.WatcherProds(dscvS.ctx, name, &dscvS.idleTime, dscvS.SetProds)
 	if err != nil {
@@ -314,31 +312,28 @@ func (that *DiscoveryMng) CheckEmpty() bool {
 }
 
 func (that *DiscoveryMng) CheckStop() {
-	that.checkTime = 0
+	that.checkLoop = 0
 }
 
 func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
-	if that.checkTime != 0 {
+	if that.checkLoop != 0 {
 		return
 	}
 
 	that.locker.Lock()
-	if that.checkTime != 0 {
+	if that.checkLoop != 0 {
 		return
 		that.locker.Unlock()
 	}
 
-	checkTime := time.Now().UnixNano()
-	that.checkTime = checkTime
+	checkLoop := time.Now().UnixNano()
+	that.checkLoop = checkLoop
 	that.locker.Unlock()
-	for checkTime == that.checkTime {
+	for Kt.Active && checkLoop == that.checkLoop {
 		now := time.Now().UnixNano()
-		that.checkTime = now
-		if that.dscvSs != nil {
-			that.dscvSs.Range(that.checkRange)
-		}
-
+		that.checkLoop = now
 		if that.dscvCs != nil {
+			// 注册检查
 			for _, dscvC := range that.dscvCs {
 				if dscvC.regsAsync == nil {
 					continue
@@ -350,6 +345,11 @@ func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
 					dscvC.regsAsync.Start(nil)
 				}
 			}
+		}
+
+		if that.dscvSs != nil {
+			// 发现检查
+			that.dscvSs.Range(that.checkRange)
 		}
 
 		time.Sleep(checkDrt)

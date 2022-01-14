@@ -43,7 +43,7 @@ func (c consul) Cfg(unique string, paras string) interface{} {
 		},
 		IdleTime:   600,
 		WaitTime:   30,
-		WatcherDrt: 3,
+		WatcherDrt: 1,
 		CheckHttp:  true,
 		Check: &api.AgentServiceCheck{
 			Status:                         "passing",
@@ -123,10 +123,6 @@ func (c consul) ReqProds(cCfg *consulCfg, cCtx *consulCtx, name string, wait *ap
 	prods := make([]*Prod, len(infos))
 	prods = prods[:0]
 	for _, info := range infos {
-		if info.AggregatedStatus != "passing" {
-			break
-		}
-
 		service := info.Service
 		id := service.ID
 		i := strings.LastIndexByte(id, '-')
@@ -204,7 +200,7 @@ func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]
 
 	service.Check = cCfg.Check
 	APro.StopAdd(func() {
-		cCfg.client.Agent().DisableServiceMaintenance(service.ID)
+		cCfg.client.Agent().ServiceDeregister(service.ID)
 	})
 
 	return &consulCtxReg{

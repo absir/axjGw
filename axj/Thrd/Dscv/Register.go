@@ -32,6 +32,7 @@ func GetDscvCfg() *DscvCfg {
 			CheckDrt:  10,
 			RegChkDrt: 60,
 		}
+
 		if APro.Cfg != nil {
 			APro.SubCfgBind("dscv", cfg)
 		}
