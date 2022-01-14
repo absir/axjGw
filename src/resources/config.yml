@@ -5,13 +5,13 @@ log:
 #  level: 1
 
 prods:
-  gw:
-    Dscv: consul:0
-    DscvName: gw
+#  gw:
+#    Dscv: consul:0
+#    DscvName: gw
   acl:
-    Dscv: consul:0
-    DscvName: @axj-serv-jar
-    #1: 127.0.0.1:8083
+#    Dscv: consul:0
+#    DscvName: @axj-serv-jar
+    1: 127.0.0.1:8083
 #  pass:
 #    1: 127.0.0.1:8083
 msg:
@@ -28,3 +28,5 @@ dscv:
     gw:
       Dscv: consul:0
       Port: 8683
+        Metas:
+          OpenIP: 10.10.10.1

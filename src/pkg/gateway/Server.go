@@ -40,7 +40,7 @@ var Server = new(server)
 
 func (that *server) Id32(rep *gw.Id32Rep) int32 {
 	if rep == nil {
-		return 0
+		return 1
 	}
 
 	return rep.Id
@@ -48,10 +48,14 @@ func (that *server) Id32(rep *gw.Id32Rep) int32 {
 
 func (that *server) Id64(rep *gw.Id64Rep) int64 {
 	if rep == nil {
-		return 0
+		return 1
 	}
 
 	return rep.Id
+}
+
+func (that *server) Id64Succ(id int64, fid bool) bool {
+	return id >= R_SUCC_MIN || (fid && id == 0)
 }
 
 func (that *server) CidGen(compress bool) int64 {

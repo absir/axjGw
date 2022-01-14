@@ -153,12 +153,13 @@ func (that *chatMng) MsgFail(id int64, gid string) error {
 		Fid: id,
 		//Isolate: false,
 	})
+
 	if err != nil {
 		return err
 	}
 
 	var fid = Server.Id64(rep)
-	if fid < R_SUCC_MIN {
+	if !Server.Id64Succ(fid, true) {
 		return ERR_FAIL
 	}
 
@@ -297,7 +298,7 @@ func (that *ChatTeam) startRun() {
 		}
 
 		for i := 0; i < mLen; i++ {
-			if !that.msgTeamPush(&msgTeams[i], true) {
+			if !that.msgTeamPush(msgTeams[i], true) {
 				return
 			}
 		}
@@ -333,6 +334,12 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 		return true
 	}
 
+	// 群消息持久化
+	var qs int32 = 2
+	if db {
+		qs = 3
+	}
+
 	// 已执行索引
 	indexDid := index
 	for ; index < mLen; index++ {
@@ -348,12 +355,12 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 			Gid:  gid,
 			Uri:  msgTeam.Uri,
 			Data: msgTeam.Data,
-			Qs:   3,
+			Qs:   qs,
 			Fid:  msgTeam.Id,
 		})
 
 		var fid = Server.Id64(rep)
-		if fid < R_SUCC_MIN {
+		if !Server.Id64Succ(fid, true) {
 			// 已执行索引
 			if db {
 				MsgMng().Db.TeamUpdate(msgTeam, indexDid)
@@ -363,7 +370,7 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 		}
 
 		indexDid = index
-		if !db {
+		if db {
 			msgTeam.Index = indexDid
 		}
 	}
@@ -377,9 +384,9 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 
 // 点对点发送聊天 调用注意分布一致hash 入口
 func (that *chatMng) Send(fromId string, toId string, uri string, data []byte, db bool) (bool, error) {
-	var qs int32 = 3
-	if !db {
-		qs = 2
+	var qs int32 = 2
+	if db {
+		qs = 3
 	}
 
 	fClient := Server.GetProdGid(fromId).GetGWIClient()
@@ -393,7 +400,7 @@ func (that *chatMng) Send(fromId string, toId string, uri string, data []byte, d
 	})
 
 	fid := Server.Id64(rep)
-	if fid < R_SUCC_MIN {
+	if !Server.Id64Succ(fid, true) {
 		return false, err
 	}
 
@@ -406,7 +413,7 @@ func (that *chatMng) Send(fromId string, toId string, uri string, data []byte, d
 	})
 
 	tid := Server.Id64(rep)
-	if tid < R_SUCC_MIN {
+	if !Server.Id64Succ(tid, true) {
 		if db {
 			fClient.GPushA(Server.Context, &gw.IGPushAReq{
 				Gid:  fromId,
@@ -431,9 +438,9 @@ func (that *chatMng) Send(fromId string, toId string, uri string, data []byte, d
 
 // 发送群聊天 调用注意分布一致hash 入口
 func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri string, data []byte, queue bool, db bool) (bool, error) {
-	var qs int32 = 3
-	if !db {
-		qs = 2
+	var qs int32 = 2
+	if db {
+		qs = 3
 	}
 
 	if !readfeed {
@@ -458,20 +465,23 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 
 			// 写扩散
 			fClient := Server.GetProdGid(fromId).GetGWIClient()
-			rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
-				Gid:  fromId,
-				Uri:  uri,
-				Data: data,
-				Qs:   qs,
-				//Unique: "",
-				Queue: queue,
-				Fid:   F_FAIL,
-				//Isolate: false,
-			})
+			var fid int64 = 0
+			if fromId != "" {
+				rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
+					Gid:  fromId,
+					Uri:  uri,
+					Data: data,
+					Qs:   qs,
+					//Unique: "",
+					Queue: queue,
+					Fid:   F_FAIL,
+					//Isolate: false,
+				})
 
-			var fid = Server.Id64(rep)
-			if fid < R_SUCC_MIN {
-				return false, err
+				fid = Server.Id64(rep)
+				if !Server.Id64Succ(fid, true) {
+					return false, err
+				}
 			}
 
 			msgTeam := &MsgTeam{
@@ -487,7 +497,7 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 			msgDb := MsgMng().Db != nil && qs == 3
 
 			if msgDb {
-				err = MsgMng().Db.TeamInsert(msgTeam)
+				err := MsgMng().Db.TeamInsert(msgTeam)
 				if err != nil {
 					if db {
 						fClient.GPushA(Server.Context, &gw.IGPushAReq{
@@ -532,7 +542,7 @@ func (that *chatMng) TeamPush(fromId string, tid string, readfeed bool, uri stri
 	})
 
 	var fid = Server.Id64(rep)
-	if fid < R_SUCC_MIN {
+	if !Server.Id64Succ(fid, true) {
 		return false, err
 	}
 

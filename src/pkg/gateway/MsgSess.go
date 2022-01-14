@@ -638,7 +638,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 				}
 
 				for j := 0; j < mLen; j++ {
-					if !that.lastQueuePush(subLastTime, client, &msgDs[j], &lastId, unique, false, continuous, &pushNum) {
+					if !that.lastQueuePush(subLastTime, client, msgDs[j], &lastId, unique, false, continuous, &pushNum) {
 						return
 					}
 				}

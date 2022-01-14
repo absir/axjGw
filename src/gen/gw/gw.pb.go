@@ -28,11 +28,11 @@ type Result int32
 
 const (
 	// 失败
-	Result_Fail Result = 0
+	Result_Fail Result = 1
 	// ID不存在
-	Result_IdNone Result = 1
+	Result_IdNone Result = 2
 	// 分布冲突
-	Result_ProdErr Result = 2
+	Result_ProdErr Result = 3
 	// 成功
 	Result_Succ Result = 16
 )

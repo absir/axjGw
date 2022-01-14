@@ -17,3 +17,11 @@ func ToJsonStr(obj interface{}) (string, error) {
 
 	return KtUnsafe.BytesToString(b), err
 }
+
+func FromJson(json []byte, target interface{}) error {
+	return jsoniter.Unmarshal(json, target)
+}
+
+func FromJsonStr(json string, target interface{}) error {
+	return jsoniter.Unmarshal(KtUnsafe.StringToBytes(json), target)
+}

@@ -9,6 +9,7 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/AZap/AZapIst"
 	"axj/Thrd/Util"
+	"axjGW/gen/gw"
 	"axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
 	"go.uber.org/zap"
@@ -128,6 +129,13 @@ func main() {
 	AZap.Logger.Info("Gateway all AXJ started")
 	// 日志配置
 	AZapIst.InitCfg(true)
+	gateway.Server.GetProdGid("123").GetGWIClient().TPush(gateway.Server.Context, &gw.TPushReq{
+		Tid:  "123",
+		Uri:  "ggg",
+		Data: nil,
+		Db:   true,
+		//Queue: true,
+	})
 	// 等待关闭
 	APro.Signal()
 }

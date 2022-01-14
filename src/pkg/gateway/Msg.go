@@ -4,10 +4,8 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtJson"
-	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
-	"encoding/json"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -112,9 +110,9 @@ type MsgTeam struct {
 
 type MsgDb interface {
 	Insert(msg *MsgD) error                                                            // 插入消息
-	Next(gid string, lastId int64, limit int) []MsgD                                   // 遍历消息
+	Next(gid string, lastId int64, limit int) []*MsgD                                  // 遍历消息
 	LastId(gid string, limit int) int64                                                // 获取最近多少条起始Id
-	Last(gid string, limit int) []MsgD                                                 // 初始消息缓存
+	Last(gid string, limit int) []*MsgD                                                // 初始消息缓存
 	Delete(id int64) error                                                             // 删除消息
 	DeleteF(fid int64) error                                                           // 删除来源消息
 	Clear(oId int64) error                                                             // 清理过期消息
@@ -123,7 +121,7 @@ type MsgDb interface {
 	FidRange(fid int64, step int, idMax int64, idMin int64, fun func(msgD *MsgD) bool) // 遍历超时状态Msg，Fid=F_Fail, 发送失败 超时处理
 	TeamInsert(msgTeam *MsgTeam) error                                                 // 群组消息插入
 	TeamUpdate(msgTeam *MsgTeam, index int) error                                      // 群组消息更新 index >= mLen || index < 0 TeamDelete
-	TeamList(tid string, limit int) []MsgTeam                                          // 群组消息列表
+	TeamList(tid string, limit int) []*MsgTeam                                         // 群组消息列表
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
 	Revoke(id int64, gid string) error                                                 // 撤销消息
 }
@@ -147,8 +145,8 @@ func (that *MsgGorm) Insert(msg *MsgD) error {
 	return that.db.Create(msg).Error
 }
 
-func (that *MsgGorm) Next(gid string, lastId int64, limit int) []MsgD {
-	var msgDS []MsgD = nil
+func (that *MsgGorm) Next(gid string, lastId int64, limit int) []*MsgD {
+	var msgDS []*MsgD = nil
 	that.db.Where("gid = ? AND id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
 	return msgDS
 }
@@ -159,8 +157,8 @@ func (that *MsgGorm) LastId(gid string, limit int) int64 {
 	return id
 }
 
-func (that *MsgGorm) Last(gid string, limit int) []MsgD {
-	var msgDS []MsgD = nil
+func (that *MsgGorm) Last(gid string, limit int) []*MsgD {
+	var msgDS []*MsgD = nil
 	that.db.Where("gid = ?", gid).Order("id DESC").Limit(limit).Find(&msgDS)
 	if msgDS != nil {
 		// 倒序
@@ -253,13 +251,13 @@ func (that *MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
 	}
 }
 
-func (that *MsgGorm) TeamList(tid string, limit int) []MsgTeam {
-	var msgTeams []MsgTeam = nil
+func (that *MsgGorm) TeamList(tid string, limit int) []*MsgTeam {
+	var msgTeams []*MsgTeam = nil
 	tx := that.db.Where("tid = ?", tid).Order("id").Limit(limit).Find(&msgTeams)
 	Kt.Err(tx.Error, false)
 	for _, msgTeam := range msgTeams {
 		if msgTeam.MembersS != "" {
-			json.Unmarshal(KtUnsafe.StringToBytes(msgTeam.MembersS), &msgTeam.Members)
+			KtJson.FromJsonStr(msgTeam.MembersS, &msgTeam.Members)
 		}
 	}
 
