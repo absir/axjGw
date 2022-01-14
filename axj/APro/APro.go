@@ -429,12 +429,12 @@ func Signal() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGILL)
 	s := <-c
-	Kt.Log(fmt.Sprintf("exit pro ------- signal:[%v]", s))
+	Kt.Log(fmt.Sprintf("os signal %v", s))
 	defer Exit(0)
 	Stop()
 }
 
 func Exit(code int) {
-	Kt.Log(fmt.Sprintf("os.Exit:[%d]", code))
+	Kt.Log(fmt.Sprintf("os exit %d", code))
 	os.Exit(code)
 }
