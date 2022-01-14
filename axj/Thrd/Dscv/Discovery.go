@@ -331,7 +331,7 @@ func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
 	that.locker.Unlock()
 	for Kt.Active && checkLoop == that.checkLoop {
 		now := time.Now().UnixNano()
-		that.checkLoop = now
+		that.nowTime = now
 		if that.dscvCs != nil {
 			// 注册检查
 			for _, dscvC := range that.dscvCs {

@@ -2,8 +2,12 @@ package gateway
 
 import (
 	"axj/ANet"
+	"axj/Kt/Kt"
+	"axj/Kt/KtJson"
+	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
+	"encoding/json"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -96,13 +100,14 @@ func NewMsg(uri string, data []byte, unique string) Msg {
 }
 
 type MsgTeam struct {
-	Id      int64        `gorm:"primary_key"`                          // 消息编号
-	Tid     string       `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
-	Members []*gw.Member `gorm:"type:json"`                            // 消息会员
-	Index   int          `gorm:""`                                     // 发送进度
-	Rand    int          `gorm:""`                                     // 发送顺序随机
-	Uri     string       `gorm:"type:varchar(255);"`
-	Data    []byte       `gorm:""`
+	Id       int64        `gorm:"primary_key"`                          // 消息编号
+	Tid      string       `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
+	Members  []*gw.Member `gorm:"-"`                                    // 消息会员
+	MembersS string       `gorm:"column:members;type:json"`             // 消息会员存储
+	Index    int          `gorm:""`                                     // 发送进度
+	Rand     int          `gorm:""`                                     // 发送顺序随机
+	Uri      string       `gorm:"type:varchar(255);"`
+	Data     []byte       `gorm:""`
 }
 
 type MsgDb interface {
@@ -218,6 +223,10 @@ func (that *MsgGorm) FidRange(fid int64, step int, idMax int64, idMin int64, fun
 }
 
 func (that *MsgGorm) TeamInsert(msgTeam *MsgTeam) error {
+	if msgTeam.MembersS == "" && msgTeam.Members != nil {
+		msgTeam.MembersS, _ = KtJson.ToJsonStr(msgTeam.Members)
+	}
+
 	return that.db.Create(msgTeam).Error
 }
 
@@ -245,9 +254,16 @@ func (that *MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
 }
 
 func (that *MsgGorm) TeamList(tid string, limit int) []MsgTeam {
-	var MsgTeams []MsgTeam = nil
-	that.db.Where("tid = ?", tid).Order("id").Limit(limit).Find(&MsgTeams)
-	return MsgTeams
+	var msgTeams []MsgTeam = nil
+	tx := that.db.Where("tid = ?", tid).Order("id").Limit(limit).Find(&msgTeams)
+	Kt.Err(tx.Error, false)
+	for _, msgTeam := range msgTeams {
+		if msgTeam.MembersS != "" {
+			json.Unmarshal(KtUnsafe.StringToBytes(msgTeam.MembersS), &msgTeam.Members)
+		}
+	}
+
+	return msgTeams
 }
 
 func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
