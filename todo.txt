@@ -1,5 +1,6 @@
 ANet epoll read and write
-bytes.Buffer 按size 梯度 pool
-ANet protocal bytes.Buffer Pool 优化
-agent proto http 解析
 agent client conn close 及时关闭状态管理
+
+conn 维护 gid GLasts 拉去管道状态， 防止丢失gid server关闭， GLasts状态丢失
+gatewayI req batch 相同prod 远程请求， 时间段合并
+client write message 消息合并，或 conn write 增加buffer 写数据 合并，  增加消息写入效率，

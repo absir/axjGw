@@ -11,8 +11,10 @@ enum Result {
     Fail = 0;
     // ID不存在
     IdNone = 1;
-    // 分布冲突
+    // 服务错误,分布冲突
     ProdErr = 2;
+    // 服务路由不存在
+    ProdNo = 3;
     // 成功
     Succ = 16;
 }
