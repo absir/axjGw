@@ -107,14 +107,16 @@ message LoginRep {
     bool clear = 9;
     // 登录回调
     bool back = 10;
+    // 登录回调数据
+    bytes backData = 11;
     // 断线回调
-    bool discBack = 11;
+    bool discBack = 12;
     // 登录失败
-    bytes kickData = 12;
+    bytes kickData = 13;
     // 获取管道
-    optional GLastsReq lastsReq = 13;
+    optional GLastsReq lastsReq = 14;
     // 获取管道
-    repeated GLastsReq lastsReqs = 14;
+    repeated GLastsReq lastsReqs = 15;
 }
 
 message LoginBack {
@@ -126,6 +128,8 @@ message LoginBack {
     int64 uid = 3;
     // 用户字符编号
     string sid = 4;
+    // 回调数据
+    optional bytes data = 5;
 }
 
 message Member {

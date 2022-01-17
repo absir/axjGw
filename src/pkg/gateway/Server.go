@@ -461,6 +461,7 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 					Unique: clientG.unique,
 					Uid:    clientG.uid,
 					Sid:    clientG.sid,
+					Data:   login.BackData,
 				})
 
 				if Server.Id32(rep) < R_SUCC_MIN {
