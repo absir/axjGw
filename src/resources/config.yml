@@ -5,17 +5,17 @@ log:
 #  level: 1
 
 prods:
-#  gw:
-#    Dscv: consul:0
-#    DscvName: gw
+  gw:
+    Dscv: consul:0
+    DscvName: gw
   acl:
-#    Dscv: consul:0
-#    DscvName: @axj-serv-jar
-    1: 127.0.0.1:8083
+    Dscv: consul:0
+    DscvName: @axj-serv-jar
+#    1: 127.0.0.1:8083
 #  pass:
 #    1: 127.0.0.1:8083
 msg:
-  LastUri: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local
+#  LastUri: absir:absir@(127.0.0.1)/axj-gw?charset=utf8mb4&loc=Local
 
 consul.0:
   Config: 127.0.0.1:8500
