@@ -244,6 +244,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 			Sub:   sub,
 			Name:  name,
 			Proto: that.Proto.Name(),
+			SName: that.Name,
 		})
 
 		if err != nil {

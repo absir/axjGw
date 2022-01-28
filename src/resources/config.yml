@@ -10,7 +10,7 @@ prods:
     DscvName: gw
   acl:
     Dscv: consul:0
-    DscvName: @axj-serv-jar
+    DscvName: @newFarm
 #    1: 127.0.0.1:8083
 #  pass:
 #    1: 127.0.0.1:8083
