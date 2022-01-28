@@ -103,3 +103,10 @@ func (g GatewayS) TDirty(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, erro
 func (g GatewayS) Revoke(ctx context.Context, req *gw.RevokeReq) (*gw.BoolRep, error) {
 	panic("implement me")
 }
+
+var sProxy *gw.ProxyReq
+
+func (g GatewayS) SetProxy(ctx context.Context, req *gw.ProxyReq) (*gw.BoolRep, error) {
+	sProxy = req
+	return gws.Result_True, nil
+}

@@ -189,6 +189,17 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 
 	var client ANet.Client = nil
 	if gid == "" && sub == "" {
+		var proxy = sProxy
+		if proxy != nil && proxy.Rules != nil {
+			var rule = proxy.Rules[that.Name]
+			if rule != nil && rule.Cid > 0 && rule.Addr != "" {
+				client = PrxServMng.Manager.Client(rule.Cid)
+				if client != nil {
+					return client, rule.Addr
+				}
+			}
+		}
+
 		if that.cid > 0 && that.rule != nil {
 			client = PrxServMng.Manager.Client(that.cid)
 			if client == nil {

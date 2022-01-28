@@ -337,6 +337,15 @@ message RevokeReq {
     string gid = 2;
 }
 
+message ProxyReq {
+    map<string, ProxyRule> rules = 1;
+}
+
+message ProxyRule {
+    int64 cid = 1;
+    string addr = 2;
+}
+
 // 网关
 service Gateway {
     // uid查询
@@ -373,4 +382,6 @@ service Gateway {
     rpc tDirty(GidReq) returns (Id32Rep);
     // 撤销消息
     rpc revoke(RevokeReq) returns (BoolRep);
+    // 设置代理
+    rpc setProxy(ProxyReq) returns (BoolRep);
 }

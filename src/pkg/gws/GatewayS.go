@@ -142,3 +142,7 @@ func (g GatewayS) Revoke(ctx context.Context, req *gw.RevokeReq) (*gw.BoolRep, e
 
 	return Result_True, nil
 }
+
+func (g GatewayS) SetProxy(ctx context.Context, req *gw.ProxyReq) (*gw.BoolRep, error) {
+	return Result_True, nil
+}
