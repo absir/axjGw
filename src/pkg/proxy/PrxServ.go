@@ -192,8 +192,8 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 		var proxy = sProxy
 		if proxy != nil && proxy.Rules != nil {
 			var rule = proxy.Rules[that.Name]
-			if rule != nil && rule.Cid > 0 && rule.Addr != "" {
-				client = PrxServMng.Manager.Client(rule.Cid)
+			if rule != nil && rule.Addr != "" {
+				client = PrxMng.Client(rule.Cid, rule.Gid)
 				if client != nil {
 					return client, rule.Addr
 				}
@@ -210,17 +210,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 		}
 
 	} else if gid != "" {
-		val, _ := PrxMng.gidMap.Load(gid)
-		cid, _ := val.(int64)
-		//AZap.Debug("clientPAddr gid $s = %d", gid, cid)
-		if cid <= 0 {
-			cid = KtCvt.ToInt64(gid)
-			if cid <= 0 {
-				return nil, ""
-			}
-		}
-
-		client = PrxServMng.Manager.Client(cid)
+		client = PrxMng.Client(0, gid)
 		if client == nil {
 			return nil, ""
 		}
@@ -263,6 +253,10 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 		}
 
 		if rep != nil && rep.Addr != "" {
+			if client == nil {
+				client = PrxMng.Client(rep.Cid, rep.Gid)
+			}
+
 			return client, rep.Addr
 		}
 	}

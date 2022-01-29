@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtBuffer"
 	"axj/Thrd/AZap"
@@ -157,4 +158,27 @@ func (that *prxMng) adapClose(id int32) {
 	if adap != nil {
 		adap.Close(nil)
 	}
+}
+
+func (that *prxMng) Client(cid int64, gid string) ANet.Client {
+	for i := 0; i < 2; i++ {
+		if cid > 0 {
+			client := PrxServMng.Manager.Client(cid)
+			if client != nil {
+				return client
+			}
+		}
+
+		if i == 0 && gid != "" {
+			val, _ := that.gidMap.Load(gid)
+			if val != nil {
+				cid, _ = val.(int64)
+				continue
+			}
+		}
+
+		break
+	}
+
+	return nil
 }

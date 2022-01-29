@@ -162,8 +162,12 @@ message AddrReq {
 }
 
 message AddrRep {
+    // 映射cid
+    int64 cid = 1;
+    // 映射gid
+    string gid = 2;
     // 映射地址
-    string addr = 1;
+    string addr = 3;
 }
 
 service Acl {
@@ -343,7 +347,8 @@ message ProxyReq {
 
 message ProxyRule {
     int64 cid = 1;
-    string addr = 2;
+    string gid = 2;
+    string addr = 3;
 }
 
 // 网关
