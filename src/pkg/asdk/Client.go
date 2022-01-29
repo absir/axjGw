@@ -183,6 +183,11 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 	return that
 }
 
+// 设置连接地址
+func (that *Client) SetAddr(addr string) {
+	that.addr = addr
+}
+
 // 空闲检查配置
 func (that *Client) SetIdleTime(beatIdle int32, idleTimeout int32) {
 	that.beatIdle = int64(beatIdle) * int64(time.Nanosecond)
