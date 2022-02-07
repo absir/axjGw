@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -193,8 +194,6 @@ type Prods struct {
 	*ProdsIn
 	// 超时时间
 	Timeout time.Duration
-	// 外部服务
-	Out bool
 	// 服务发现
 	Dscv string
 	// 服务发现名
@@ -202,7 +201,13 @@ type Prods struct {
 	// 服务发现间隔
 	DscvIdle int
 	// 服务发现成功
-	discSucc bool
+	inited bool
+	// 模块服务查询
+	PassUrl string
+	// 模块编号地址
+	IdUrl string
+	// 模块编号数量
+	IdCount int
 }
 
 func (that *Prods) TimeoutCtx() context.Context {
@@ -241,7 +246,44 @@ func (that *Prods) Add(id int32, url string) *Prods {
 	return prods
 }
 
+func (that *Prods) init() {
+	if that.inited {
+		return
+	}
+
+	if that.PassUrl != "" {
+		// 查询服务地址
+		prod, err := NewProd(0, that.PassUrl)
+		Kt.Panic(err)
+		var rep *gw.ProdsRep
+		rep, err = prod.GetPassClient().Prods(that.TimeoutCtx(), &gw.Void{})
+		Kt.Panic(err)
+		that.SetProdsRep(rep)
+
+	} else if that.IdUrl != "" && that.IdCount > 0 {
+		// 有状态服务地址
+		prodsIn := new(ProdsIn)
+		for id := 0; id < that.IdCount; id++ {
+			prodsIn.addIn(int32(id), strings.ReplaceAll(that.IdUrl, "$id", strconv.Itoa(id)))
+		}
+
+		that.ProdsIn = prodsIn
+	}
+
+	that.inited = true
+}
+
+func (that *Prods) SetProdsRep(prods *gw.ProdsRep) {
+	prodsIn := new(ProdsIn)
+	for _, prod := range prods.Prods {
+		prodsIn.addIn(prod.Id, prod.Uri)
+	}
+
+	that.ProdsIn = prodsIn
+}
+
 func (that *Prods) Size() int {
+	that.init()
 	if that.ProdsIn == nil {
 		return 0
 	}
@@ -250,6 +292,7 @@ func (that *Prods) Size() int {
 }
 
 func (that *Prods) GetProd(id int32) *Prod {
+	that.init()
 	prodsIn := that.ProdsIn
 	if prodsIn == nil {
 		return nil
@@ -259,6 +302,7 @@ func (that *Prods) GetProd(id int32) *Prod {
 }
 
 func (that *Prods) GetProdHash(hash int) *Prod {
+	that.init()
 	prodsIn := that.ProdsIn
 	if prodsIn == nil {
 		return nil
@@ -277,6 +321,7 @@ func (that *Prods) GetProdHash(hash int) *Prod {
 }
 
 func (that *Prods) GetProdHashS(hash string) *Prod {
+	that.init()
 	prodsIn := that.ProdsIn
 	if prodsIn == nil {
 		return nil
@@ -290,6 +335,7 @@ func (that *Prods) GetProdHashS(hash string) *Prod {
 }
 
 func (that *Prods) GetProdRand() *Prod {
+	that.init()
 	prodsIn := that.ProdsIn
 	if prodsIn == nil {
 		return nil

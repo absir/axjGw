@@ -216,7 +216,7 @@ func (that *server) initProdsDscv(name string, prods *Prods) {
 				dscvName = name
 			}
 
-			prods.discSucc = Dscv.InstMng().SetDiscoveryS(prods.Dscv, dscvName, prods.Set, prods.DscvIdle, true) != nil
+			prods.inited = Dscv.InstMng().SetDiscoveryS(prods.Dscv, dscvName, prods.Set, prods.DscvIdle, true) != nil
 		}
 
 		that.prodsMap[name] = prods
@@ -563,4 +563,8 @@ func (that *server) GetProdGid(gid string) *Prod {
 
 func (that *server) GetProdClient(clientG *ClientG) *Prod {
 	return that.GetProds(Config.GwProd).GetProdHash(clientG.Hash())
+}
+
+func (that *server) SetProdsRep(rep *gw.ProdsRep) {
+	that.prodsMap[rep.Name].SetProdsRep(rep)
 }

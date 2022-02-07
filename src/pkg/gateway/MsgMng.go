@@ -63,9 +63,9 @@ func MsgMng() *msgMng {
 func initMsgMng() {
 	// 消息管理配置
 	that := &msgMng{
-		QueueMax:      20,
-		NextLimit:     10,
-		LastMax:       21, // over load cover msgs
+		QueueMax:      32,
+		NextLimit:     100,
+		LastMax:       33, // over load cover msgs [QueueMax]
 		LastLoad:      true,
 		LastUri:       "",
 		ClearCron:     "0 0 3 * * *",

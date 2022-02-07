@@ -74,3 +74,7 @@ func (Z zDevAcl) Send(ctx context.Context, in *gw.PassReq, opts ...grpc.CallOpti
 func (Z zDevAcl) Addr(ctx context.Context, in *gw.AddrReq, opts ...grpc.CallOption) (*gw.AddrRep, error) {
 	return nil, nil
 }
+
+func (Z zDevAcl) Prods(ctx context.Context, in *gw.Void, opts ...grpc.CallOption) (*gw.ProdsRep, error) {
+	return nil, nil
+}

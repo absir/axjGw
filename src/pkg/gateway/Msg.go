@@ -104,8 +104,9 @@ type MsgTeam struct {
 	MembersS string       `gorm:"column:members;type:json"`             // 消息会员存储
 	Index    int          `gorm:""`                                     // 发送进度
 	Rand     int          `gorm:""`                                     // 发送顺序随机
-	Uri      string       `gorm:"type:varchar(255);"`
-	Data     []byte       `gorm:""`
+	Uri      string       `gorm:"type:varchar(255);"`                   // 消息路由
+	Data     []byte       `gorm:""`                                     // 消息内容
+	Unique   string       `gorm:""`                                     // 唯一消息
 }
 
 type MsgDb interface {
@@ -123,7 +124,7 @@ type MsgDb interface {
 	TeamUpdate(msgTeam *MsgTeam, index int) error                                      // 群组消息更新 index >= mLen || index < 0 TeamDelete
 	TeamList(tid string, limit int) []*MsgTeam                                         // 群组消息列表
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
-	Revoke(id int64, gid string) error                                                 // 撤销消息
+	Revoke(id int64, gid string, push func() error) error                              // 撤销消息
 }
 
 type MsgGorm struct {
@@ -225,7 +226,17 @@ func (that *MsgGorm) TeamInsert(msgTeam *MsgTeam) error {
 		msgTeam.MembersS, _ = KtJson.ToJsonStr(msgTeam.Members)
 	}
 
-	return that.db.Create(msgTeam).Error
+	err := that.db.Create(msgTeam).Error
+	if err != nil {
+		return err
+	}
+
+	if msgTeam.Unique != "" {
+		// 删除重复消息
+		that.db.Exec("DELETE FROM msg_teams WHERE tid = ? AND unique = ? AND id < ?", msgTeam.Tid, msgTeam.Unique, msgTeam.Id)
+	}
+
+	return nil
 }
 
 func (that *MsgGorm) TeamUpdate(msgTeam *MsgTeam, index int) error {
@@ -270,15 +281,25 @@ func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 	return tIds
 }
 
-func (that *MsgGorm) Revoke(id int64, gid string) error {
-	tx := that.db.Exec("DELETE FROM msg_ds WHERE id = ? AND gid = ?", id, gid)
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	if tx.RowsAffected <= 0 {
+func (that *MsgGorm) Revoke(id int64, gid string, push func() error) error {
+	var tid int64 = 0
+	that.db.First("SELECT id FROM msg_ds WHERE id = ? AND gid = ?", id, gid).Find(&tid)
+	if tid <= 0 {
 		return ANet.ERR_DENIED
 	}
 
-	return that.DeleteF(id)
+	err := that.DeleteF(id)
+	if err != nil {
+		return err
+	}
+
+	if push != nil {
+		err = push()
+		if err != nil {
+			return err
+		}
+	}
+
+	tx := that.db.Exec("DELETE FROM msg_ds WHERE id = ? AND gid = ?", id, gid)
+	return tx.Error
 }

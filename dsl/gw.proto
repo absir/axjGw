@@ -19,6 +19,9 @@ enum Result {
     Succ = 16;
 }
 
+message Void {
+}
+
 message CidReq {
     // 客户端编号
     int64 cid = 1;
@@ -196,11 +199,27 @@ message PassReq {
     bytes data = 5;
 }
 
+message ProdsRep {
+    // 服务名
+    string name = 1;
+    // 服务列表
+    repeated Prod prods = 2;
+}
+
+message Prod {
+    // 服务编号
+    int32 id = 1;
+    // 服务地址
+    string uri = 2;
+}
+
 service Pass {
     // 请求
     rpc req(PassReq) returns (DataRep);
     // 发送
     rpc send(PassReq) returns (Id32Rep);
+    // 服务列表
+    rpc prods(Void) returns (ProdsRep);
 }
 
 message CloseReq {
@@ -302,7 +321,7 @@ message GLastsReq {
     string unique = 3;
     // 最后消息编号 <65535时 = 获取缓存消息数量， lastId = 1
     int64 lastId = 4;
-    // <= 0 不连续获取， 每次通过REQ_LAST 通知更新后，主动再调用GLasts， =1 不发送REQ_LASTC管道LASTC消息 >1 最多多少条消息发送管道LASTC消息
+    // <= 0 不连续获取， 每次通过REQ_LAST 通知更新后，主动再调用GLasts， =1 不发送REQ_LASTC管道LASTC消息 >1 最多多少条消息发送管道LASTC消息 MSD_ID_SUB_NUM -1 订阅计数器
     int32 continuous = 5;
 }
 
@@ -334,11 +353,17 @@ message TPushReq {
     bool db = 6;
     // 持久同时是否强制创建队列
     bool queue = 7;
+    // 唯一标识
+    string unique = 8;
 }
 
 message RevokeReq {
     int64 id = 1;
     string gid = 2;
+    // 消息撤销通知
+    GPushReq push = 3;
+    // 消息撤销通知
+    TPushReq tPush = 4;
 }
 
 message ProxyReq {
@@ -389,4 +414,6 @@ service Gateway {
     rpc revoke(RevokeReq) returns (BoolRep);
     // 设置代理
     rpc setProxy(ProxyReq) returns (BoolRep);
+    // 设置服务列表
+    rpc setProds(ProdsRep) returns (BoolRep);
 }

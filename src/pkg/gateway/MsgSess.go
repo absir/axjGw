@@ -613,6 +613,8 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 			if lastIn || _msgMng.Db == nil || dbNexted {
 				// 消息已读取完毕
 				if !that.subLastDone(client, lastTime) {
+					// 必须要间隔, 最小毫秒
+					time.Sleep(time.Millisecond)
 					continue
 				}
 

@@ -131,18 +131,23 @@ func (g GatewayS) TDirty(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, erro
 }
 
 func (g GatewayS) Revoke(ctx context.Context, req *gw.RevokeReq) (*gw.BoolRep, error) {
-	if gateway.MsgMng().Db == nil {
-		return Result_Fasle, nil
-	}
-
-	err := gateway.MsgMng().Db.Revoke(req.Id, req.Gid)
+	succ, err := gateway.ChatMng().Revoke(ctx, req)
 	if err != nil {
 		return Result_Fasle, err
+	}
+
+	if !succ {
+		return Result_Fasle, nil
 	}
 
 	return Result_True, nil
 }
 
 func (g GatewayS) SetProxy(ctx context.Context, req *gw.ProxyReq) (*gw.BoolRep, error) {
+	return Result_True, nil
+}
+
+func (g GatewayS) SetProds(ctx context.Context, rep *gw.ProdsRep) (*gw.BoolRep, error) {
+	gateway.Server.SetProdsRep(rep)
 	return Result_True, nil
 }

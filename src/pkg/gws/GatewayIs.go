@@ -377,7 +377,7 @@ func (g GatewayIs) Send(ctx context.Context, req *gw.SendReq) (*gw.Id32Rep, erro
 		return Result_ProdErr_Rep, nil
 	}
 
-	succ, err := gateway.ChatMng().Send(req.FromId, req.ToId, req.Uri, req.Data, req.Db)
+	succ, err := gateway.ChatMng().Send(req)
 	if !succ || err != nil {
 		return Result_Fail_Rep, err
 	}
@@ -390,7 +390,7 @@ func (g GatewayIs) TPush(ctx context.Context, req *gw.TPushReq) (*gw.Id32Rep, er
 		return Result_ProdErr_Rep, nil
 	}
 
-	succ, err := gateway.ChatMng().TeamPush(req.FromId, req.Tid, req.ReadFeed, req.Uri, req.Data, req.Queue, req.Db)
+	succ, err := gateway.ChatMng().TeamPush(req)
 	if !succ || err != nil {
 		return Result_Fail_Rep, err
 	}
