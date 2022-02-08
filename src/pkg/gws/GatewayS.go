@@ -148,6 +148,14 @@ func (g GatewayS) SetProxy(ctx context.Context, req *gw.ProxyReq) (*gw.BoolRep, 
 }
 
 func (g GatewayS) SetProds(ctx context.Context, rep *gw.ProdsRep) (*gw.BoolRep, error) {
-	gateway.Server.SetProdsRep(rep)
+	succ, err := gateway.Server.SetProdsRepAll(ctx, rep)
+	if err != nil {
+		return Result_Fasle, err
+	}
+
+	if !succ {
+		return Result_Fasle, nil
+	}
+
 	return Result_True, nil
 }

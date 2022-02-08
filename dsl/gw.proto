@@ -173,6 +173,17 @@ message AddrRep {
     string addr = 3;
 }
 
+message GwRegReq {
+    // 网关数量
+    int32 idCount = 1;
+    // 网关地址
+    string IdUrl = 3;
+    // 当前网关id
+    int32 id = 2;
+    // 当前网关metas
+    map<string, string> metas = 4;
+}
+
 service Acl {
     // 登录
     rpc login(LoginReq) returns (LoginRep);
@@ -184,6 +195,8 @@ service Acl {
     rpc team(GidReq) returns (TeamRep);
     // 代理查询
     rpc addr(AddrReq) returns (AddrRep);
+    // 分布式网关注册
+    rpc gwReg(GwRegReq) returns (BoolRep);
 }
 
 message PassReq {

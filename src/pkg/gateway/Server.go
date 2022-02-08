@@ -185,11 +185,16 @@ func (that *server) initProds(cfg map[interface{}]interface{}) {
 		that.initProdsDscv(Config.AclProd, prods)
 	}
 
-	// Gw服务默认配置
-	if that.prodsMap[Config.GwProd] == nil {
+	gwProds := that.prodsMap[Config.GwProd]
+	if gwProds == nil {
+		// Gw服务默认配置
 		prods := new(Prods)
 		prods.Add(APro.WorkId(), "")
 		that.initProdsDscv(Config.GwProd, prods)
+
+	} else if Config.GwAclReg > 0 && gwProds.IdCount > 0 {
+		// GwAcl注册
+		go that.gwAclRegLoop(gwProds)
 	}
 
 	// 服务发现启动发现线程
@@ -221,6 +226,46 @@ func (that *server) initProdsDscv(name string, prods *Prods) {
 
 		that.prodsMap[name] = prods
 	}
+}
+
+func (that *server) gwAclRegLoop(gwProds *Prods) {
+	gwReg := &gw.GwRegReq{
+		IdCount: int32(gwProds.IdCount),
+		IdUrl:   gwProds.IdUrl,
+		Id:      APro.WorkId(),
+		Metas:   Config.GwMetas,
+	}
+
+	for {
+		if that.gwAclRegDo(gwReg) {
+			break
+		}
+
+		time.Sleep(Config.GwAclReg)
+	}
+}
+
+func (that *server) gwAclRegRcvr() {
+	err := recover()
+	if err != nil {
+		AZap.Logger.Error("gwAclReg Err", zap.Reflect("err", err))
+	}
+}
+
+func (that *server) gwAclRegDo(gwReg *gw.GwRegReq) bool {
+	defer that.gwAclRegRcvr()
+	prods := that.GetProds(Config.AclProd)
+	rep, err := prods.GetProdRand().GetAclClient().GwReg(prods.TimeoutCtx(), gwReg)
+	if err != nil {
+		AZap.Logger.Error("gwAclReg Fail", zap.Error(err))
+		return false
+	}
+
+	if rep != nil && rep.Val {
+		return true
+	}
+
+	return false
 }
 
 func (that *server) StartGw() {
@@ -567,4 +612,21 @@ func (that *server) GetProdClient(clientG *ClientG) *Prod {
 
 func (that *server) SetProdsRep(rep *gw.ProdsRep) {
 	that.prodsMap[rep.Name].SetProdsRep(rep)
+}
+
+func (that *server) SetProdsRepAll(ctx context.Context, rep *gw.ProdsRep) (bool, error) {
+	// 全部通知更新
+	prods := that.GetProds(Config.GwProd)
+	for _, prod := range prods.prods {
+		succ, err := prod.GetGWIClient().SetProds(ctx, rep)
+		if err != nil {
+			return false, err
+		}
+
+		if succ == nil || !succ.Val {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

@@ -415,3 +415,8 @@ func (g GatewayIs) TStarts(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, er
 	gateway.ChatMng().TeamStart(req.Gid, nil)
 	return Result_Succ_Rep, nil
 }
+
+func (g GatewayIs) SetProds(ctx context.Context, rep *gw.ProdsRep) (*gw.BoolRep, error) {
+	gateway.Server.SetProdsRep(rep)
+	return Result_True, nil
+}

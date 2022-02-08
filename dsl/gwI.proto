@@ -83,4 +83,6 @@ service GatewayI {
     rpc tDirty(GidReq) returns (Id32Rep);
     // 组发送管道启动 tid
     rpc tStarts(GidReq) returns (Id32Rep);
+    // 设置服务列表
+    rpc setProds(ProdsRep) returns (BoolRep);
 }

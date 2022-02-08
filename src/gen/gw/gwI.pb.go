@@ -376,7 +376,7 @@ var file_dsl_gwI_proto_rawDesc = []byte{
 	0x12, 0x10, 0x0a, 0x03, 0x67, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x67,
 	0x69, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02,
 	0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x75, 0x63, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08,
-	0x52, 0x04, 0x73, 0x75, 0x63, 0x63, 0x32, 0x95, 0x06, 0x0a, 0x08, 0x47, 0x61, 0x74, 0x65, 0x77,
+	0x52, 0x04, 0x73, 0x75, 0x63, 0x63, 0x32, 0xbc, 0x06, 0x0a, 0x08, 0x47, 0x61, 0x74, 0x65, 0x77,
 	0x61, 0x79, 0x49, 0x12, 0x1d, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e,
 	0x43, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x55, 0x49, 0x64, 0x52,
 	0x65, 0x70, 0x12, 0x21, 0x0a, 0x06, 0x6f, 0x6e, 0x6c, 0x69, 0x6e, 0x65, 0x12, 0x0a, 0x2e, 0x67,
@@ -425,8 +425,11 @@ var file_dsl_gwI_proto_rawDesc = []byte{
 	0x79, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x69, 0x64, 0x52, 0x65, 0x71, 0x1a, 0x0b, 0x2e,
 	0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x22, 0x0a, 0x07, 0x74, 0x53,
 	0x74, 0x61, 0x72, 0x74, 0x73, 0x12, 0x0a, 0x2e, 0x67, 0x77, 0x2e, 0x47, 0x69, 0x64, 0x52, 0x65,
-	0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x42, 0x06,
-	0x5a, 0x04, 0x2e, 0x2f, 0x67, 0x77, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x71, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x49, 0x64, 0x33, 0x32, 0x52, 0x65, 0x70, 0x12, 0x25,
+	0x0a, 0x08, 0x73, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x64, 0x73, 0x12, 0x0c, 0x2e, 0x67, 0x77, 0x2e,
+	0x50, 0x72, 0x6f, 0x64, 0x73, 0x52, 0x65, 0x70, 0x1a, 0x0b, 0x2e, 0x67, 0x77, 0x2e, 0x42, 0x6f,
+	0x6f, 0x6c, 0x52, 0x65, 0x70, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x67, 0x77, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -462,11 +465,12 @@ var file_dsl_gwI_proto_goTypes = []interface{}{
 	(*GPushReq)(nil),   // 16: gw.GPushReq
 	(*SendReq)(nil),    // 17: gw.SendReq
 	(*TPushReq)(nil),   // 18: gw.TPushReq
-	(*UIdRep)(nil),     // 19: gw.UIdRep
-	(*BoolRep)(nil),    // 20: gw.BoolRep
-	(*BoolsRep)(nil),   // 21: gw.BoolsRep
-	(*Id32Rep)(nil),    // 22: gw.Id32Rep
-	(*Id64Rep)(nil),    // 23: gw.Id64Rep
+	(*ProdsRep)(nil),   // 19: gw.ProdsRep
+	(*UIdRep)(nil),     // 20: gw.UIdRep
+	(*BoolRep)(nil),    // 21: gw.BoolRep
+	(*BoolsRep)(nil),   // 22: gw.BoolsRep
+	(*Id32Rep)(nil),    // 23: gw.Id32Rep
+	(*Id64Rep)(nil),    // 24: gw.Id64Rep
 }
 var file_dsl_gwI_proto_depIdxs = []int32{
 	5,  // 0: gw.GatewayI.uid:input_type -> gw.CidReq
@@ -491,30 +495,32 @@ var file_dsl_gwI_proto_depIdxs = []int32{
 	18, // 19: gw.GatewayI.tPush:input_type -> gw.TPushReq
 	6,  // 20: gw.GatewayI.tDirty:input_type -> gw.GidReq
 	6,  // 21: gw.GatewayI.tStarts:input_type -> gw.GidReq
-	19, // 22: gw.GatewayI.uid:output_type -> gw.UIdRep
-	20, // 23: gw.GatewayI.online:output_type -> gw.BoolRep
-	21, // 24: gw.GatewayI.onlines:output_type -> gw.BoolsRep
-	22, // 25: gw.GatewayI.close:output_type -> gw.Id32Rep
-	22, // 26: gw.GatewayI.kick:output_type -> gw.Id32Rep
-	22, // 27: gw.GatewayI.alive:output_type -> gw.Id32Rep
-	22, // 28: gw.GatewayI.rid:output_type -> gw.Id32Rep
-	22, // 29: gw.GatewayI.rids:output_type -> gw.Id32Rep
-	22, // 30: gw.GatewayI.conn:output_type -> gw.Id32Rep
-	22, // 31: gw.GatewayI.disc:output_type -> gw.Id32Rep
-	22, // 32: gw.GatewayI.last:output_type -> gw.Id32Rep
-	22, // 33: gw.GatewayI.push:output_type -> gw.Id32Rep
-	22, // 34: gw.GatewayI.gQueue:output_type -> gw.Id32Rep
-	22, // 35: gw.GatewayI.gClear:output_type -> gw.Id32Rep
-	22, // 36: gw.GatewayI.gLasts:output_type -> gw.Id32Rep
-	22, // 37: gw.GatewayI.gLast:output_type -> gw.Id32Rep
-	23, // 38: gw.GatewayI.gPush:output_type -> gw.Id64Rep
-	22, // 39: gw.GatewayI.gPushA:output_type -> gw.Id32Rep
-	22, // 40: gw.GatewayI.send:output_type -> gw.Id32Rep
-	22, // 41: gw.GatewayI.tPush:output_type -> gw.Id32Rep
-	22, // 42: gw.GatewayI.tDirty:output_type -> gw.Id32Rep
-	22, // 43: gw.GatewayI.tStarts:output_type -> gw.Id32Rep
-	22, // [22:44] is the sub-list for method output_type
-	0,  // [0:22] is the sub-list for method input_type
+	19, // 22: gw.GatewayI.setProds:input_type -> gw.ProdsRep
+	20, // 23: gw.GatewayI.uid:output_type -> gw.UIdRep
+	21, // 24: gw.GatewayI.online:output_type -> gw.BoolRep
+	22, // 25: gw.GatewayI.onlines:output_type -> gw.BoolsRep
+	23, // 26: gw.GatewayI.close:output_type -> gw.Id32Rep
+	23, // 27: gw.GatewayI.kick:output_type -> gw.Id32Rep
+	23, // 28: gw.GatewayI.alive:output_type -> gw.Id32Rep
+	23, // 29: gw.GatewayI.rid:output_type -> gw.Id32Rep
+	23, // 30: gw.GatewayI.rids:output_type -> gw.Id32Rep
+	23, // 31: gw.GatewayI.conn:output_type -> gw.Id32Rep
+	23, // 32: gw.GatewayI.disc:output_type -> gw.Id32Rep
+	23, // 33: gw.GatewayI.last:output_type -> gw.Id32Rep
+	23, // 34: gw.GatewayI.push:output_type -> gw.Id32Rep
+	23, // 35: gw.GatewayI.gQueue:output_type -> gw.Id32Rep
+	23, // 36: gw.GatewayI.gClear:output_type -> gw.Id32Rep
+	23, // 37: gw.GatewayI.gLasts:output_type -> gw.Id32Rep
+	23, // 38: gw.GatewayI.gLast:output_type -> gw.Id32Rep
+	24, // 39: gw.GatewayI.gPush:output_type -> gw.Id64Rep
+	23, // 40: gw.GatewayI.gPushA:output_type -> gw.Id32Rep
+	23, // 41: gw.GatewayI.send:output_type -> gw.Id32Rep
+	23, // 42: gw.GatewayI.tPush:output_type -> gw.Id32Rep
+	23, // 43: gw.GatewayI.tDirty:output_type -> gw.Id32Rep
+	23, // 44: gw.GatewayI.tStarts:output_type -> gw.Id32Rep
+	21, // 45: gw.GatewayI.setProds:output_type -> gw.BoolRep
+	23, // [23:46] is the sub-list for method output_type
+	0,  // [0:23] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -664,6 +670,8 @@ type GatewayIClient interface {
 	TDirty(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 组发送管道启动 tid
 	TStarts(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	// 设置服务列表
+	SetProds(ctx context.Context, in *ProdsRep, opts ...grpc.CallOption) (*BoolRep, error)
 }
 
 type gatewayIClient struct {
@@ -872,6 +880,15 @@ func (c *gatewayIClient) TStarts(ctx context.Context, in *GidReq, opts ...grpc.C
 	return out, nil
 }
 
+func (c *gatewayIClient) SetProds(ctx context.Context, in *ProdsRep, opts ...grpc.CallOption) (*BoolRep, error) {
+	out := new(BoolRep)
+	err := c.cc.Invoke(ctx, "/gw.GatewayI/setProds", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayIServer is the server API for GatewayI service.
 type GatewayIServer interface {
 	// uid查询
@@ -918,6 +935,8 @@ type GatewayIServer interface {
 	TDirty(context.Context, *GidReq) (*Id32Rep, error)
 	// 组发送管道启动 tid
 	TStarts(context.Context, *GidReq) (*Id32Rep, error)
+	// 设置服务列表
+	SetProds(context.Context, *ProdsRep) (*BoolRep, error)
 }
 
 // UnimplementedGatewayIServer can be embedded to have forward compatible implementations.
@@ -989,6 +1008,9 @@ func (*UnimplementedGatewayIServer) TDirty(context.Context, *GidReq) (*Id32Rep, 
 }
 func (*UnimplementedGatewayIServer) TStarts(context.Context, *GidReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TStarts not implemented")
+}
+func (*UnimplementedGatewayIServer) SetProds(context.Context, *ProdsRep) (*BoolRep, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetProds not implemented")
 }
 
 func RegisterGatewayIServer(s *grpc.Server, srv GatewayIServer) {
@@ -1391,6 +1413,24 @@ func _GatewayI_TStarts_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayI_SetProds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProdsRep)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayIServer).SetProds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gw.GatewayI/SetProds",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayIServer).SetProds(ctx, req.(*ProdsRep))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _GatewayI_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gw.GatewayI",
 	HandlerType: (*GatewayIServer)(nil),
@@ -1482,6 +1522,10 @@ var _GatewayI_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "tStarts",
 			Handler:    _GatewayI_TStarts_Handler,
+		},
+		{
+			MethodName: "setProds",
+			Handler:    _GatewayI_SetProds_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

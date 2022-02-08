@@ -78,3 +78,7 @@ func (Z zDevAcl) Addr(ctx context.Context, in *gw.AddrReq, opts ...grpc.CallOpti
 func (Z zDevAcl) Prods(ctx context.Context, in *gw.Void, opts ...grpc.CallOption) (*gw.ProdsRep, error) {
 	return nil, nil
 }
+
+func (Z zDevAcl) GwReg(ctx context.Context, in *gw.GwRegReq, opts ...grpc.CallOption) (*gw.BoolRep, error) {
+	return nil, nil
+}

@@ -97,3 +97,7 @@ func (that gatewayISC) TDirty(ctx context.Context, in *gw.GidReq, opts ...grpc.C
 func (that gatewayISC) TStarts(ctx context.Context, in *gw.GidReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
 	return that.Server.TStarts(ctx, in)
 }
+
+func (that gatewayISC) SetProds(ctx context.Context, in *gw.ProdsRep, opts ...grpc.CallOption) (*gw.BoolRep, error) {
+	return that.Server.SetProds(ctx, in)
+}
