@@ -378,7 +378,7 @@ func (that *MsgSess) lastQueueLoad() {
 			// 空队列才加入
 			mLen := len(msgDs)
 			for i := 0; i < mLen; i++ {
-				that.lastQueue.Push(&msgDs[i], true)
+				that.lastQueue.Push(msgDs[i], true)
 			}
 		}
 	}
