@@ -134,9 +134,11 @@ func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.Bo
 		if dial.Timeout <= 0 {
 			dial.Timeout = req.Timeout
 		}
-		
+
+		_i := i
+		_dial := dial
 		Util.GoSubmit(func() {
-			bools[i] = PrxMng.Dial(dial.Cid, dial.Gid, dial.Addr, time.Duration(dial.Timeout)*time.Millisecond)
+			bools[_i] = PrxMng.Dial(_dial.Cid, _dial.Gid, _dial.Addr, time.Duration(_dial.Timeout)*time.Millisecond)
 			end := false
 			PrxServMng.locker.Lock()
 			size -= 1
