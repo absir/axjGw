@@ -100,6 +100,7 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 		return false
 	}
 
+	close(dials)
 	return false
 }
 
