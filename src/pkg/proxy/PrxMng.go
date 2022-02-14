@@ -25,7 +25,7 @@ type prxMng struct {
 	checkBuff []interface{}
 	gidMap    *cmap.CMap
 	dialId    int32
-	dialMap   *cmap.CMap
+	dialsMap  *cmap.CMap
 }
 
 var PrxMng *prxMng
@@ -37,7 +37,7 @@ func initPrxMng() {
 	that.locker = new(sync.Mutex)
 	that.connMap = cmap.NewCMapInit()
 	that.gidMap = cmap.NewCMapInit()
-	that.dialMap = cmap.NewCMapInit()
+	that.dialsMap = cmap.NewCMapInit()
 	PrxMng = that
 }
 
@@ -62,7 +62,8 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 		if _, ok := that.connMap.Load(id); !ok {
 			// 保证实时性
 			dials = make(chan bool, 1)
-			that.connId = id
+			that.dialsMap.Store(id, dials)
+			that.dialId = id
 			break
 		}
 
@@ -92,10 +93,10 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 
 	select {
 	case dial := <-dials:
-		that.dialMap.Delete(id)
+		that.dialsMap.Delete(id)
 		return dial
 	case <-time.After(timeout):
-		that.dialMap.Delete(id)
+		that.dialsMap.Delete(id)
 		return false
 	}
 
@@ -104,15 +105,15 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 
 func (that *prxMng) DialRep(id int32, ok bool) {
 	that.locker.Lock()
-	val, _ := that.dialMap.LoadAndDelete(id)
+	val, _ := that.dialsMap.LoadAndDelete(id)
 	that.locker.Unlock()
 	if val == nil {
 		return
 	}
 
-	rep, _ := val.(chan bool)
-	if rep != nil {
-		rep <- ok
+	dials, _ := val.(chan bool)
+	if dials != nil {
+		dials <- ok
 	}
 }
 

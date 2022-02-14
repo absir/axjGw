@@ -57,12 +57,12 @@ func dialAddr(addr string, timeout time.Duration) error {
 		conn, err = net.Dial("tcp", addr)
 	}
 
-	if err != nil {
-		return err
-	}
-
 	if conn != nil {
 		conn.Close()
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return nil

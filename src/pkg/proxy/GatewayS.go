@@ -131,7 +131,7 @@ func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.Bo
 	bools := make([]bool, size)
 	reps := make(chan bool, 1)
 	for i, dial := range req.Dials {
-		if dial.Timeout < 0 {
+		if dial.Timeout <= 0 {
 			dial.Timeout = req.Timeout
 		}
 
