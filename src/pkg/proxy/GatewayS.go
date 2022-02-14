@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"axjGW/pkg/gws"
 	"context"
@@ -123,4 +124,41 @@ func (g GatewayS) DialProxy(ctx context.Context, req *gw.DialProxyReq) (*gw.Bool
 	}
 
 	return gws.Result_Fasle, nil
+}
+
+func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.BoolsRep, error) {
+	size := len(req.Dials)
+	bools := make([]bool, size)
+	reps := make(chan bool, 1)
+	for i, dial := range req.Dials {
+		if dial.Timeout < 0 {
+			dial.Timeout = req.Timeout
+		}
+
+		Util.GoSubmit(func() {
+			bools[i] = PrxMng.Dial(dial.Cid, dial.Gid, dial.Addr, time.Duration(dial.Timeout)*time.Millisecond)
+			PrxServMng.locker.Lock()
+			size -= 1
+			PrxServMng.locker.Unlock()
+			if size <= 0 {
+				reps <- true
+			}
+		})
+	}
+
+	timeout := time.Duration(req.Timeout)
+	if timeout <= 0 {
+		timeout = Config.DialTimeout
+	}
+
+	select {
+	case <-reps:
+		break
+	case <-time.After(timeout):
+		break
+	}
+
+	return &gw.BoolsRep{
+		Vals: bools,
+	}, nil
 }

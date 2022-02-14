@@ -396,6 +396,11 @@ message DialProxyReq {
     int64 timeout = 4;
 }
 
+message DialsProxyReq {
+    repeated DialProxyReq dials = 1;
+    int64 timeout = 4;
+}
+
 // 网关
 service Gateway {
     // uid查询
@@ -438,4 +443,6 @@ service Gateway {
     rpc setProds(ProdsRep) returns (BoolRep);
     // 连接代理
     rpc dialProxy(DialProxyReq) returns (BoolRep);
+    // 连接代理复数
+    rpc dialsProxy(DialsProxyReq) returns (BoolsRep);
 }

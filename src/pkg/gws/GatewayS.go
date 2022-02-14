@@ -163,3 +163,7 @@ func (g GatewayS) SetProds(ctx context.Context, rep *gw.ProdsRep) (*gw.BoolRep, 
 func (g GatewayS) DialProxy(ctx context.Context, req *gw.DialProxyReq) (*gw.BoolRep, error) {
 	return Result_Fasle, nil
 }
+
+func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.BoolsRep, error) {
+	return nil, nil
+}
