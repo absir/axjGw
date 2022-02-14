@@ -112,6 +112,7 @@ func (that *prxMng) DialRep(id int32, ok bool) {
 		return
 	}
 
+	defer recover()
 	dials, _ := val.(chan bool)
 	if dials != nil {
 		dials <- ok
