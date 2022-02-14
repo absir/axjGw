@@ -64,6 +64,13 @@ func (h handler) OnReq(client ANet.Client, req int32, uri string, uriI int32, da
 		PrxMng.adapClose(uriI)
 	}
 
+	if req == agent.REQ_DIAL {
+
+
+	} else if req == agent.REQ_DIAL_ERR {
+
+	}
+
 	return true
 }
 

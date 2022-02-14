@@ -4,6 +4,7 @@ import (
 	"axjGW/gen/gw"
 	"axjGW/pkg/gws"
 	"context"
+	"time"
 )
 
 type GatewayS struct {
@@ -109,4 +110,17 @@ var sProxy *gw.ProxyReq
 func (g GatewayS) SetProxy(ctx context.Context, req *gw.ProxyReq) (*gw.BoolRep, error) {
 	sProxy = req
 	return gws.Result_True, nil
+}
+
+func (g GatewayS) SetProds(ctx context.Context, rep *gw.ProdsRep) (*gw.BoolRep, error) {
+	panic("implement me")
+}
+
+func (g GatewayS) DialProxy(ctx context.Context, req *gw.DialProxyReq) (*gw.BoolRep, error) {
+	ok := PrxMng.Dial(req.Cid, req.Gid, req.Addr, time.Duration(req.Timeout)*time.Millisecond)
+	if ok {
+		return gws.Result_True, nil
+	}
+
+	return gws.Result_Fasle, nil
 }

@@ -389,6 +389,13 @@ message ProxyRule {
     string addr = 3;
 }
 
+message DialProxyReq {
+    int64 cid = 1;
+    string gid = 2;
+    string addr = 3;
+    int64 timeout = 4;
+}
+
 // 网关
 service Gateway {
     // uid查询
@@ -429,4 +436,6 @@ service Gateway {
     rpc setProxy(ProxyReq) returns (BoolRep);
     // 设置服务列表
     rpc setProds(ProdsRep) returns (BoolRep);
+    // 连接代理
+    rpc dialProxy(DialProxyReq) returns (BoolRep);
 }

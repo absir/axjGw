@@ -4,9 +4,11 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtBuffer"
+	"axj/Kt/KtBytes"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
+	"axjGW/pkg/agent"
 	"go.uber.org/zap"
 	"io"
 	"net"
@@ -22,6 +24,8 @@ type prxMng struct {
 	checkTime int64
 	checkBuff []interface{}
 	gidMap    *cmap.CMap
+	dialId    int32
+	dialMap   *cmap.CMap
 }
 
 var PrxMng *prxMng
@@ -33,7 +37,83 @@ func initPrxMng() {
 	that.locker = new(sync.Mutex)
 	that.connMap = cmap.NewCMapInit()
 	that.gidMap = cmap.NewCMapInit()
+	that.dialMap = cmap.NewCMapInit()
 	PrxMng = that
+}
+
+func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Duration) bool {
+	client := that.Client(cid, gid)
+	if client == nil {
+		return false
+	}
+
+	var dials chan bool = nil
+	var num int32 = 0
+	that.locker.Lock()
+	id := that.dialId
+	for {
+		if id >= Config.AdapMaxId {
+			id = 0
+
+		} else {
+			id++
+		}
+
+		if _, ok := that.connMap.Load(id); !ok {
+			// 保证实时性
+			dials = make(chan bool, 1)
+			that.connId = id
+			break
+		}
+
+		num++
+		if num >= Config.AdapMaxId {
+			num = 0
+			time.Sleep(time.Second)
+		}
+	}
+
+	that.locker.Unlock()
+	if dials == nil {
+		return false
+	}
+
+	bs := make([]byte, 8)
+	KtBytes.SetInt64(bs, 0, int64(timeout), nil)
+	err := client.Get().Rep(false, agent.REQ_DIAL, addr, id, bs, false, false, 0)
+	if err != nil {
+		AZap.Logger.Warn("REQ_DIAL err", zap.Error(err))
+		return false
+	}
+
+	if timeout <= 0 {
+		timeout = Config.DialTimeout
+	}
+
+	select {
+	case dial := <-dials:
+		that.dialMap.Delete(id)
+		return dial
+	case <-time.After(timeout):
+		that.dialMap.Delete(id)
+		return false
+	}
+
+	return false
+}
+
+func (that *prxMng) DialRep(id int32, ok bool) {
+	that.locker.Lock()
+	val, _ := that.dialMap.LoadAndDelete(id)
+	that.locker.Unlock()
+	if val == nil {
+		return
+	}
+
+	rep, _ := val.(chan bool)
+	if rep != nil {
+		rep <- ok
+	}
 }
 
 func (that *prxMng) closeConn(conn *net.TCPConn, immed bool, err error) {
@@ -126,7 +206,7 @@ func (that *prxMng) adapOpen(serv *PrxServ, outConn *net.TCPConn, outBuff []byte
 		num++
 		if num >= Config.AdapMaxId {
 			num = 0
-			time.Sleep(time.Millisecond)
+			time.Sleep(time.Second)
 		}
 	}
 

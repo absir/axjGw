@@ -20,6 +20,7 @@ type config struct {
 	AdapTimeout   int64             // 适配超时
 	AdapMaxId     int32             // 适配最大编号
 	CloseDelay    int               // 关闭延迟秒
+	DialTimeout   time.Duration     // 连接超时
 	Servs         map[string]*Serv  // 协议服务
 	ClientKeys    map[string]string // 客户端授权码
 	Acl           string            // Acl服务地址
@@ -51,6 +52,7 @@ func initConfig() {
 		AdapTimeout:   60000,
 		AdapMaxId:     KtBytes.VINT_3_MAX,
 		CloseDelay:    30,
+		DialTimeout:   10000,
 		Servs:         map[string]*Serv{},
 		ClientKeys:    map[string]string{},
 		AclTry:        3000,
@@ -61,6 +63,7 @@ func initConfig() {
 
 	Config.CheckDrt *= time.Millisecond
 	Config.AdapTimeout *= int64(time.Millisecond)
+	Config.DialTimeout *= time.Millisecond
 	Config.AclTimeout *= time.Millisecond
 }
 

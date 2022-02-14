@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ConnId struct {
@@ -30,6 +31,56 @@ type ConnId struct {
 var Client *asdk.Client
 var CloseDelay int
 var CloseDelayIn int
+
+func dialAddr(addr string, timeout time.Duration) error {
+	if strings.HasPrefix(addr, "-") {
+		// arp mac -> ip
+		idx := strings.LastIndexByte(addr, ':')
+		if idx > 0 {
+			mac := addr[0:idx]
+			ip := ANets.Config.FindIp(mac, 0)
+			if ip == "" {
+				return Kt.NewErrReason("Find No Ip " + mac)
+
+			} else {
+				addr = ip + addr[idx:]
+			}
+		}
+	}
+
+	var conn net.Conn
+	var err error
+	if timeout > 0 {
+		conn, err = net.DialTimeout("tcp", addr, timeout)
+
+	} else {
+		conn, err = net.Dial("tcp", addr)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if conn != nil {
+		conn.Close()
+	}
+
+	return nil
+}
+
+func DialProxy(addr string, id int32, timeout time.Duration) {
+	err := dialAddr(addr, timeout)
+	req := REQ_DIAL
+	if err != nil {
+		req = REQ_DIAL_ERR
+		AZap.Warn("REQ_DIAL Err "+addr+" , "+strconv.Itoa(int(id)), zap.Error(err))
+	}
+
+	adap := Client.Conn()
+	if adap != nil {
+		adap.Rep(Client, req, "", id, nil, false, 0)
+	}
+}
 
 func ConnProxy(addr string, id int32, data []byte, buffer asdk.Buffer) {
 	connId := &ConnId{

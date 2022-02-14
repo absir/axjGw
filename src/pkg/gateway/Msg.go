@@ -283,7 +283,7 @@ func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 
 func (that *MsgGorm) Revoke(id int64, gid string, push func() error) error {
 	var tid int64 = 0
-	that.db.First("SELECT id FROM msg_ds WHERE id = ? AND gid = ?", id, gid).Find(&tid)
+	that.db.Raw("SELECT id FROM msg_ds WHERE id = ? AND gid = ?", id, gid).Find(&tid)
 	if tid <= 0 {
 		return ANet.ERR_DENIED
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"axj/APro"
 	"axj/Kt/Kt"
+	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
@@ -148,6 +149,15 @@ func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte, 
 
 func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32, data []byte, buffer asdk.Buffer) {
 	switch req {
+	case agent.REQ_DIAL:
+		// 连接代理
+		var timeout int64 = 0
+		if data != nil {
+			timeout = KtBytes.GetInt64(data, 0, nil)
+		}
+
+		go agent.DialProxy(uri, uriI, time.Duration(timeout))
+		return
 	case agent.REQ_CONN:
 		// 发送连接
 		go agent.ConnProxy(uri, uriI, data, buffer)
