@@ -200,6 +200,13 @@ func (c consul) RegCtx(cfg interface{}, name string, port int, metas map[string]
 
 	service.Check = cCfg.Check
 	APro.StopAdd(func() {
+		/** 检查是否是自己注册信息
+		_service, _, _ := cCfg.client.Agent().Service(service.ID, nil)
+		if _service == nil {
+			return
+		}
+		*/
+
 		cCfg.client.Agent().ServiceDeregister(service.ID)
 	})
 

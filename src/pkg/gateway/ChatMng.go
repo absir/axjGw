@@ -577,7 +577,7 @@ func (that *chatMng) Revoke(ctx context.Context, req *gw.RevokeReq) (bool, error
 				return err
 			}
 
-			if rep == nil || Server.Id64Succ(rep.Id, true) {
+			if rep == nil || !Server.Id64Succ(rep.Id, true) {
 				return ERR_FAIL
 			}
 
