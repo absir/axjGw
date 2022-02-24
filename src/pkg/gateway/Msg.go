@@ -99,6 +99,7 @@ func NewMsg(uri string, data []byte, unique string) Msg {
 
 type MsgTeam struct {
 	Id       int64        `gorm:"primary_key"`                          // 消息编号
+	Sid      string       `gorm:""`                                     // 发送者编号
 	Tid      string       `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
 	Members  []*gw.Member `gorm:"-"`                                    // 消息会员
 	MembersS string       `gorm:"column:members;type:json"`             // 消息会员存储

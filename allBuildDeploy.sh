@@ -4,6 +4,24 @@ cliDir="/e/open/axj/axj-cli"
 cd `dirname $0`
 args=$*
 
+if [[ -z "$args" ]] || [[ $args =~ "0" ]];then
+  mkdir -p src/bin
+  cd src/bin
+  export CGO_ENABLED=0
+  export GOOS=linux
+  export GOARCH=amd64
+  go build -o ./gateway-linux64 ../cmd/gateway/Gateway.go
+fi
+
+if [[ -z "$args" ]] || [[ $args =~ "1" ]];then
+  mkdir -p src/bin
+  cd src/bin
+  export CGO_ENABLED=0
+  export GOOS=windows
+  export GOARCH=amd64
+  go build -o ./gateway-win64.exe ../cmd/gateway/Gateway.go
+fi
+
 if [[ -z "$args" ]] || [[ $args =~ "2" ]];then
   mkdir -p src/bin
   cd src/bin

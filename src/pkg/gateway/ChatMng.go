@@ -347,28 +347,31 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 		// Rand随机发送顺序
 		member := members[(index+msgTeam.Rand)%mLen]
 		gid := member.Gid
-		if member.Nofeed {
-			// 不推送到gid， 需要主动拉去tid_gid
-			gid = that.tid + "_" + gid
-		}
-
-		rep, _ := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
-			Gid:    gid,
-			Uri:    msgTeam.Uri,
-			Data:   msgTeam.Data,
-			Qs:     qs,
-			Fid:    msgTeam.Id,
-			Unique: msgTeam.Unique,
-		})
-
-		var fid = Server.Id64(rep)
-		if !Server.Id64Succ(fid, true) {
-			// 已执行索引
-			if db {
-				MsgMng().Db.TeamUpdate(msgTeam, indexDid)
+		// 群消息不需要再发送给自己
+		if gid != msgTeam.Sid {
+			if member.Nofeed {
+				// 不推送到gid， 需要主动拉去tid_gid
+				gid = that.tid + "_" + gid
 			}
 
-			return false
+			rep, _ := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
+				Gid:    gid,
+				Uri:    msgTeam.Uri,
+				Data:   msgTeam.Data,
+				Qs:     qs,
+				Fid:    msgTeam.Id,
+				Unique: msgTeam.Unique,
+			})
+
+			var fid = Server.Id64(rep)
+			if !Server.Id64Succ(fid, true) {
+				// 已执行索引
+				if db {
+					MsgMng().Db.TeamUpdate(msgTeam, indexDid)
+				}
+
+				return false
+			}
 		}
 
 		indexDid = index
@@ -496,6 +499,7 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 
 			msgTeam := &MsgTeam{
 				Id:      fid,
+				Sid:     req.FromId,
 				Tid:     req.Tid,
 				Members: team.Members,
 				Index:   0,
