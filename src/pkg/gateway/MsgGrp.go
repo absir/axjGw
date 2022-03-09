@@ -138,9 +138,14 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 		Util.GoSubmit(func() {
 			client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid})
 		})
+
+		AZap.Debug("Grp Kick %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
+
+	} else {
+		client.gatewayI.Close(Server.Context, &gw.CloseReq{Cid: client.cid})
+		AZap.Debug("Grp Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	}
 
-	AZap.Debug("Grp Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	return true
 }
 

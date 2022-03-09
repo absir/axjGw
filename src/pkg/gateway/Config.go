@@ -18,8 +18,8 @@ type config struct {
 	ConnLimit    int               // 连接检查协程限制
 	LiveLimit    int               // 存活检查协程限制
 	GwProd       string            // 网关服务名
-	GwMetas  map[string]string     // 网关额外数据
-	GwAclReg time.Duration         // 网关Acl注册
+	GwMetas      map[string]string // 网关额外数据
+	GwAclReg     time.Duration     // 网关Acl注册
 	AclProd      string            // Acl服务名
 	PassProd     string            // Pass服务名
 	ProdTimeout  time.Duration     // 服务超时时间
@@ -41,7 +41,7 @@ func initConfig(workId int32) {
 		CheckDrt:     3000,
 		IdleDrt:      30000,
 		ConnDrt:      60000,
-		KickDrt:      6000,
+		KickDrt:      10 * time.Second,
 		GwProd:       "gw",
 		AclProd:      "acl",
 		ProdTimeout:  30 * time.Second,
