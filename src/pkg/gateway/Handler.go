@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	ERR_PROD_NO  = 1 // 服务不存在
-	ERR_PORD_ERR = 2 // 服务错误
+	ERR_PROD_NO  = int32(gw.Result_ProdNo)  // 服务不存在
+	ERR_PORD_ERR = int32(gw.Result_ProdErr) // 服务错误
 )
 
 var Processor *ANet.Processor
@@ -83,7 +83,8 @@ func (that *handler) OnReq(client ANet.Client, req int32, uri string, uriI int32
 
 func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, data []byte) {
 	reped := false
-	defer that.reqRcvr(client, req, reped)
+	pReped := &reped
+	defer that.reqRcvr(client, req, pReped)
 	name := Config.PassProd
 	if uri != "" && uri[0] == '@' {
 		i := strings.IndexByte(uri, '/')
@@ -98,7 +99,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 	if prod == nil {
 		if req > ANet.REQ_ONEWAY {
 			// 服务不存在
-			reped = true
+			*pReped = true
 			clientG.Get().Rep(true, req, "", ERR_PROD_NO, nil, false, false, 0)
 		}
 
@@ -122,7 +123,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 				AZap.Logger.Warn("Pass Err " + uri + " " + err.Error())
 			}
 
-			reped = true
+			*pReped = true
 			if err == nil {
 				clientG.Get().Rep(true, req, "", ERR_PROD_NO, nil, false, false, 0)
 
@@ -131,7 +132,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 			}
 
 		} else {
-			reped = true
+			*pReped = true
 			clientG.Get().Rep(true, req, "", result.Err, result.Data, false, false, 0)
 		}
 
@@ -147,12 +148,12 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 	}
 }
 
-func (that *handler) reqRcvr(client ANet.Client, req int32, reped bool) {
+func (that *handler) reqRcvr(client ANet.Client, req int32, reped *bool) {
 	if err := recover(); err != nil {
 		AZap.LoggerS.Warn("Rep Err", zap.Reflect("err", err))
 	}
 
-	if !reped && req > ANet.REQ_ONEWAY {
+	if !*reped && req > ANet.REQ_ONEWAY {
 		client.Get().Rep(true, req, "", ERR_PORD_ERR, nil, false, false, 0)
 	}
 }
