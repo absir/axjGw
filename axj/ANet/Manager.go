@@ -75,13 +75,17 @@ func (that *Manager) Client(cid int64) Client {
 	return nil
 }
 
+/**
+ * @idleDrt second
+ * @checkDrt second
+ */
 func NewManager(handlerM HandlerM, workerId int32, idleDrt int64, checkDrt time.Duration) *Manager {
 	that := new(Manager)
 	that.idWorker = Util.NewIdWorkerPanic(workerId)
 	that.handlerM = handlerM
 	that.clientMap = cmap.NewCMapInit()
 	that.checkDrt = checkDrt
-	that.idleDrt = int64(idleDrt)
+	that.idleDrt = idleDrt
 	that.beatBytes, _ = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, 0, false, 0, 0, nil)
 	return that
 }
@@ -107,7 +111,7 @@ func (that *Manager) OnClose(client Client, err error, reason interface{}) {
 }
 
 func (that *Manager) OnKeep(client Client, req bool) {
-	that.ClientM(client).idleTime = time.Now().UnixNano() + that.idleDrt
+	that.ClientM(client).idleTime = time.Now().Unix() + that.idleDrt
 	that.handlerM.OnKeep(client, req)
 }
 
@@ -147,9 +151,10 @@ func (that *Manager) CheckStop() {
 func (that *Manager) CheckLoop() {
 	checkLoop := time.Now().UnixNano()
 	that.checkLoop = checkLoop
+	checkDrt := that.checkDrt * time.Second
 	for Kt.Active && checkLoop == that.checkLoop {
-		time.Sleep(that.checkDrt)
-		that.checkTime = time.Now().UnixNano()
+		time.Sleep(checkDrt)
+		that.checkTime = time.Now().Unix()
 		that.clientMap.RangeBuff(that.checkRange, &that.clientBuff, 1024)
 		that.handlerM.CheckDone(that.checkTime)
 	}
@@ -201,7 +206,7 @@ func (that *Manager) Open(conn Conn, encryKey []byte, compress bool, id int64) C
 	client := that.handlerM.New(conn)
 	clientM := that.ClientM(client)
 	clientM.id = id
-	clientM.initTime = time.Now().UnixNano()
+	clientM.initTime = time.Now().Unix()
 	clientM.idleTime = clientM.initTime + that.idleDrt
 	client.Get().Open(client, conn, that, encryKey, compress)
 	that.OnOpen(client)

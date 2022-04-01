@@ -55,10 +55,6 @@ func (c consul) Cfg(unique string, paras string) interface{} {
 
 	APro.SubCfgBind("consul."+paras, cCfg)
 
-	cCfg.WaitTime *= time.Second
-	cCfg.WatcherDrt *= time.Second
-	cCfg.RegChkDrt *= int64(time.Second)
-
 	// 初始化client
 	client, err := api.NewClient(cCfg.Config)
 	Kt.Panic(err)
@@ -84,7 +80,7 @@ func (c consul) ListProds(cfg interface{}, ctx interface{}, name string) ([]*Pro
 func (c consul) ReqProds(cCfg *consulCfg, cCtx *consulCtx, name string, wait *api.QueryOptions) ([]*Prod, error) {
 	if wait != nil {
 		q := wait
-		now := time.Now().UnixNano()
+		now := time.Now().Unix()
 		if cCfg.WaitTime > 0 && cCtx.passTime > now {
 			q.WaitIndex = cCtx.lastIndex
 			q.WaitTime = cCfg.WaitTime
@@ -149,7 +145,7 @@ func (c consul) WatcherProds(cfg interface{}, ctx interface{}, name string, idle
 		cCtx := ctx.(*consulCtx)
 		if idleTime != nil {
 			cCtx.idleTime = *idleTime
-			cCtx.passTime = time.Now().UnixNano() + cCtx.idleTime
+			cCtx.passTime = time.Now().Unix() + cCtx.idleTime
 		}
 
 		Util.GoSubmit(func() {

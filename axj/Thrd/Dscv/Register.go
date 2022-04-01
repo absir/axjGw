@@ -45,9 +45,6 @@ func GetDscvCfg() *DscvCfg {
 			cfg.RegWait = 30
 		}
 
-		cfg.CheckDrt *= time.Second
-		cfg.RegWait *= time.Second
-		cfg.RegChkDrt *= int64(time.Second)
 		dscvCfg = cfg
 	}
 

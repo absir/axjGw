@@ -81,7 +81,7 @@ func (that *discoveryC) addRegs(reg *prodReg) {
 }
 
 func (that *discoveryC) doRegs() {
-	that.regsTime = time.Now().UnixNano() + GetDscvCfg().RegChkDrt
+	that.regsTime = time.Now().Unix() + GetDscvCfg().RegChkDrt
 	for i, reg := range that.regs {
 		if i == 0 {
 			if that.regsCheck {
@@ -117,7 +117,7 @@ type discoveryS struct {
 }
 
 func (that *discoveryS) ListProds() {
-	that.passTime = time.Now().UnixNano() + that.idleTime
+	that.passTime = time.Now().Unix() + that.idleTime
 	that.SetProds(that.dscvC.ListProds(that.ctx, that.name))
 }
 
@@ -201,7 +201,7 @@ func InstMngStart(create bool) {
 			}
 		}
 
-		go InstMng().CheckLoop(GetDscvCfg().CheckDrt)
+		go InstMng().CheckLoop(GetDscvCfg().CheckDrt * time.Second)
 	}
 }
 
@@ -289,7 +289,7 @@ func (that *DiscoveryMng) SetDiscoveryS(dscv string, name string, setFun func(pr
 		idleTime = dscvC.dscv.IdleTime(dscvC.cfg)
 	}
 
-	dscvS.idleTime = int64(idleTime) * int64(time.Second)
+	dscvS.idleTime = int64(idleTime)
 	dscvS.ctx = dscvS.dscvC.CtxProds()
 
 	// WatcherProds
@@ -330,7 +330,7 @@ func (that *DiscoveryMng) CheckLoop(checkDrt time.Duration) {
 	that.checkLoop = checkLoop
 	that.locker.Unlock()
 	for Kt.Active && checkLoop == that.checkLoop {
-		now := time.Now().UnixNano()
+		now := time.Now().Unix()
 		that.nowTime = now
 		if that.dscvCs != nil {
 			// 注册检查
