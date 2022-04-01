@@ -28,7 +28,7 @@ type MsgGrp struct {
 
 // 延长过期时间
 func (that *MsgGrp) retain() {
-	that.passTime = time.Now().UnixNano() + _msgMng.LiveDrt
+	that.passTime = time.Now().Unix() + _msgMng.LiveDrt
 }
 
 // 获取消息管理场客户端数量
@@ -109,7 +109,7 @@ func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 
 	client.cid = cid
 	client.gatewayI = Server.GetProdCid(cid).GetGWIClient()
-	client.idleTime = time.Now().UnixNano() + _msgMng.IdleDrt
+	client.idleTime = time.Now().Unix() + _msgMng.IdleDrt
 	return client
 }
 
@@ -363,7 +363,7 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 
 		// 消息直写测试
 		if _msgMng.pushDrTest && sess != nil && sess.clientMap != nil {
-			sTime := time.Now().UnixNano() / 1000000
+			sTime := time.Now().UnixMilli()
 			sess.clientMap.Range(func(key, value interface{}) bool {
 				client := value.(*MsgClient)
 				Util.GoSubmit(func() {
@@ -372,7 +372,7 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 				return true
 			})
 
-			AZap.Logger.Debug("Msg PushDrTest span " + strconv.FormatInt(time.Now().UnixNano()/1000000-sTime, 10) + "ms")
+			AZap.Logger.Debug("Msg PushDrTest span " + strconv.FormatInt(time.Now().UnixMilli()-sTime, 10) + "ms")
 
 		} else if sess != nil && msg.Get().Id > 0 {
 			sess.LastStart()

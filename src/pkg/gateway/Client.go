@@ -186,7 +186,7 @@ func (that *ClientG) UidRep() *gw.UIdRep {
 }
 
 func (that *GidConn) connKeep() {
-	that.connTime = time.Now().UnixNano() + Config.ConnDrt
+	that.connTime = time.Now().Unix() + Config.ConnDrt
 }
 
 func (that *ClientG) CidGid(req *gw.CidGidReq) {

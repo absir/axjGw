@@ -70,9 +70,9 @@ func initMsgMng() {
 		LastUri:       "",
 		ClearCron:     "0 0 3 * * *",
 		ClearDay:      30,
-		CheckDrt:      5000,
-		LiveDrt:       15000,
-		IdleDrt:       30000,
+		CheckDrt:      5,
+		LiveDrt:       15,
+		IdleDrt:       30,
 		ORwLocker:     true,
 		OClientLocker: true,
 		pushDrTest:    false,
@@ -82,9 +82,6 @@ func initMsgMng() {
 	// 配置处理
 	APro.SubCfgBind("msg", that)
 	that.LastLoad = that.LastLoad && that.LastMax > 0
-	that.CheckDrt = that.CheckDrt * time.Millisecond
-	that.LiveDrt = that.LiveDrt * int64(time.Millisecond)
-	that.IdleDrt = that.IdleDrt * int64(time.Millisecond)
 
 	// 最长消息队列
 	that.LastMaxAll = that.LastMax
@@ -130,9 +127,10 @@ func (that *msgMng) CheckStop() {
 func (that *msgMng) CheckLoop() {
 	checkLoop := time.Now().UnixNano()
 	that.checkLoop = checkLoop
+	checkDrt := that.CheckDrt * time.Second
 	for Kt.Active && checkLoop == that.checkLoop {
-		time.Sleep(that.CheckDrt)
-		that.checkTime = time.Now().UnixNano()
+		time.Sleep(checkDrt)
+		that.checkTime = time.Now().Unix()
 		that.grpMap.RangeBuff(that.checkRange, &that.checkBuff, 1024)
 	}
 }

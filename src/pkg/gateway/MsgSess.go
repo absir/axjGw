@@ -87,7 +87,7 @@ func (that *MsgSess) dirtyClientNum() {
 func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
 	ret := Server.Id32(rep)
 	if ret >= R_SUCC_MIN {
-		client.idleTime = time.Now().UnixNano() + _msgMng.IdleDrt
+		client.idleTime = time.Now().Unix() + _msgMng.IdleDrt
 		return true
 
 	} else if ret == Result_IdNone {

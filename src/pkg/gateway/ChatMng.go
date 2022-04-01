@@ -48,24 +48,24 @@ func ChatMng() *chatMng {
 
 func initChatMng() {
 	that := &chatMng{
-		FDrt:         3000,
+		FDrt:         3,
 		FStep:        20,
-		FTimeout:     9000,
-		FTimeoutD:    60000,
-		TStartsDrt:   3000,
+		FTimeout:     9,
+		FTimeoutD:    60,
+		TStartsDrt:   3,
 		TStartsLimit: 3000,
 		TStartLimit:  30,
-		TIdleLive:    30000,
+		TIdleLive:    30,
 		TPushQueue:   30,
 	}
 
 	// 配置处理
 	APro.SubCfgBind("chat", _chatMng)
-	that.FDrt = that.FDrt * time.Millisecond
-	that.FTimeout = that.FTimeout * int64(time.Millisecond)
-	that.FTimeoutD = that.FTimeoutD * int64(time.Millisecond)
-	that.TStartsDrt = that.TStartsDrt * int64(time.Millisecond)
-	that.TIdleLive = that.TIdleLive * int64(time.Millisecond)
+	that.FDrt = that.FDrt * time.Second
+	that.FTimeout = that.FTimeout * int64(time.Second)
+	that.FTimeoutD = that.FTimeoutD * int64(time.Second)
+	that.TStartsDrt = that.TStartsDrt * int64(time.Second)
+	that.TIdleLive = that.TIdleLive * int64(time.Second)
 	that.locker = new(sync.Mutex)
 	that.teamMap = cmap.NewCMapInit()
 	_chatMng = that

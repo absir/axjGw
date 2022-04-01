@@ -141,7 +141,7 @@ func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI
 	initHandler()
 	// 路由字典初始化
 	initUriDict()
-	that.Manager = ANet.NewManager(Handler, workId, Config.IdleDrt*int64(time.Millisecond), Config.CheckDrt*time.Millisecond)
+	that.Manager = ANet.NewManager(Handler, workId, Config.IdleDrt, Config.CheckDrt)
 	that.Context = context.Background()
 	that.gatewayISC = &gatewayISC{Server: gatewayI}
 }
@@ -210,11 +210,7 @@ func (that *server) initProdsDscv(name string, prods *Prods) {
 		delete(that.prodsMap, name)
 
 	} else {
-		if prods.Timeout > 0 {
-			// 超时时间单位为秒
-			prods.Timeout *= time.Second
-
-		} else {
+		if prods.Timeout <= 0 {
 			prods.Timeout = Config.ProdTimeout
 		}
 

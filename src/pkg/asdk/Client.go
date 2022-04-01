@@ -154,6 +154,8 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 		checkDrt = 1
 	}
 
+	that.checkDrt = time.Duration(checkDrt)
+
 	// 检查异步执行
 	that.checksAsync = Util.NewNotifierAsync(that.doChecks, that.locker, nil)
 

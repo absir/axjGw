@@ -3,6 +3,7 @@ module axj
 go 1.17
 
 require (
+	github.com/hashicorp/consul/api v1.12.0
 	github.com/json-iterator/go v1.1.12
 	github.com/mdlayher/arp v0.0.0-20191213142603-f72070a231fc
 	github.com/natefinch/lumberjack v2.0.0+incompatible
@@ -14,7 +15,6 @@ require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/hashicorp/consul/api v1.12.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-hclog v0.12.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
