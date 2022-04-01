@@ -114,7 +114,7 @@ func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
 }
 
 // 关闭消息客户端
-func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kick bool) bool {
+func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kick bool, disc bool) bool {
 	sess := that.sess
 	if sess == nil {
 		return false
@@ -122,6 +122,12 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 
 	if client == nil || (cid > 0 && cid != client.cid) {
 		return false
+	}
+
+	if disc {
+		// disc 先执行
+		client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, State: gw.GidState_Disc})
+		AZap.Debug("Grp Disc %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	}
 
 	if unique == "" {
@@ -133,12 +139,13 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 
 	client.connVer = 0
 	sess.dirtyClientNum()
-	if kick {
-		// 关闭通知
-		Util.GoSubmit(func() {
-			client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid})
-		})
+	if disc {
+		//client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, State: gw.GidState_Disc})
+		//AZap.Debug("Grp Disc %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 
+	} else if kick {
+		// 关闭通知
+		client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid})
 		AZap.Debug("Grp Kick %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 
 	} else {
@@ -221,8 +228,21 @@ func (that *MsgGrp) checkClientRun(client *MsgClient, unique string, limiter Uti
 	rep, _ := client.gatewayI.Alive(Server.Context, client.getCidReq())
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {
-		that.closeClient(client, client.cid, unique, false)
+		that.closeClient(client, client.cid, unique, false, false)
 	}
+}
+
+func (that *MsgGrp) CheckConn(cid int64, unique string, gLast bool) bool {
+	client := that.getClient(unique)
+	if client == nil || client.cid != cid {
+		return false
+	}
+
+	if gLast && client.subLastId == 0 {
+		return false
+	}
+
+	return true
 }
 
 // 消息客户端连接
@@ -240,12 +260,18 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 			return nil
 		}
 
-		that.closeClient(client, client.cid, unique, kick)
+		that.closeClient(client, client.cid, unique, kick, false)
 	}
 
 	sess := that.getOrNewSess(true)
 	client = that.newMsgClient(cid)
 	client.connVer = _msgMng.newConnVer()
+
+	// 连接状态
+	rep, _ := client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, Unique: unique, State: gw.GidState_Conn})
+	if !Server.Id32Succ(Server.Id32(rep)) {
+		return nil
+	}
 
 	if unique == "" {
 		sess.client = client
@@ -260,10 +286,10 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 }
 
 // 消息客户端关闭
-func (that *MsgGrp) Close(cid int64, unique string, connVer int32, kick bool) bool {
+func (that *MsgGrp) Close(cid int64, unique string, connVer int32, disc bool) bool {
 	client := that.getClient(unique)
 	if client != nil && (connVer == 0 || connVer == client.connVer) {
-		return that.closeClient(client, cid, unique, kick)
+		return that.closeClient(client, cid, unique, false, disc)
 	}
 
 	return false

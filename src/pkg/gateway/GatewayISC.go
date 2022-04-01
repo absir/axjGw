@@ -50,6 +50,14 @@ func (that gatewayISC) Rids(ctx context.Context, in *gw.RidsReq, opts ...grpc.Ca
 	return that.Server.Rids(ctx, in)
 }
 
+func (that gatewayISC) CidGid(ctx context.Context, in *gw.CidGidReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.CidGid(ctx, in)
+}
+
+func (that gatewayISC) GidCid(ctx context.Context, in *gw.CidGidReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.GidCid(ctx, in)
+}
+
 func (that gatewayISC) Last(ctx context.Context, in *gw.ILastReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
 	return that.Server.Last(ctx, in)
 }

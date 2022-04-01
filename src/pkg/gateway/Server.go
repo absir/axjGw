@@ -46,6 +46,10 @@ func (that *server) Id32(rep *gw.Id32Rep) int32 {
 	return rep.Id
 }
 
+func (that *server) Id32Succ(id int32) bool {
+	return id >= R_SUCC_MIN
+}
+
 func (that *server) Id64(rep *gw.Id64Rep) int64 {
 	if rep == nil {
 		return 1
@@ -437,9 +441,13 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			// 用户状态设置
 			clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
 			if clientG.Gid() != "" {
-				// 用户连接保持
-				clientG.connKeep()
-				clientG.connCheck(nil)
+				// Gid连接
+				that.gateway.GConn(Server.Context, &gw.GConnReq{
+					Cid:    clientG.Id(),
+					Gid:    clientG.Gid(),
+					Unique: clientG.Unique(),
+					Kick:   true,
+				})
 				if clientG.IsClosed() {
 					return
 				}

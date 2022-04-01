@@ -513,6 +513,13 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 	}
 
 	AZap.Debug("Grp SubLast %s : %d, %d, %d", that.grp.gid, client.cid, lastId, continuous)
+	if client.subLastId == 0 {
+		rep, _ := client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.grp.gid, Unique: unique, State: gw.GidState_GLast})
+		if !Server.Id32Succ(Server.Id32(rep)) {
+			return
+		}
+	}
+
 	// lastId <= 0 && lastId <= 0
 	if continuous <= 0 && lastId <= 0 {
 		// 只监听last通知，不接受subLast消息推送

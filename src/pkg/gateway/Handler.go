@@ -37,6 +37,7 @@ func initHandler() {
 }
 
 type handler struct {
+	checkBuff []interface{}
 }
 
 func (that *handler) ClientG(client ANet.Client) *ClientG {
@@ -44,8 +45,6 @@ func (that *handler) ClientG(client ANet.Client) *ClientG {
 }
 
 func (that *handler) OnOpen(client ANet.Client) {
-	clientG := that.ClientG(client)
-	clientG.connKeep()
 }
 
 func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) {
@@ -56,7 +55,6 @@ func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) 
 			Cid:    clientG.Id(),
 			Gid:    clientG.gid,
 			Unique: clientG.unique,
-			//Kick:   true,
 		})
 	}
 
@@ -178,20 +176,9 @@ func (that *handler) New(conn ANet.Conn) ANet.ClientM {
 
 func (that *handler) Check(time int64, client ANet.Client) {
 	clientG := that.ClientG(client)
-	if clientG.gid != "" && clientG.connTime < time {
-		clientG.connKeep()
-		if clientG.conning {
-			return
-		}
-
-		limiter := Server.getConnLimiter()
-		if limiter == nil {
-			clientG.connCheck(nil)
-
-		} else {
-			clientG.connCheck(limiter)
-			limiter.Add()
-		}
+	clientG.GidConn(time, clientG.gid, clientG.gidConn)
+	if clientG.gidMap != nil {
+		clientG.gidMap.RangeBuff(clientG.GidConnRange, &that.checkBuff, 1024)
 	}
 }
 

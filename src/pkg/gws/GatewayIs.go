@@ -182,6 +182,33 @@ func (g GatewayIs) Rids(ctx context.Context, req *gw.RidsReq) (*gw.Id32Rep, erro
 	return Result_Succ_Rep, nil
 }
 
+func (g GatewayIs) CidGid(ctx context.Context, req *gw.CidGidReq) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdCid(req.Cid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	client := gateway.Server.Manager.Client(req.Cid)
+	if client == nil {
+		return Result_IdNone_Rep, nil
+	}
+
+	gateway.Handler.ClientG(client).CidGid(req)
+	return Result_Succ_Rep, nil
+}
+
+func (g GatewayIs) GidCid(ctx context.Context, req *gw.CidGidReq) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdHashS(req.Gid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
+	if grp == nil || !grp.CheckConn(req.Cid, req.Unique, req.State == gw.GidState_GLast) {
+		return Result_Fail_Rep, nil
+	}
+
+	return Result_Succ_Rep, nil
+}
+
 func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, error) {
 	if !gateway.Server.IsProdHashS(req.Gid) {
 		return Result_ProdErr_Rep, nil
@@ -202,7 +229,7 @@ func (g GatewayIs) Disc(ctx context.Context, req *gw.GDiscReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	if !gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Close(req.Cid, req.Unique, req.ConnVer, req.Kick) {
+	if !gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Close(req.Cid, req.Unique, req.ConnVer, true) {
 		return Result_Fail_Rep, nil
 	}
 

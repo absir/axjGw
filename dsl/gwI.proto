@@ -6,6 +6,22 @@ import "dsl/gw.proto";
 
 option go_package = "./gw";
 
+enum GidState {
+    // 连接
+    Conn = 0;
+    // 拉取数据
+    GLast = 1;
+    // 断开
+    Disc = 2;
+}
+
+message CidGidReq {
+    int64 cid = 1;
+    string gid = 2;
+    string unique = 3;
+    GidState state = 4;
+}
+
 message Msg {
     string uri = 1;
     bytes data = 2;
@@ -55,6 +71,10 @@ service GatewayI {
     rpc rid(RidReq) returns (Id32Rep);
     // 服务编号
     rpc rids(RidsReq) returns (Id32Rep);
+    // 设置cidGid状态
+    rpc cidGid(CidGidReq) returns (Id32Rep);
+    // gidCid状态校验
+    rpc gidCid(CidGidReq) returns (Id32Rep);
     // 连接
     rpc conn(GConnReq) returns (Id32Rep);
     // 断开

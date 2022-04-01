@@ -5,6 +5,7 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/Util"
+	"axj/Thrd/cmap"
 	"axjGW/gen/gw"
 	"strconv"
 	"sync"
@@ -25,6 +26,13 @@ type ClientG struct {
 	conning  bool      // 连接中
 	connReq  *gw.GConnReq
 	uidRep   *gw.UIdRep
+	gidConn  *GidConn
+	gidMap   *cmap.CMap // gid状态
+}
+
+type GidConn struct {
+	connTime int64         // 最后连接时间 update set delete locker
+	req      *gw.CidGidReq // 连接请求
 }
 
 func (that *ClientG) Uid() int64 {
@@ -162,42 +170,6 @@ func (that *ClientG) GetProd(name string, rand bool) (*Prod, *Prods) {
 	return prods.GetProdHash(that.Hash()), prods
 }
 
-func (that *ClientG) connKeep() {
-	that.connTime = time.Now().Unix() + Config.ConnDrt
-}
-
-func (that *ClientG) connOut() {
-	that.conning = false
-}
-
-func (that *ClientG) connCheck(limiter Util.Limiter) {
-	if limiter != nil {
-		defer limiter.Done()
-	}
-
-	if that.conning {
-		return
-	}
-
-	if that.connReq == nil {
-		that.connReq = &gw.GConnReq{
-			Cid:    that.Id(),
-			Gid:    that.Gid(),
-			Unique: that.Unique(),
-			Kick:   true,
-		}
-	}
-
-	that.conning = true
-	defer that.connOut()
-	rep, err := Server.GetProdClient(that).GetGWIClient().Conn(Server.Context, that.connReq)
-	ret := Server.Id32(rep)
-	if ret < R_SUCC_MIN {
-		// 用户注册失败
-		that.Close(err, ret)
-	}
-}
-
 func (that *ClientG) UidRep() *gw.UIdRep {
 	if that.uidRep == nil {
 		uidRep := &gw.UIdRep{}
@@ -211,4 +183,109 @@ func (that *ClientG) UidRep() *gw.UIdRep {
 	}
 
 	return that.uidRep
+}
+
+func (that *GidConn) connKeep() {
+	that.connTime = time.Now().Unix() + Config.ConnDrt
+}
+
+func (that *ClientG) CidGid(req *gw.CidGidReq) {
+	if req.Gid == that.gid {
+		if req.State == gw.GidState_Disc {
+			that.gidConn = nil
+			return
+		}
+
+		conn := &GidConn{
+			req: req,
+		}
+
+		conn.connKeep()
+		that.gidConn = conn
+		return
+	}
+
+	if that.gidMap == nil {
+		if req.State == gw.GidState_Disc {
+			return
+		}
+	}
+
+	that.Locker().Lock()
+	if that.gidMap == nil {
+		that.gidMap = cmap.NewCMapInit()
+	}
+
+	that.Locker().Unlock()
+	if req.State == gw.GidState_Disc {
+		that.gidMap.Delete(that.gid)
+
+	} else {
+		conn := &GidConn{
+			req: req,
+		}
+
+		conn.connKeep()
+		that.gidMap.Store(that.gid, conn)
+	}
+}
+
+func (that *ClientG) GidConnRange(key, val interface{}) bool {
+	conn, _ := val.(*GidConn)
+	if conn == nil {
+		that.gidMap.Delete(key)
+
+	} else {
+		gid, _ := key.(string)
+		that.GidConn(Server.Manager.CheckTime(), gid, conn)
+	}
+
+	return true
+}
+
+func (that *ClientG) GidConn(time int64, gid string, conn *GidConn) {
+	if conn == nil || conn.connTime > time {
+		return
+	}
+
+	conn.connKeep()
+	limiter := Server.getConnLimiter()
+	if limiter == nil {
+		that.gidConnRun(limiter, gid, conn)
+
+	} else {
+		Util.GoSubmit(func() {
+			that.gidConnRun(limiter, gid, conn)
+		})
+
+		limiter.Add()
+	}
+}
+
+func (that *ClientG) getGidConn(gid string) *GidConn {
+	if gid == that.gid {
+		return that.gidConn
+	}
+
+	if that.gidMap == nil {
+		return nil
+	}
+
+	conn, _ := that.gidMap.Load(gid)
+	if conn == nil {
+		return nil
+	}
+
+	return conn.(*GidConn)
+}
+
+func (that *ClientG) gidConnRun(limiter Util.Limiter, gid string, conn *GidConn) {
+	if limiter != nil {
+		defer limiter.Done()
+	}
+
+	rep, err := Server.GetProdGid(gid).GetGWIClient().GidCid(Server.Context, conn.req)
+	if !Server.Id32Succ(Server.Id32(rep)) && conn == that.getGidConn(gid) {
+		that.Close(err, rep)
+	}
 }

@@ -321,8 +321,6 @@ message GDiscReq {
     string unique = 3;
     // 连接信息新版本
     int32 connVer = 4;
-    // 同时踢出旧客户端，下线，gw一般不用
-    bool kick = 5;
 }
 
 message GLastsReq {

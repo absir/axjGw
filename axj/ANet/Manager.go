@@ -135,6 +135,10 @@ func (that *Manager) KickDrt() time.Duration {
 	return that.handlerM.KickDrt()
 }
 
+func (that *Manager) CheckTime() int64 {
+	return that.checkTime
+}
+
 // 空闲检测
 func (that *Manager) CheckStop() {
 	that.checkLoop = -1
