@@ -44,27 +44,22 @@ func initConfig() {
 		CompressMin:   256,
 		DataMax:       256 << 10,
 		Encrypt:       true,
-		CheckDrt:      3000,
-		IdleDrt:       30000,
-		KickDrt:       6000,
-		AdapCheckDrt:  3000,
+		CheckDrt:      3,
+		IdleDrt:       30,
+		KickDrt:       6,
+		AdapCheckDrt:  3,
 		AdapCheckBuff: 128,
-		AdapTimeout:   60000,
+		AdapTimeout:   60,
 		AdapMaxId:     KtBytes.VINT_3_MAX,
 		CloseDelay:    30,
-		DialTimeout:   10000,
+		DialTimeout:   10,
 		Servs:         map[string]*Serv{},
 		ClientKeys:    map[string]string{},
-		AclTry:        3000,
-		AclTimeout:    30000,
+		AclTry:        3,
+		AclTimeout:    30,
 		GrpcAddr:      "0.0.0.0:8082",
 		GrpcIps:       KtStr.SplitByte("*", ',', true, 0, 0),
 	}
-
-	Config.CheckDrt *= time.Millisecond
-	Config.AdapTimeout *= int64(time.Millisecond)
-	Config.DialTimeout *= time.Millisecond
-	Config.AclTimeout *= time.Millisecond
 }
 
 func (that *config) AclCtx() context.Context {

@@ -56,17 +56,18 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 	if Config.Encrypt {
 		Processor.Encrypt = &ANet.EncryptSr{}
 	}
-	that.Manager = ANet.NewManager(Handler, wordId, Config.IdleDrt*int64(time.Millisecond), Config.CheckDrt*time.Millisecond)
+	that.Manager = ANet.NewManager(Handler, wordId, Config.IdleDrt, Config.CheckDrt)
 	initProtos()
 	initPrxMng()
 	// Acl服务客户端
 	if Config.Acl != "" {
 		go func() {
+			aclTry := Config.AclTry * time.Second
 			for {
 				client, err := grpc.Dial(Config.Acl, grpc.WithInsecure())
 				if err != nil {
 					AZap.Logger.Warn("Acl grpc.Dial Err "+Config.Acl, zap.Error(err))
-					time.Sleep(Config.AclTry * time.Millisecond)
+					time.Sleep(aclTry)
 					continue
 				}
 

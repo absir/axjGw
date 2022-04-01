@@ -48,7 +48,7 @@ func (that *PrxAdap) Close(err error) {
 }
 
 func (that *PrxAdap) OnKeep() {
-	that.passTime = time.Now().UnixNano() + Config.AdapTimeout
+	that.passTime = time.Now().Unix() + Config.AdapTimeout
 }
 
 func (that *PrxAdap) doInConn(inConn *net.TCPConn) {

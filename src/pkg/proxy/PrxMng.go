@@ -149,9 +149,10 @@ func (that *prxMng) CheckStop() {
 func (that *prxMng) CheckLoop() {
 	loopTime := time.Now().UnixNano()
 	that.loopTime = loopTime
+	checkDrt := Config.AdapCheckDrt * time.Second
 	for loopTime == that.loopTime {
-		time.Sleep(Config.AdapCheckDrt)
-		that.checkTime = time.Now().UnixNano()
+		time.Sleep(checkDrt)
+		that.checkTime = time.Now().Unix()
 		that.connMap.RangeBuff(that.checkRange, &that.checkBuff, Config.AdapCheckBuff)
 	}
 }

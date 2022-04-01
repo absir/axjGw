@@ -396,7 +396,7 @@ message DialProxyReq {
 
 message DialsProxyReq {
     repeated DialProxyReq dials = 1;
-    int64 timeout = 4;
+    int32 timeout = 4;
 }
 
 // 网关

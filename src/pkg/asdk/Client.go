@@ -154,7 +154,6 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 		checkDrt = 1
 	}
 
-	that.checkDrt = time.Duration(checkDrt) * time.Second
 	// 检查异步执行
 	that.checksAsync = Util.NewNotifierAsync(that.doChecks, that.locker, nil)
 
@@ -190,8 +189,8 @@ func (that *Client) SetAddr(addr string) {
 
 // 空闲检查配置
 func (that *Client) SetIdleTime(beatIdle int32, idleTimeout int32) {
-	that.beatIdle = int64(beatIdle) * int64(time.Nanosecond)
-	that.idleTimeout = int64(idleTimeout) * int64(time.Nanosecond)
+	that.beatIdle = int64(beatIdle)
+	that.idleTimeout = int64(idleTimeout)
 }
 
 // interface{}保护，避免sdk导出类型复杂
@@ -258,7 +257,7 @@ func (that *Client) Conn() *Adapter {
 	adapter.conn = aConn
 	adapter.locker = new(sync.Mutex)
 	// 空闲检查
-	adapter.lastTime = time.Now().UnixNano()
+	adapter.lastTime = time.Now().Unix()
 	if that.idleTimeout > 0 {
 		that.checkStart()
 	}
@@ -301,7 +300,7 @@ func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, ba
 
 	// 超时设置
 	if timeout > 0 {
-		rq.timeout = time.Now().UnixNano() + int64(timeout)*int64(time.Second)
+		rq.timeout = time.Now().Unix() + int64(timeout)
 	}
 
 	// 请求队列
@@ -419,7 +418,7 @@ func (that *Client) rqDelAry(el *list.Element) {
 func (that *Client) doChecks() {
 	adapter := that.adapter
 	looped := adapter != nil && adapter.looped
-	time := time.Now().UnixNano()
+	time := time.Now().Unix()
 	var el *list.Element
 	nxt := that.rqNext(nil)
 	for {
@@ -508,7 +507,7 @@ func (that *Client) checkStart() {
 func (that *Client) checkIn() int64 {
 	that.locker.Lock()
 	if that.checkTime == 0 {
-		checkTime := time.Now().UnixNano()
+		checkTime := time.Now().Unix()
 		if that.checkTime >= checkTime {
 			checkTime = that.checkTime + 1
 		}
@@ -533,8 +532,9 @@ func (that *Client) checkLoop() {
 	}
 
 	defer that.checkOut()
+	checkDrt := that.checkDrt * time.Second
 	for Kt.Active && checkTime == that.checkTime {
-		time.Sleep(that.checkDrt)
+		time.Sleep(checkDrt)
 		that.checksAsync.Start(nil)
 	}
 }
@@ -623,7 +623,7 @@ func (that *Client) reqLoop(adapter *Adapter) {
 		}
 
 		// 接收时间
-		adapter.lastTime = time.Now().UnixNano()
+		adapter.lastTime = time.Now().Unix()
 		// 非返回值 才需要路由压缩解密
 		if req < ANet.REQ_ONEWAY {
 			if uri == "" && uriI > 0 {
