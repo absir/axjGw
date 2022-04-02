@@ -214,7 +214,7 @@ func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	client := gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer)
+	client := gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer, true)
 	if client == nil {
 		return Result_Fail_Rep, nil
 	}
@@ -301,7 +301,7 @@ func (g GatewayIs) GQueue(ctx context.Context, req *gw.IGQueueReq) (*gw.Id32Rep,
 	}
 
 	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
-	client := grp.Conn(req.Cid, req.Unique, false, false)
+	client := grp.Conn(req.Cid, req.Unique, false, false, true)
 	if client == nil {
 		return Result_IdNone_Rep, nil
 	}
@@ -335,7 +335,15 @@ func (g GatewayIs) GLasts(ctx context.Context, req *gw.GLastsReq) (*gw.Id32Rep, 
 	}
 
 	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
-	client := grp.Conn(req.Cid, req.Unique, false, true)
+	client := grp.GetClient(req.Unique)
+	if client == nil || client.GetSubLastId() == 0 {
+		rep, err := gateway.Server.GetProdCid(req.Cid).GetGWIClient().CidGid(gateway.Server.Context, &gw.CidGidReq{Cid: req.Cid, Gid: req.Gid, Unique: req.Unique, State: gw.GidState_GLast})
+		if !gateway.Server.Id32Succ(gateway.Server.Id32(rep)) {
+			return rep, err
+		}
+	}
+
+	client = grp.Conn(req.Cid, req.Unique, false, true, false)
 	if client == nil {
 		return Result_IdNone_Rep, nil
 	}

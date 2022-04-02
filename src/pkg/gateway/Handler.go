@@ -49,15 +49,6 @@ func (that *handler) OnOpen(client ANet.Client) {
 
 func (that *handler) OnClose(client ANet.Client, err error, reason interface{}) {
 	clientG := that.ClientG(client)
-	if clientG.gid != "" {
-		// 断开连接通知
-		Server.GetProdClient(clientG).GetGWIClient().Disc(Server.Context, &gw.GDiscReq{
-			Cid:    clientG.Id(),
-			Gid:    clientG.gid,
-			Unique: clientG.unique,
-		})
-	}
-
 	if clientG.discBack {
 		Server.GetProds(Config.AclProd).GetProdHash(clientG.Hash()).GetAclClient().DiscBack(Server.Context, &gw.LoginBack{
 			Cid:    clientG.Id(),

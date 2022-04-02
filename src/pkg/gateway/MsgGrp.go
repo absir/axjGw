@@ -77,7 +77,7 @@ func (that *MsgGrp) getOrNewDbLocker() sync.Locker {
 }
 
 // 获取客户端
-func (that *MsgGrp) getClient(unique string) *MsgClient {
+func (that *MsgGrp) GetClient(unique string) *MsgClient {
 	sess := that.sess
 	if sess == nil {
 		return nil
@@ -126,16 +126,26 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 
 	if disc {
 		// disc 先执行
-		client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, State: gw.GidState_Disc})
+		if client.connVer >= 0 {
+			client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, State: gw.GidState_Disc})
+		}
+
 		AZap.Debug("Grp Disc %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	}
 
+	that.locker.Lock()
+	// 锁中删除
 	if unique == "" {
-		sess.client = nil
+		if sess.client == client {
+			sess.client = nil
+		}
 
 	} else if sess.clientMap != nil {
-		sess.clientMap.Delete(unique)
+		if that.GetClient(unique) == client {
+			sess.clientMap.Delete(unique)
+		}
 	}
+	that.locker.Unlock()
 
 	client.connVer = 0
 	sess.dirtyClientNum()
@@ -145,11 +155,15 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 
 	} else if kick {
 		// 关闭通知
-		client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid})
+		if client.connVer >= 0 {
+			client.gatewayI.Kick(Server.Context, &gw.KickReq{Cid: client.cid})
+		}
 		AZap.Debug("Grp Kick %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 
 	} else {
-		client.gatewayI.Close(Server.Context, &gw.CloseReq{Cid: client.cid})
+		if client.connVer >= 0 {
+			client.gatewayI.Close(Server.Context, &gw.CloseReq{Cid: client.cid})
+		}
 		AZap.Debug("Grp Close %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
 	}
 
@@ -228,12 +242,14 @@ func (that *MsgGrp) checkClientRun(client *MsgClient, unique string, limiter Uti
 	rep, _ := client.gatewayI.Alive(Server.Context, client.getCidReq())
 	ret := Server.Id32(rep)
 	if ret < R_SUCC_MIN {
+		// id不存在
+		client.connVer = -1
 		that.closeClient(client, client.cid, unique, false, false)
 	}
 }
 
 func (that *MsgGrp) CheckConn(cid int64, unique string, gLast bool) bool {
-	client := that.getClient(unique)
+	client := that.GetClient(unique)
 	if client == nil || client.cid != cid {
 		return false
 	}
@@ -246,8 +262,8 @@ func (that *MsgGrp) CheckConn(cid int64, unique string, gLast bool) bool {
 }
 
 // 消息客户端连接
-func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgClient {
-	client := that.getClient(unique)
+func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool, cidGid bool) *MsgClient {
+	client := that.GetClient(unique)
 	if client != nil {
 		if client.cid == cid {
 			if newVer {
@@ -267,18 +283,23 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 	client = that.newMsgClient(cid)
 	client.connVer = _msgMng.newConnVer()
 
-	// 连接状态
-	rep, _ := client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, Unique: unique, State: gw.GidState_Conn})
-	if !Server.Id32Succ(Server.Id32(rep)) {
-		return nil
+	if cidGid {
+		// 连接状态
+		rep, _ := client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.gid, Unique: unique, State: gw.GidState_Conn})
+		if !Server.Id32Succ(Server.Id32(rep)) {
+			return nil
+		}
 	}
 
+	that.locker.Lock()
+	// 锁中添加
 	if unique == "" {
 		sess.client = client
 
 	} else {
-		sess.getOrNewClientMap().Store(unique, client)
+		sess.getOrNewClientMap(false).Store(unique, client)
 	}
+	that.locker.Unlock()
 
 	sess.dirtyClientNum()
 	AZap.Debug("Grp Conn %s : %d, %s = %d", that.gid, cid, unique, sess.clientNum)
@@ -287,7 +308,7 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool) *MsgC
 
 // 消息客户端关闭
 func (that *MsgGrp) Close(cid int64, unique string, connVer int32, disc bool) bool {
-	client := that.getClient(unique)
+	client := that.GetClient(unique)
 	if client != nil && (connVer == 0 || connVer == client.connVer) {
 		return that.closeClient(client, cid, unique, false, disc)
 	}

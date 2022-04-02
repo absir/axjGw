@@ -56,14 +56,19 @@ var Result_IdNone = int32(gw.Result_IdNone)
 
 var SubLastSleep = 20 * time.Millisecond
 
-func (that *MsgSess) getOrNewClientMap() *cmap.CMap {
+func (that *MsgSess) getOrNewClientMap(locker bool) *cmap.CMap {
 	if that.clientMap == nil {
-		that.grp.locker.Lock()
+		if locker {
+			that.grp.locker.Lock()
+		}
+
 		if that.clientMap == nil {
 			that.clientMap = cmap.NewCMapInit()
 		}
 
-		that.grp.locker.Unlock()
+		if locker {
+			that.grp.locker.Unlock()
+		}
 	}
 
 	return that.clientMap
@@ -92,7 +97,8 @@ func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgC
 
 	} else if ret == Result_IdNone {
 		// 要不要立刻剔除呢? Conn 和 Close HASH不一致的情况下
-		that.grp.Close(client.cid, unique, client.connVer, false)
+		client.connVer = -1
+		that.grp.closeClient(client, client.cid, unique, false, false)
 	}
 
 	// 消息发送失败
@@ -513,12 +519,6 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 	}
 
 	AZap.Debug("Grp SubLast %s : %d, %d, %d", that.grp.gid, client.cid, lastId, continuous)
-	if client.subLastId == 0 {
-		rep, _ := client.gatewayI.CidGid(Server.Context, &gw.CidGidReq{Cid: client.cid, Gid: that.grp.gid, Unique: unique, State: gw.GidState_GLast})
-		if !Server.Id32Succ(Server.Id32(rep)) {
-			return
-		}
-	}
 
 	// lastId <= 0 && lastId <= 0
 	if continuous <= 0 && lastId <= 0 {

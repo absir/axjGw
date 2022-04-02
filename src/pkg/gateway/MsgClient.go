@@ -24,6 +24,10 @@ func (that *MsgClient) GetConnVer() int32 {
 	return that.connVer
 }
 
+func (that *MsgClient) GetSubLastId() int64 {
+	return that.subLastId
+}
+
 func (that *MsgClient) getCidReq() *gw.CidReq {
 	if that.cidReq == nil {
 		that.cidReq = &gw.CidReq{
