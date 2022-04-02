@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"axj/APro"
 	"axj/Kt/KtBytes"
 	"axj/Kt/KtStr"
 	"context"
@@ -60,6 +61,9 @@ func initConfig() {
 		GrpcAddr:      "0.0.0.0:8082",
 		GrpcIps:       KtStr.SplitByte("*", ',', true, 0, 0),
 	}
+
+	APro.SubCfgBind("proxy", Config)
+	Config.AclTimeout = Config.AclTimeout * time.Second
 }
 
 func (that *config) AclCtx() context.Context {

@@ -214,6 +214,7 @@ func (that *server) initProdsDscv(name string, prods *Prods) {
 			prods.Timeout = Config.ProdTimeout
 		}
 
+		prods.Timeout = prods.Timeout * time.Second
 		if prods.Dscv != "" {
 			// 服务发现
 			dscvName := prods.DscvName
