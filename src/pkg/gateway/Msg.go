@@ -191,7 +191,7 @@ func (that *MsgGorm) Clear(oId int64) error {
 }
 
 func (that *MsgGorm) UpdateF(id int64, fid int64) error {
-	return that.db.Exec("UPDATE msg_ds SET fid = ? WHERE id <= ?", fid, id).Error
+	return that.db.Exec("UPDATE msg_ds SET fid = ? WHERE id = ?", fid, id).Error
 }
 
 func (that *MsgGorm) FidGet(fid int64, gid string) int64 {
