@@ -11,6 +11,7 @@ import (
 	"axj/Thrd/Util"
 	"axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
+	"fmt"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 	"net"
@@ -21,25 +22,27 @@ import (
 )
 
 type config struct {
-	HttpAddr   string   // http服务地址
-	HttpWs     bool     // 启用ws网关
-	HttpWsPath string   // ws连接地址
-	SocketAddr string   // socket服务地址
-	SocketPoll bool     // socketPoll读取
-	FrameMax   int      // 最大帧数
-	GrpcAddr   string   // grpc服务地址
-	GrpcIps    []string // grpc调用Ip白名单，支持*通配
-	LastUrl    string   // 消息持久化，数据库连接
+	HttpAddr     string   // http服务地址
+	HttpWs       bool     // 启用ws网关
+	HttpWsPath   string   // ws连接地址
+	HttpWsOrigin bool     // ws Origin校验
+	SocketAddr   string   // socket服务地址
+	SocketPoll   bool     // socketPoll读取
+	FrameMax     int      // 最大帧数
+	GrpcAddr     string   // grpc服务地址
+	GrpcIps      []string // grpc调用Ip白名单，支持*通配
+	LastUrl      string   // 消息持久化，数据库连接
 }
 
 var Config = &config{
-	HttpAddr:   ":8682",
-	HttpWs:     true,
-	HttpWsPath: "/gw",
-	SocketAddr: ":8683",
-	SocketPoll: true,
-	GrpcAddr:   "0.0.0.0:8082",
-	GrpcIps:    KtStr.SplitByte("*", ',', true, 0, 0),
+	HttpAddr:     ":8682",
+	HttpWs:       true,
+	HttpWsPath:   "/gw",
+	HttpWsOrigin: false,
+	SocketAddr:   ":8683",
+	SocketPoll:   true,
+	GrpcAddr:     "0.0.0.0:8082",
+	GrpcIps:      KtStr.SplitByte("*", ',', true, 0, 0),
 }
 
 var WorkHash int
@@ -113,9 +116,27 @@ func main() {
 		if Config.HttpWs {
 			AZap.Logger.Info("StartHttpWs: " + Config.HttpWsPath)
 			// websocket连接
-			http.Handle(Config.HttpWsPath, websocket.Handler(func(conn *websocket.Conn) {
+			handler := websocket.Handler(func(conn *websocket.Conn) {
 				gateway.Server.ConnLoop(ANet.NewConnWebsocket(conn))
-			}))
+			})
+
+			if Config.HttpWsOrigin {
+				s := websocket.Server{Handler: handler, Handshake: func(config *websocket.Config, req *http.Request) (err error) {
+					config.Origin, err = websocket.Origin(config, req)
+					if err == nil && config.Origin == nil {
+						return fmt.Errorf("null origin")
+					}
+					return err
+				}}
+				http.Handle(Config.HttpWsPath, s)
+
+			} else {
+				s := websocket.Server{Handler: handler, Handshake: func(config *websocket.Config, req *http.Request) error {
+					//websocket.Origin(config, req)
+					return nil
+				}}
+				http.Handle(Config.HttpWsPath, s)
+			}
 		}
 
 		go func() {

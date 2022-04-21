@@ -165,7 +165,8 @@ func (that *ConnWebsocket) Close(immed bool) {
 }
 
 func (that *ConnWebsocket) RemoteAddr() string {
-	return Kt.IpAddr(that.Conn().RemoteAddr())
+	request := that.Conn().Request()
+	return Kt.IpAddrStr(request.RemoteAddr)
 }
 
 func (that *ConnWebsocket) ConnPoll() *ConnPoll {

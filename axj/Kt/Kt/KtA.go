@@ -173,7 +173,10 @@ func IpAddr(addr net.Addr) string {
 		return uAddr.IP.String()
 	}
 
-	str := addr.String()
+	return IpAddrStr(addr.String())
+}
+
+func IpAddrStr(str string) string {
 	idx := strings.IndexByte(str, ':')
 	if idx >= 0 {
 		return str[:idx]
