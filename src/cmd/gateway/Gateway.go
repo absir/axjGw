@@ -132,7 +132,7 @@ func main() {
 
 			} else {
 				s := websocket.Server{Handler: handler, Handshake: func(config *websocket.Config, req *http.Request) error {
-					//websocket.Origin(config, req)
+					websocket.Origin(config, req)
 					return nil
 				}}
 				http.Handle(Config.HttpWsPath, s)
