@@ -138,6 +138,7 @@ type rqDt struct {
 	data    []byte
 	encrypt bool
 	rqI     int32
+	req     int32 // 自定义发送
 }
 
 func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int, dataMax int, checkDrt int, rqIMax int, opt Opt) *Client {
@@ -281,6 +282,51 @@ func (that *Client) Loop(timeout int32, back func(string, []byte, Buffer)) {
 	that.Req("", nil, false, timeout, back)
 }
 
+// 自由发送
+func (that *Client) Send(req int32, uri string, uriI int32, data []byte, encrypt bool, timeout int32) {
+	if req <= 0 {
+		return
+	}
+
+	adapter := that.Conn()
+	if adapter == nil {
+		// 直接断开
+		return
+	}
+
+	// 请求对象
+	rq := &rqDt{
+		adapter: adapter,
+		uri:     uri,
+		data:    data,
+		encrypt: encrypt,
+		req:     req,
+		rqI:     uriI,
+	}
+
+	// 超时设置
+	if timeout > 0 {
+		rq.timeout = time.Now().Unix() + int64(timeout)
+	}
+
+	that.locker.Lock()
+	that.rqAry.PushBack(rq)
+	that.locker.Unlock()
+	// 超时检测
+	that.checkStart()
+	// 发送触发
+	if adapter.looped {
+		that.checksAsync.Start(nil)
+	}
+}
+
+// 已读消息
+func (that *Client) Read(tid string, lastId int64, timeout int32) {
+	data := make([]byte, 8)
+	KtBytes.SetInt64(data, 0, lastId, nil)
+	that.Send(ANet.REQ_READ, tid, 0, data, false, timeout)
+}
+
 func (that *Client) Req(uri string, data []byte, encrypt bool, timeout int32, back func(string, []byte, Buffer)) {
 	adapter := that.Conn()
 	if adapter == nil {
@@ -337,7 +383,9 @@ func (that *Client) onRep(rqI int32, rq *rqDt, err string, data []byte, buffer B
 		rq = that.rqGet(rqI)
 
 	} else if rqI <= 0 {
-		rqI = rq.rqI
+		if rq.req <= 0 {
+			rqI = rq.rqI
+		}
 	}
 
 	if rq != nil {

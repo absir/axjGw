@@ -151,6 +151,8 @@ message TeamRep {
     repeated Member members = 2;
     // 读扩散、写扩散
     bool readFeed = 3;
+    // 未读消息扩散
+    bool unreadFeed = 4;
 }
 
 message AddrReq {
@@ -368,6 +370,8 @@ message TPushReq {
     bool queue = 7;
     // 唯一标识
     string unique = 8;
+    // 未读消息扩散
+    bool unreadFeed = 9;
 }
 
 message RevokeReq {

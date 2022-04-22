@@ -479,7 +479,8 @@ func (g GatewayIs) Read(ctx context.Context, req *gw.ReadReq) (*gw.Id32Rep, erro
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
+	var grp *gateway.MsgGrp = nil
+	grp = gateway.MsgMng().GetMsgGrp(req.Gid)
 	if grp != nil && grp.GetSess() != nil {
 		grp.GetSess().ReadLastId(req.Tid, req.LastId)
 
@@ -498,7 +499,14 @@ func (g GatewayIs) Unread(ctx context.Context, req *gw.UnreadReq) (*gw.Id32Rep, 
 		return Result_ProdErr_Rep, nil
 	}
 
-	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
+	var grp *gateway.MsgGrp = nil
+	if req.Num > 0 {
+		grp = gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
+
+	} else {
+		grp = gateway.MsgMng().GetMsgGrp(req.Gid)
+	}
+
 	if grp == nil {
 		return Result_Fail_Rep, nil
 	}

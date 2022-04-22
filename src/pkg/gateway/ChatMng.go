@@ -349,28 +349,49 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 		gid := member.Gid
 		// 群消息不需要再发送给自己
 		if gid != msgTeam.Sid {
-			if member.Nofeed {
-				// 不推送到gid， 需要主动拉取GidForTid
-				gid = MsgMng().GidForTid(gid, that.tid)
-			}
-
-			rep, _ := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
-				Gid:    gid,
-				Uri:    msgTeam.Uri,
-				Data:   msgTeam.Data,
-				Qs:     qs,
-				Fid:    msgTeam.Id,
-				Unique: msgTeam.Unique,
-			})
-
-			var fid = Server.Id64(rep)
-			if !Server.Id64Succ(fid, true) {
-				// 已执行索引
-				if db {
-					MsgMng().Db.TeamUpdate(msgTeam, indexDid)
+			if msgTeam.UnreadFeed != 2 {
+				if member.Nofeed || msgTeam.UnreadFeed > 0 {
+					// 不推送到gid， 需要主动拉取GidForTid
+					gid = MsgMng().GidForTid(gid, that.tid)
 				}
 
-				return false
+				rep, _ := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
+					Gid:    gid,
+					Uri:    msgTeam.Uri,
+					Data:   msgTeam.Data,
+					Qs:     qs,
+					Fid:    msgTeam.Id,
+					Unique: msgTeam.Unique,
+				})
+
+				var fid = Server.Id64(rep)
+				if !Server.Id64Succ(fid, true) {
+					// 已执行索引
+					if db {
+						MsgMng().Db.TeamUpdate(msgTeam, indexDid)
+					}
+
+					return false
+				}
+			}
+
+			if msgTeam.UnreadFeed > 0 {
+				// 未读消息发送
+				gid = member.Gid
+				rep, _ := Server.GetProdGid(gid).GetGWIClient().Unread(Server.Context, &gw.UnreadReq{
+					Gid:    gid,
+					Tid:    msgTeam.Tid,
+					LastId: msgTeam.Id,
+				})
+
+				if rep == nil || !Server.Id32Succ(rep.Id) {
+					// 已执行索引
+					if db {
+						MsgMng().Db.TeamUpdate(msgTeam, indexDid)
+					}
+
+					return false
+				}
 			}
 		}
 
@@ -453,18 +474,21 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 		qs = 3
 	}
 
+	var team *gw.TeamRep = nil
+	mLen := 0
+	unreadFeed := false
 	if !req.ReadFeed {
 		if MsgMng().Db == nil {
 			qs = 2
 		}
 
-		team := TeamMng().GetTeam(req.Tid)
+		team = TeamMng().GetTeam(req.Tid)
 		if team == nil {
 			return false, ANet.ERR_NOWAY
 		}
 
+		unreadFeed = team.UnreadFeed || req.UnreadFeed
 		if !team.ReadFeed {
-			mLen := 0
 			if team.Members != nil {
 				mLen = len(team.Members)
 			}
@@ -507,6 +531,10 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 				Uri:     req.Uri,
 				Data:    req.Data,
 				Unique:  req.Unique,
+			}
+
+			if unreadFeed {
+				msgTeam.UnreadFeed = 1
 			}
 
 			msgDb := MsgMng().Db != nil && qs == 3
@@ -563,6 +591,43 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 	var fid = Server.Id64(rep)
 	if !Server.Id64Succ(fid, true) {
 		return false, err
+	}
+
+	if unreadFeed && mLen > 0 {
+		// 未读扩散对象
+		msgTeam := &MsgTeam{
+			Id:         fid,
+			Sid:        req.FromId,
+			Tid:        req.Tid,
+			Members:    team.Members,
+			Index:      0,
+			Rand:       int(rand.Int31n(int32(mLen))),
+			Uri:        req.Uri,
+			Data:       req.Data,
+			Unique:     req.Unique,
+			UnreadFeed: 2,
+		}
+
+		// 未读扩散持久化
+		msgDb := MsgMng().Db != nil && qs == 3
+		if msgTeam.Id <= 0 {
+			msgTeam.Id = MsgMng().idWorkder.Generate()
+		}
+
+		if msgDb {
+			err = MsgMng().Db.TeamInsert(msgTeam)
+			if err != nil {
+				return false, err
+			}
+		}
+
+		// 启动扩散任务
+		if msgDb {
+			that.TeamStart(req.Tid, nil)
+
+		} else {
+			that.TeamStart(req.Tid, msgTeam)
+		}
 	}
 
 	return true, nil

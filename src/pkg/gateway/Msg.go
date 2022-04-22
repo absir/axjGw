@@ -99,16 +99,17 @@ func NewMsg(uri string, data []byte, unique string) Msg {
 }
 
 type MsgTeam struct {
-	Id       int64        `gorm:"primary_key"`                          // 消息编号
-	Sid      string       `gorm:""`                                     // 发送者编号
-	Tid      string       `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
-	Members  []*gw.Member `gorm:"-"`                                    // 消息会员
-	MembersS string       `gorm:"column:members;type:json"`             // 消息会员存储
-	Index    int          `gorm:""`                                     // 发送进度
-	Rand     int          `gorm:""`                                     // 发送顺序随机
-	Uri      string       `gorm:"type:varchar(255);"`                   // 消息路由
-	Data     []byte       `gorm:""`                                     // 消息内容
-	Unique   string       `gorm:""`                                     // 唯一消息
+	Id         int64        `gorm:"primary_key"`                          // 消息编号
+	Sid        string       `gorm:""`                                     // 发送者编号
+	Tid        string       `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
+	Members    []*gw.Member `gorm:"-"`                                    // 消息会员
+	MembersS   string       `gorm:"column:members;type:json"`             // 消息会员存储
+	Index      int          `gorm:""`                                     // 发送进度
+	Rand       int          `gorm:""`                                     // 发送顺序随机
+	Uri        string       `gorm:"type:varchar(255);"`                   // 消息路由
+	Data       []byte       `gorm:""`                                     // 消息内容
+	Unique     string       `gorm:""`                                     // 唯一消息
+	UnreadFeed int          `gorm:""`                                     // 未读消息扩散类型 0 不扩散 1 读扩散 2 写扩散
 }
 
 type MsgRead struct {
