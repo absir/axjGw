@@ -59,7 +59,7 @@ type Opt interface {
 	   },
 	*/
 	OnState(adapter *Adapter, state int, err string, data []byte, buffer Buffer)
-	// 保留通道消息处理
+	// 保留通道消息处理 REQ_READ 未读消息 uri = gid || gid/uri
 	OnReserve(adapter *Adapter, req int32, uri string, uriI int32, data []byte, buffer Buffer)
 }
 

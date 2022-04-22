@@ -67,13 +67,34 @@ func (that *MsgClient) unreadPushRange(key, val interface{}) bool {
 		return true
 	}
 
-	rep, err := Server.GetProdCid(that.cid).GetGWIClient().Rep(Server.Context, &gw.RepReq{
+	req := &gw.RepReq{
 		Cid:  that.cid,
 		Req:  ANet.REQ_READ,
 		Uri:  gid,
 		UriI: unread.num,
-	})
+	}
 
+	data := unread.data
+	if data != nil {
+		CompressorCData(data.data, &data.cData, &data.cDid)
+		if data.gidUri == "" {
+			data.gidUri = gid + "/" + data.uri
+		}
+
+		req.Uri = data.gidUri
+		req.Data = data.cData
+		if data.cDid {
+			req.CDid = 1
+
+		} else {
+			req.CDid = 2
+		}
+
+		req.Encry = data.entry
+		req.Isolate = true
+	}
+
+	rep, err := Server.GetProdCid(that.cid).GetGWIClient().Rep(Server.Context, req)
 	if that.grp.sess.OnResult(rep, err, ER_PUSH, that) {
 		that.unreadVer = unread.ver
 	}

@@ -281,6 +281,6 @@ func (that *msgMng) UnreadTids(gid string, tids []string) {
 	sess := grp.GetOrNewSess(true)
 	for _, num := range nums {
 		// 未读消息数设置
-		sess.UnreadRecv(that.TidFromGidForTid(num.Gid), num.Num, 0)
+		sess.UnreadRecv(that.TidFromGidForTid(num.Gid), num.Num, 0, num.Uri, num.Data, true)
 	}
 }

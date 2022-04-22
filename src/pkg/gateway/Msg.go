@@ -4,9 +4,7 @@ import (
 	"axj/ANet"
 	"axj/Kt/Kt"
 	"axj/Kt/KtJson"
-	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"strings"
 )
@@ -40,34 +38,7 @@ func (that *MsgD) CData() ([]byte, bool) {
 		return that.cData, that.cDid
 	}
 
-	if that.Data == nil {
-		return that.Data, false
-	}
-
-	if Processor.Compress == nil {
-		that.cData = that.Data
-		return that.cData, that.cDid
-	}
-
-	dLen := len(that.Data)
-	if dLen <= 0 || dLen < Processor.CompressMin {
-		that.cData = that.Data
-		return that.cData, that.cDid
-	}
-
-	cData, err := Processor.Compress.Compress(that.Data)
-	if cData == nil || err != nil || len(cData) >= dLen {
-		if err != nil {
-			// 压缩错误
-			AZap.Logger.Warn("Msg CData Err", zap.Error(err))
-		}
-
-		that.cData = that.Data
-		return that.cData, that.cDid
-	}
-
-	that.cData = cData
-	that.cDid = true
+	CompressorCData(that.Data, &that.cData, &that.cDid)
 	return that.cData, that.cDid
 }
 
@@ -118,8 +89,10 @@ type MsgRead struct {
 }
 
 type MsgReadNum struct {
-	Gid string
-	Num int32
+	Gid  string
+	Num  int32
+	Uri  string
+	Data []byte
 }
 
 type MsgDb interface {
@@ -139,7 +112,6 @@ type MsgDb interface {
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
 	Revoke(id int64, gid string, push func() error) error                              // 撤销消息
 	Read(gid string, lastId int64) error                                               // 消息已读
-	UnRead(gid string) int                                                             // 未读消息
 	UnReads(gids []string) []MsgReadNum                                                // 未读消息列表
 }
 
@@ -355,6 +327,9 @@ func (that *MsgGorm) UnReads(gids []string) []MsgReadNum {
 	}
 
 	var nums []MsgReadNum = nil
-	that.db.Raw("SELECT COUNT(a.id) as num, a.gid as gid FROM msg_ds LEFT JOIN msg_reads as b ON b.gid = a.gid WHERE a.gid IN (" + sb.String() + ") AND a.id > b.lastId GROUP BY a.gid").Find(&nums)
+	that.db.Raw("SELECT a.num as num, a.gid as gid, b.uri as uri, b.data as data FROM (" +
+		"SELECT COUNT(a.id) as num, gid as gid, MAX(id) as id FROM msg_ds LEFT JOIN msg_reads as b ON b.gid = a.gid WHERE a.gid IN (" + sb.String() + ") AND a.id > b.lastId GROUP BY a.gid" +
+		") as a LEFT JOIN msg_ds as b ON b.id = a.id",
+	).Find(&nums)
 	return nums
 }

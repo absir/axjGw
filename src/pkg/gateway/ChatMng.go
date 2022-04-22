@@ -382,6 +382,9 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 					Gid:    gid,
 					Tid:    msgTeam.Tid,
 					LastId: msgTeam.Id,
+					Uri:    msgTeam.Uri,
+					Data:   msgTeam.Data,
+					Entry:  true,
 				})
 
 				if rep == nil || !Server.Id32Succ(rep.Id) {

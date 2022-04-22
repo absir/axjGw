@@ -190,3 +190,29 @@ func (that *handler) Check(time int64, client ANet.Client) {
 
 func (that *handler) CheckDone(time int64) {
 }
+
+func CompressorCData(data []byte, cDataP *[]byte, cDidP *bool) {
+	if *cDataP != nil || data == nil {
+		return
+	}
+
+	dLen := len(data)
+	if Processor.Compress == nil || dLen <= 0 || dLen < Processor.CompressMin {
+		*cDataP = data
+		return
+	}
+
+	cData, err := Processor.Compress.Compress(data)
+	if cData == nil || err != nil || len(cData) >= dLen {
+		if err != nil {
+			// 压缩错误
+			AZap.Logger.Warn("Msg CData Err", zap.Error(err))
+		}
+
+		*cDataP = data
+		return
+	}
+
+	*cDataP = cData
+	*cDidP = true
+}

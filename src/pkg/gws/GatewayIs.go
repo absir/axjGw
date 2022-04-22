@@ -246,7 +246,11 @@ func (g GatewayIs) Rep(ctx context.Context, req *gw.RepReq) (*gw.Id32Rep, error)
 		return Result_IdNone_Rep, nil
 	}
 
-	err := client.Get().Rep(true, req.Req, req.Uri, req.UriI, req.Data, false, false, 0)
+	if ctx != gateway.Server.Context {
+		req.Isolate = false
+	}
+
+	err := client.Get().RepCData(true, req.Req, req.Uri, req.UriI, req.Data, req.CDid, req.Isolate, req.Encry, 0)
 	if err != nil {
 		return Result_Fail_Rep, err
 	}
@@ -512,7 +516,7 @@ func (g GatewayIs) Unread(ctx context.Context, req *gw.UnreadReq) (*gw.Id32Rep, 
 	}
 
 	// 未读消息
-	grp.GetOrNewSess(true).UnreadRecv(req.Tid, req.Num, req.LastId)
+	grp.GetOrNewSess(true).UnreadRecv(req.Tid, req.Num, req.LastId, req.Uri, req.Data, req.Entry)
 	return Result_Succ_Rep, nil
 }
 
@@ -530,7 +534,7 @@ func (g GatewayIs) Unreads(ctx context.Context, reqs *gw.UnreadReqs) (*gw.Id32Re
 		sess := grp.GetOrNewSess(true)
 		for _, req := range reqs.Reqs {
 			// 未读消息
-			sess.UnreadRecv(req.Tid, req.Num, req.LastId)
+			sess.UnreadRecv(req.Tid, req.Num, req.LastId, req.Uri, req.Data, req.Entry)
 		}
 	}
 

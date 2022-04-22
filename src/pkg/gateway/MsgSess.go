@@ -797,7 +797,7 @@ func (that *MsgSess) ReadLastId(gid string, lastId int64) {
 }
 
 // 未读消息 id > 0 增加一条未读消息
-func (that *MsgSess) UnreadRecv(gid string, num int32, lastId int64) {
+func (that *MsgSess) UnreadRecv(gid string, num int32, lastId int64, uri string, data []byte, entry bool) {
 	unreads := that.unreads
 	if unreads == nil {
 		that.grp.locker.Lock()
@@ -820,6 +820,14 @@ func (that *MsgSess) UnreadRecv(gid string, num int32, lastId int64) {
 		unread.num = num
 	}
 
+	if uri != "" || data != nil {
+		unread.data = &SessUnreadData{
+			uri:   uri,
+			data:  data,
+			entry: entry,
+		}
+	}
+
 	if lastId > 0 {
 		// 未读消息数++
 		unread.num++
@@ -832,7 +840,18 @@ func (that *MsgSess) UnreadRecv(gid string, num int32, lastId int64) {
 }
 
 type SessUnread struct {
+	ver    int32
 	num    int32
 	lastId int64
-	ver    int32
+	data   *SessUnreadData
+}
+
+type SessUnreadData struct {
+	// 最后一条消息内容
+	uri    string
+	data   []byte
+	cData  []byte
+	cDid   bool
+	entry  bool
+	gidUri string
 }

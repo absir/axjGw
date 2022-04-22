@@ -263,6 +263,7 @@ func (that *ClientCnn) Rep(bufferP bool, req int32, uri string, uriI int32, data
 	return that.RepCData(bufferP, req, uri, uriI, data, 0, isolate, encry, id)
 }
 
+// cData 1 已压缩 > 1 无法压缩
 func (that *ClientCnn) RepCData(bufferP bool, req int32, uri string, uriI int32, data []byte, cData int32, isolate bool, encry bool, id int64) error {
 	handler := that.handler
 	if handler == nil {

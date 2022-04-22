@@ -32,6 +32,12 @@ message RepReq {
     int32  uriI = 4;
     // 写入数据
     bytes data = 5;
+    // 已压缩
+    int32 cDid = 6; // 1 已压缩 2 已尝试压缩，未能压缩
+    // 加密
+    bool encry = 7;
+    // 独立数据
+    bool Isolate = 8;
 }
 
 message Msg {
@@ -76,6 +82,9 @@ message UnreadReq {
     string tid = 2;
     int32  num = 3;
     int64 lastId = 4;
+    string uri = 5;
+    bytes  data = 6;
+    bool entry = 7;
 }
 
 message UnreadReqs {
