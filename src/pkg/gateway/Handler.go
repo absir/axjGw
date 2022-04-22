@@ -64,7 +64,7 @@ func (that *handler) OnKeep(client ANet.Client, req bool) {
 }
 
 func (that *handler) OnReq(client ANet.Client, req int32, uri string, uriI int32, data []byte) bool {
-	if req >= ANet.REQ_ONEWAY {
+	if req >= ANet.REQ_ONEWAY || req == ANet.REQ_READ {
 		return false
 	}
 
@@ -75,12 +75,11 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 	if req == ANet.REQ_READ {
 		clientG := that.ClientG(client)
 		if clientG.gid != "" {
-			// Server.GetProdGid(clientG.gid).GetGWIClient()
-			// 已读消息
-			if MsgMng().Db != nil {
-
-				MsgMng().Db.Read(MsgMng().GidForTid(clientG.gid, uri), KtBytes.GetInt64(data, 0, nil))
-			}
+			Server.GetProdGid(clientG.gid).GetGWIClient().Read(Server.Context, &gw.ReadReq{
+				Gid:    clientG.gid,
+				Tid:    uri,
+				LastId: KtBytes.GetInt64(data, 0, nil),
+			})
 		}
 
 		return
