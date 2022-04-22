@@ -543,7 +543,14 @@ func (that *Client) rqSend(rq *rqDt) {
 		decryKey = nil
 	}
 
-	err := that.processor.Rep(that.sendP, adapter.conn, decryKey, that.compress, rq.rqI, rq.uri, 0, rq.data, false, 0)
+	var err error = nil
+	if rq.req > 0 {
+		err = that.processor.Rep(that.sendP, adapter.conn, decryKey, that.compress, rq.req, rq.uri, rq.rqI, rq.data, false, 0)
+
+	} else {
+		err = that.processor.Rep(that.sendP, adapter.conn, decryKey, that.compress, rq.rqI, rq.uri, 0, rq.data, false, 0)
+	}
+
 	// 发送错误处理
 	that.onError(adapter, err, true)
 }
