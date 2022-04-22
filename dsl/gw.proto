@@ -120,6 +120,8 @@ message LoginRep {
     optional GLastsReq lastsReq = 14;
     // 获取管道
     repeated GLastsReq lastsReqs = 15;
+    // 未读消息列表
+    repeated string unreadTids = 16;
 }
 
 message LoginBack {
@@ -399,6 +401,11 @@ message DialsProxyReq {
     int32 timeout = 4;
 }
 
+message UnreadTids {
+    string gid = 1;
+    repeated string tids = 2;
+}
+
 // 网关
 service Gateway {
     // uid查询
@@ -443,4 +450,6 @@ service Gateway {
     rpc dialProxy(DialProxyReq) returns (BoolRep);
     // 连接代理复数
     rpc dialsProxy(DialsProxyReq) returns (BoolsRep);
+    // 未读消息.查询
+    rpc unreadTids(UnreadTids) returns (Id32Rep);
 }

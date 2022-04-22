@@ -47,7 +47,7 @@ func (that *MsgGrp) GetSess() *MsgSess {
 }
 
 // 获取或创建消息管理场
-func (that *MsgGrp) getOrNewSess(force bool) *MsgSess {
+func (that *MsgGrp) GetOrNewSess(force bool) *MsgSess {
 	if that.sess == nil && force {
 		that.locker.Lock()
 		if that.sess == nil {
@@ -98,8 +98,10 @@ func (that *MsgGrp) GetClient(unique string) *MsgClient {
 }
 
 // 创建消息客户端
-func (that *MsgGrp) newMsgClient(cid int64) *MsgClient {
+func (that *MsgGrp) newMsgClient(cid int64, unique string) *MsgClient {
 	client := new(MsgClient)
+	client.grp = that
+	client.unique = unique
 	if _msgMng.OClientLocker {
 		client.locker = new(sync.Mutex)
 
@@ -179,7 +181,7 @@ func (that *MsgGrp) checkClients() {
 
 	clientNum := 0
 	if sess.client != nil {
-		that.checkClient(sess.client, "")
+		that.checkClient(sess.client)
 		clientNum += 1
 	}
 
@@ -193,12 +195,11 @@ func (that *MsgGrp) checkClients() {
 
 func (that *MsgGrp) checkRange(key, val interface{}) bool {
 	client, _ := val.(*MsgClient)
-	unique, _ := key.(string)
-	that.checkClient(client, unique)
+	that.checkClient(client)
 	return true
 }
 
-func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
+func (that *MsgGrp) checkClient(client *MsgClient) {
 	if client == nil {
 		return
 	}
@@ -214,11 +215,11 @@ func (that *MsgGrp) checkClient(client *MsgClient, unique string) {
 
 	limiter := Server.getLiveLimiter()
 	if limiter == nil {
-		that.checkClientRun(client, unique, nil)
+		that.checkClientRun(client, nil)
 
 	} else {
 		Util.GoSubmit(func() {
-			that.checkClientRun(client, unique, limiter)
+			that.checkClientRun(client, limiter)
 		})
 		limiter.Add()
 	}
@@ -228,7 +229,7 @@ func (that *MsgGrp) checkClientOut(client *MsgClient) {
 	client.checking = false
 }
 
-func (that *MsgGrp) checkClientRun(client *MsgClient, unique string, limiter Util.Limiter) {
+func (that *MsgGrp) checkClientRun(client *MsgClient, limiter Util.Limiter) {
 	if limiter != nil {
 		defer limiter.Done()
 	}
@@ -244,7 +245,7 @@ func (that *MsgGrp) checkClientRun(client *MsgClient, unique string, limiter Uti
 	if ret < R_SUCC_MIN {
 		// id不存在
 		client.connVer = -1
-		that.closeClient(client, client.cid, unique, false, false)
+		that.closeClient(client, client.cid, client.unique, false, false)
 	}
 }
 
@@ -279,8 +280,8 @@ func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool, cidGi
 		that.closeClient(client, client.cid, unique, kick, false)
 	}
 
-	sess := that.getOrNewSess(true)
-	client = that.newMsgClient(cid)
+	sess := that.GetOrNewSess(true)
+	client = that.newMsgClient(cid, unique)
 	client.connVer = _msgMng.newConnVer()
 
 	if cidGid {
@@ -355,7 +356,7 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 		}
 	}
 
-	sess := that.getOrNewSess(queue)
+	sess := that.GetOrNewSess(queue)
 	if qs <= 1 {
 		if sess == nil {
 			return 0, false, ERR_NOWAY
@@ -388,7 +389,7 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 			sess.clientMap.Range(func(key, value interface{}) bool {
 				client := value.(*MsgClient)
 				Util.GoSubmit(func() {
-					sess.Push(msgD, client, key.(string), true)
+					sess.Push(msgD, client, true)
 				})
 				return true
 			})

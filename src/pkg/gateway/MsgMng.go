@@ -40,6 +40,7 @@ type msgMng struct {
 	locker        sync.Locker
 	connVer       int32
 	grpMap        *cmap.CMap
+	readVer       int32
 }
 
 // 初始变量
@@ -231,4 +232,55 @@ func (that *msgMng) newConnVer() int32 {
 	that.connVer = connVer
 	that.locker.Unlock()
 	return connVer
+}
+
+func (that *msgMng) GidForTid(gid string, tid string) string {
+	return gid + "/" + tid
+}
+
+func (that *msgMng) TidFromGidForTid(gidForTid string) string {
+	idx := strings.LastIndexByte(gidForTid, '/')
+	if idx > 0 {
+		return gidForTid[idx+1:]
+	}
+
+	return gidForTid
+}
+
+// 新未读版本
+func (that *msgMng) newUnreadVer() int32 {
+	that.locker.Lock()
+	readVer := that.readVer
+	if readVer < R_SUCC_MIN || readVer >= connVerMax {
+		readVer = R_SUCC_MIN
+
+	} else {
+		readVer++
+	}
+
+	that.readVer = readVer
+	that.locker.Unlock()
+	return readVer
+}
+
+func (that *msgMng) UnreadTids(gid string, tids []string) {
+	if tids == nil || that.Db == nil {
+		return
+	}
+
+	for i, tid := range tids {
+		tids[i] = that.GidForTid(gid, tid)
+	}
+
+	nums := that.Db.UnReads(tids)
+	if nums == nil {
+		return
+	}
+
+	grp := that.GetMsgGrp(gid)
+	sess := grp.GetOrNewSess(true)
+	for _, num := range nums {
+		// 未读消息数设置
+		sess.UnreadRecv(that.TidFromGidForTid(num.Gid), num.Num, 0)
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"axjGW/gen/gw"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"strings"
 )
 
 type Msg interface {
@@ -18,7 +19,7 @@ type Msg interface {
 type MsgD struct {
 	Id   int64  `gorm:"primary_key"`                          // 消息编号
 	Gid  string `gorm:"type:varchar(255);not null;index:Gid"` // 消息分组
-	Fid  int64  `gorm:"index:Fid"`                            // 消息来源编号
+	Fid  int64  `gorm:"index:Fid"`                            // 消息来源编号, 从哪条发送消息编号生成的
 	Uri  string `gorm:"type:varchar(255);"`
 	Data []byte `gorm:""`
 	// 压缩后Data不映射字段
@@ -110,6 +111,16 @@ type MsgTeam struct {
 	Unique   string       `gorm:""`                                     // 唯一消息
 }
 
+type MsgRead struct {
+	Gid    string `gorm:"type:varchar(255);not null;primary_key"` // 消息分组
+	LastId int64  `gorm:""`                                       // 最后消息编号
+}
+
+type MsgReadNum struct {
+	Gid string
+	Num int32
+}
+
 type MsgDb interface {
 	Insert(msg *MsgD) error                                                            // 插入消息
 	Next(gid string, lastId int64, limit int) []*MsgD                                  // 遍历消息
@@ -126,6 +137,9 @@ type MsgDb interface {
 	TeamList(tid string, limit int) []*MsgTeam                                         // 群组消息列表
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
 	Revoke(id int64, gid string, push func() error) error                              // 撤销消息
+	Read(gid string, lastId int64) error                                               // 消息已读
+	UnRead(gid string) int                                                             // 未读消息
+	UnReads(gids []string) []MsgReadNum                                                // 未读消息列表
 }
 
 type MsgGorm struct {
@@ -140,6 +154,10 @@ func (that *MsgGorm) AutoMigrate() {
 
 	if (!migrator.HasTable(&MsgTeam{})) {
 		migrator.AutoMigrate(&MsgTeam{})
+	}
+
+	if (!migrator.HasTable(&MsgRead{})) {
+		migrator.AutoMigrate(&MsgRead{})
 	}
 }
 
@@ -303,4 +321,39 @@ func (that *MsgGorm) Revoke(id int64, gid string, push func() error) error {
 
 	tx := that.db.Exec("DELETE FROM msg_ds WHERE id = ? AND gid = ?", id, gid)
 	return tx.Error
+}
+
+func (that *MsgGorm) Read(gid string, lastId int64) error {
+	var id = ""
+	that.db.Raw("SELECT gid FROM msg_reads WHERE gid = ? ", gid).First(&id)
+	if id == "" {
+		return that.db.Create(&MsgRead{Gid: gid, LastId: lastId}).Error
+
+	} else {
+		return that.db.Exec("UPDATE msg_reads SET lastId = ? WHERE gid <= ? AND lastId < ?", lastId, gid, lastId).Error
+	}
+}
+
+func (that *MsgGorm) UnRead(gid string) int {
+	var num = 0
+	//that.db.Raw("SELECT COUNT(a.id) FROM msg_ds LEFT JOIN msg_reads as b ON b.gid = a.gid WHERE a.gid = ? AND a.id > b.lastId", gid).First(&num)
+	var lastId int64 = 0
+	that.db.Raw("SELECT lastId FROM msg_reads WHERE gid = ? ", gid).First(&lastId)
+	that.db.Raw("SELECT COUNT(id) FROM msg_ds WHERE gid = ? AND id > ?", gid, lastId).First(&num)
+	return num
+}
+
+func (that *MsgGorm) UnReads(gids []string) []MsgReadNum {
+	sb := strings.Builder{}
+	for i, gid := range gids {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+
+		sb.WriteString(gid)
+	}
+
+	var nums []MsgReadNum = nil
+	that.db.Raw("SELECT COUNT(a.id) as num, a.gid as gid FROM msg_ds LEFT JOIN msg_reads as b ON b.gid = a.gid WHERE a.gid IN (" + sb.String() + ") AND a.id > b.lastId GROUP BY a.gid").Find(&nums)
+	return nums
 }

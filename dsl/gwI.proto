@@ -22,6 +22,18 @@ message CidGidReq {
     GidState state = 4;
 }
 
+message RepReq {
+    int64 cid = 1;
+    // 写入类型
+    int32 req = 2;
+    // 写入连接
+    string uri = 3;
+    // 写入链接压缩
+    int32  uriI = 4;
+    // 写入数据
+    bytes data = 5;
+}
+
 message Msg {
     string uri = 1;
     bytes data = 2;
@@ -53,6 +65,24 @@ message IGPushAReq {
     bool succ = 3;
 }
 
+message ReadReq {
+    string gid = 1;
+    string tid = 2;
+    int64 lastId = 3;
+}
+
+message UnreadReq {
+    string gid = 1;
+    string tid = 2;
+    int32  num = 3;
+    int64 lastId = 4;
+}
+
+message UnreadReqs {
+    string gid = 1;
+    repeated UnreadReq reqs = 2;
+}
+
 // 网关内部
 service GatewayI {
     // uid查询
@@ -79,6 +109,8 @@ service GatewayI {
     rpc conn(GConnReq) returns (Id32Rep);
     // 断开
     rpc disc(GDiscReq) returns (Id32Rep);
+    // 写入数据
+    rpc rep(RepReq) returns (Id32Rep);
     // 最新消息通知
     rpc last(ILastReq) returns (Id32Rep);
     // 推送
@@ -105,4 +137,12 @@ service GatewayI {
     rpc tStarts(GidReq) returns (Id32Rep);
     // 设置服务列表
     rpc setProds(ProdsRep) returns (BoolRep);
+    // 已读消息
+    rpc read(ReadReq) returns (Id32Rep);
+    // 未读消息
+    rpc unread(UnreadReq) returns (Id32Rep);
+    // 未读消息
+    rpc unreads(UnreadReqs) returns (Id32Rep);
+    // 未读消息.查询
+    rpc unreadTids(UnreadTids) returns (Id32Rep);
 }

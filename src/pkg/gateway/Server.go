@@ -504,6 +504,11 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 				}
 			}
 
+			// 未读消息
+			if clientG.gid != "" && login.UnreadTids != nil {
+				MsgMng().UnreadTids(clientG.gid, login.UnreadTids)
+			}
+
 			// 注册成功回调
 			if login.Back {
 				rep, err := aclClient.LoginBack(aclProds.TimeoutCtx(), &gw.LoginBack{

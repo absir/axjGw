@@ -33,6 +33,7 @@ const (
 	REQ_ACL    int32 = 6  // 请求开启
 	REQ_BEAT   int32 = 7  // 心跳
 	REQ_ROUTE  int32 = 8  // 路由字典
+	REQ_READ   int32 = 9  // 消息未读,已读
 	REQ_LOOP   int32 = 15 // 连接接受
 	REQ_ONEWAY int32 = 16 // 路由处理
 )

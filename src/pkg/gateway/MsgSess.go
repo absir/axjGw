@@ -40,6 +40,8 @@ type MsgSess struct {
 	clientNum int
 	// 客户端checkBuff
 	checkBuff []interface{}
+	// 未读消息
+	unreads *cmap.CMap
 }
 
 type ERpc int
@@ -89,7 +91,7 @@ func (that *MsgSess) dirtyClientNum() {
 }
 
 // 消息发送返回处理
-func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient, unique string) bool {
+func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgClient) bool {
 	ret := Server.Id32(rep)
 	if ret >= R_SUCC_MIN {
 		client.idleTime = time.Now().Unix() + _msgMng.IdleDrt
@@ -98,7 +100,7 @@ func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgC
 	} else if ret == Result_IdNone {
 		// 要不要立刻剔除呢? Conn 和 Close HASH不一致的情况下
 		client.connVer = -1
-		that.grp.closeClient(client, client.cid, unique, false, false)
+		that.grp.closeClient(client, client.cid, client.unique, false, false)
 	}
 
 	// 消息发送失败
@@ -106,7 +108,7 @@ func (that *MsgSess) OnResult(rep *gw.Id32Rep, err error, rpc ERpc, client *MsgC
 }
 
 // 发送消息执行
-func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string, isolate bool) bool {
+func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, isolate bool) bool {
 	if msgD == nil {
 		return true
 	}
@@ -123,7 +125,7 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string, isolate 
 			Id:      msgD.Fid,
 			Isolate: isolate,
 		})
-		return that.OnResult(rep, err, ER_PUSH, client, unique)
+		return that.OnResult(rep, err, ER_PUSH, client)
 
 	} else {
 		pushReg := &gw.PushReq{
@@ -149,7 +151,7 @@ func (that *MsgSess) Push(msgD *MsgD, client *MsgClient, unique string, isolate 
 		}
 
 		rep, err := Server.GetProdCid(client.cid).GetGWIClient().Push(Server.Context, pushReg)
-		return that.OnResult(rep, err, ER_PUSH, client, unique)
+		return that.OnResult(rep, err, ER_PUSH, client)
 	}
 }
 
@@ -181,7 +183,7 @@ func (that *MsgSess) queueRun() {
 			break
 		}
 
-		if !that.Push(msg.Get(), client, "", true) {
+		if !that.Push(msg.Get(), client, true) {
 			break
 		}
 
@@ -241,7 +243,7 @@ func (that *MsgSess) QueuePush(msg Msg) (bool, error) {
 				Data:    msgD.Data,
 				Isolate: true,
 			})
-			return that.OnResult(rep, err, ER_PUSH, client, ""), err
+			return that.OnResult(rep, err, ER_PUSH, client), err
 		}
 
 		return false, ERR_NOWAY
@@ -293,7 +295,7 @@ func (that *MsgSess) getOrNewLastAsync() *Util.NotifierAsync {
 func (that *MsgSess) lastRun() {
 	client := that.client
 	if client != nil {
-		that.LastClient(client, "")
+		that.LastClient(client)
 	}
 
 	if that.clientMap != nil {
@@ -329,7 +331,7 @@ func (that *MsgSess) lastRange(key, val interface{}) bool {
 		return true
 	}
 
-	that.LastClient(client, unique)
+	that.LastClient(client)
 	return true
 }
 
@@ -394,12 +396,14 @@ func (that *MsgSess) lastQueueLoad() {
 }
 
 // last消息通知客户端
-func (that *MsgSess) LastClient(client *MsgClient, unique string) {
+func (that *MsgSess) LastClient(client *MsgClient) {
 	if client == nil {
 		return
 	}
 
 	if client.subLastId == 0 {
+		// 未读消息
+		client.unreadPush()
 		// 还未sub监听
 		return
 	}
@@ -423,7 +427,7 @@ func (that *MsgSess) LastClient(client *MsgClient, unique string) {
 	if !client.lasting {
 		// 启动通知线程，包含会执行LastSubRun
 		Util.GoSubmit(func() {
-			that.lastClientRun(client, unique)
+			that.lastClientRun(client)
 		})
 		client.locker.Unlock()
 		return
@@ -446,13 +450,13 @@ func (that *MsgSess) lastClientIn(client *MsgClient) bool {
 }
 
 // last消息通知客户端退出
-func (that *MsgSess) lastClientOut(client *MsgClient, unique string, lastTime int64) {
+func (that *MsgSess) lastClientOut(client *MsgClient, lastTime int64) {
 	client.locker.Lock()
 	client.lasting = false
 	if client.lastTime > lastTime {
 		// 漏掉重启
 		Util.GoSubmit(func() {
-			that.lastClientRun(client, unique)
+			that.lastClientRun(client)
 		})
 		client.locker.Unlock()
 		return
@@ -470,13 +474,13 @@ func (that *MsgSess) lastClientDone(client *MsgClient, lastTime int64) bool {
 }
 
 // last消息通知客户端执行
-func (that *MsgSess) lastClientRun(client *MsgClient, unique string) {
+func (that *MsgSess) lastClientRun(client *MsgClient) {
 	if !that.lastClientIn(client) {
 		return
 	}
 
 	lastTime := client.lastTime
-	defer that.lastClientOut(client, unique, lastTime)
+	defer that.lastClientOut(client, lastTime)
 	for {
 		if client.subLastTime > 0 {
 			// lastSubRun执行中, 在结束后，会Async启动LastClient
@@ -487,7 +491,7 @@ func (that *MsgSess) lastClientRun(client *MsgClient, unique string) {
 		lastTime = client.lastTime
 		if client.subLastId >= MSD_ID_MIN {
 			// 执行LastSubRun
-			that.subLastRun(client.subLastId, client, unique, client.subContinuous)
+			that.subLastRun(client.subLastId, client, client.subContinuous)
 
 		} else {
 			// last通知发送
@@ -497,10 +501,13 @@ func (that *MsgSess) lastClientRun(client *MsgClient, unique string) {
 				ConnVer:    client.connVer,
 				Continuous: false,
 			})
-			that.OnResult(rep, err, ER_LAST, client, unique)
+			that.OnResult(rep, err, ER_LAST, client)
 			// 休眠一秒， 防止通知过于频繁|必需
 			time.Sleep(time.Second)
 		}
+
+		// 未读消息推送
+		client.unreadPush()
 
 		if that.lastClientDone(client, lastTime) {
 			break
@@ -513,7 +520,7 @@ func (that *MsgSess) lastClientRun(client *MsgClient, unique string) {
 //continuous <= 0 不连续监听 同时lastId<=0时 只是激活Last消息通知
 //continuous == 1 连续监听不发送LastC消息
 //continuous > 1 多少条间隔发送LastC消息
-func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, continuous int32) {
+func (that *MsgSess) SubLast(lastId int64, client *MsgClient, continuous int32) {
 	if client == nil {
 		return
 	}
@@ -528,7 +535,7 @@ func (that *MsgSess) SubLast(lastId int64, client *MsgClient, unique string, con
 	}
 
 	Util.GoSubmit(func() {
-		that.subLastRun(lastId, client, unique, continuous)
+		that.subLastRun(lastId, client, continuous)
 	})
 }
 
@@ -550,14 +557,14 @@ func (that *MsgSess) subLastIn(client *MsgClient) int64 {
 }
 
 // last消息队列消息订阅退出
-func (that *MsgSess) subLastOut(client *MsgClient, unique string, subLastTime int64, lastTime int64) {
+func (that *MsgSess) subLastOut(client *MsgClient, subLastTime int64, lastTime int64) {
 	client.locker.Lock()
 	if client.subLastTime == subLastTime {
 		client.subLastTime = 0
 		if lastTime < client.lastTime {
 			// last通知触发，last通知或lastSubRun由LastClient负责
 			Util.GoSubmit(func() {
-				that.lastClientRun(client, unique)
+				that.lastClientRun(client)
 			})
 			client.locker.Unlock()
 			return
@@ -576,7 +583,7 @@ func (that *MsgSess) subLastDone(client *MsgClient, lastTime int64) bool {
 }
 
 // last消息队列消息订阅执行
-func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, continuous int32) {
+func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, continuous int32) {
 	if client == nil {
 		return
 	}
@@ -584,7 +591,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 	connVer := client.connVer
 	lastTime := client.lastTime
 	subLastTime := that.subLastIn(client)
-	defer that.subLastOut(client, unique, subLastTime, lastTime)
+	defer that.subLastOut(client, subLastTime, lastTime)
 	if lastId >= 0 && lastId < MSD_ID_MIN {
 		subLastId := that.lastSubLastId(int(lastId))
 		if lastId == subLastId && _msgMng.Db != nil {
@@ -647,14 +654,14 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 				}
 
 				for j := 0; j < mLen; j++ {
-					if !that.lastQueuePush(subLastTime, client, msgDs[j], &lastId, unique, false, continuous, &pushNum) {
+					if !that.lastQueuePush(subLastTime, client, msgDs[j], &lastId, false, continuous, &pushNum) {
 						return
 					}
 				}
 			}
 
 		} else {
-			if !that.lastQueuePush(subLastTime, client, msg, &lastId, unique, true, continuous, &pushNum) {
+			if !that.lastQueuePush(subLastTime, client, msg, &lastId, true, continuous, &pushNum) {
 				return
 			}
 		}
@@ -667,7 +674,7 @@ func (that *MsgSess) subLastRun(lastId int64, client *MsgClient, unique string, 
 			ConnVer:    client.connVer,
 			Continuous: true,
 		})
-		that.OnResult(rep, err, ER_LAST, client, unique)
+		that.OnResult(rep, err, ER_LAST, client)
 	}
 }
 
@@ -728,13 +735,13 @@ func (that *MsgSess) lastQueueGet(client *MsgClient, subLastTime int64, lastId i
 }
 
 // last消息队列消息推送执行
-func (that *MsgSess) lastQueuePush(subLastTime int64, client *MsgClient, msg Msg, lastId *int64, unique string, isolate bool, continuous int32, pushNum *int32) bool {
+func (that *MsgSess) lastQueuePush(subLastTime int64, client *MsgClient, msg Msg, lastId *int64, isolate bool, continuous int32, pushNum *int32) bool {
 	if subLastTime != client.subLastTime {
 		return false
 	}
 
 	msgD := msg.Get()
-	if !that.Push(msg.Get(), client, unique, isolate) {
+	if !that.Push(msg.Get(), client, isolate) {
 		return false
 	}
 
@@ -754,7 +761,7 @@ func (that *MsgSess) lastQueuePush(subLastTime int64, client *MsgClient, msg Msg
 				ConnVer:    client.connVer,
 				Continuous: true,
 			})
-			if !that.OnResult(rep, err, ER_LAST, client, unique) {
+			if !that.OnResult(rep, err, ER_LAST, client) {
 				return false
 			}
 
@@ -765,4 +772,67 @@ func (that *MsgSess) lastQueuePush(subLastTime int64, client *MsgClient, msg Msg
 	}
 
 	return true
+}
+
+// 已读消息
+func (that *MsgSess) ReadLastId(gid string, lastId int64) {
+	if _msgMng.Db != nil {
+		_msgMng.Db.Read(_msgMng.GidForTid(that.grp.gid, gid), lastId)
+	}
+
+	unreads := that.unreads
+	if unreads != nil {
+		val, _ := unreads.Load(gid)
+		unread, _ := val.(*SessUnread)
+		if unread != nil {
+			that.grp.locker.Lock()
+			if unread.lastId < lastId {
+				unread.lastId = lastId
+				unread.num = 0
+			}
+
+			that.grp.locker.Unlock()
+		}
+	}
+}
+
+// 未读消息 id > 0 增加一条未读消息
+func (that *MsgSess) UnreadRecv(gid string, num int32, id int64) {
+	unreads := that.unreads
+	if unreads == nil {
+		that.grp.locker.Lock()
+		unreads = that.unreads
+		if unreads == nil {
+			unreads = cmap.NewCMapInit()
+			that.unreads = unreads
+		}
+
+		that.grp.locker.Unlock()
+	}
+
+	val, _ := unreads.Load(gid)
+	unread, _ := val.(*SessUnread)
+	if unread == nil {
+		unread = &SessUnread{num: num}
+		unreads.Store(gid, unread)
+
+	} else if num > 0 {
+		unread.num = num
+	}
+
+	if id > 0 {
+		// 未读消息数++
+		unread.num++
+	}
+
+	// 未读版本
+	unread.ver = _msgMng.newUnreadVer()
+	// 未读消息数通知
+	that.LastStart()
+}
+
+type SessUnread struct {
+	num    int32
+	lastId int64
+	ver    int32
 }

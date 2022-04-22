@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"axj/ANet"
+	"axj/Kt/KtBytes"
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
 	"go.uber.org/zap"
@@ -71,6 +72,20 @@ func (that *handler) OnReq(client ANet.Client, req int32, uri string, uriI int32
 }
 
 func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, data []byte) {
+	if req == ANet.REQ_READ {
+		clientG := that.ClientG(client)
+		if clientG.gid != "" {
+			// Server.GetProdGid(clientG.gid).GetGWIClient()
+			// 已读消息
+			if MsgMng().Db != nil {
+
+				MsgMng().Db.Read(MsgMng().GidForTid(clientG.gid, uri), KtBytes.GetInt64(data, 0, nil))
+			}
+		}
+
+		return
+	}
+
 	reped := false
 	pReped := &reped
 	defer that.reqRcvr(client, req, pReped)

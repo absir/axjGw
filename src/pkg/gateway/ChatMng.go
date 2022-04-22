@@ -350,8 +350,8 @@ func (that *ChatTeam) msgTeamPush(msgTeam *MsgTeam, db bool) bool {
 		// 群消息不需要再发送给自己
 		if gid != msgTeam.Sid {
 			if member.Nofeed {
-				// 不推送到gid， 需要主动拉去gid_tid
-				gid = gid + "_" + that.tid
+				// 不推送到gid， 需要主动拉取GidForTid
+				gid = MsgMng().GidForTid(gid, that.tid)
 			}
 
 			rep, _ := Server.GetProdGid(gid).GetGWIClient().GPush(Server.Context, &gw.GPushReq{

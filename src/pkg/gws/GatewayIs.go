@@ -236,6 +236,24 @@ func (g GatewayIs) Disc(ctx context.Context, req *gw.GDiscReq) (*gw.Id32Rep, err
 	return Result_Succ_Rep, nil
 }
 
+func (g GatewayIs) Rep(ctx context.Context, req *gw.RepReq) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdCid(req.Cid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	client := gateway.Server.Manager.Client(req.Cid)
+	if client == nil {
+		return Result_IdNone_Rep, nil
+	}
+
+	err := client.Get().Rep(true, req.Req, req.Uri, req.UriI, req.Data, false, false, 0)
+	if err != nil {
+		return Result_Fail_Rep, err
+	}
+
+	return Result_Succ_Rep, nil
+}
+
 func (g GatewayIs) Last(ctx context.Context, req *gw.ILastReq) (*gw.Id32Rep, error) {
 	if !gateway.Server.IsProdCid(req.Cid) {
 		return Result_ProdErr_Rep, nil
@@ -349,7 +367,7 @@ func (g GatewayIs) GLasts(ctx context.Context, req *gw.GLastsReq) (*gw.Id32Rep, 
 	}
 
 	// 开始拉取
-	grp.GetSess().SubLast(req.LastId, client, req.Unique, req.Continuous)
+	grp.GetSess().SubLast(req.LastId, client, req.Continuous)
 	return Result_Succ_Rep, nil
 }
 
@@ -454,4 +472,68 @@ func (g GatewayIs) TStarts(ctx context.Context, req *gw.GidReq) (*gw.Id32Rep, er
 func (g GatewayIs) SetProds(ctx context.Context, rep *gw.ProdsRep) (*gw.BoolRep, error) {
 	gateway.Server.SetProdsRep(rep)
 	return Result_True, nil
+}
+
+func (g GatewayIs) Read(ctx context.Context, req *gw.ReadReq) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdHashS(req.Gid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
+	if grp != nil && grp.GetSess() != nil {
+		grp.GetSess().ReadLastId(req.Tid, req.LastId)
+
+	} else {
+		// 数据库保存
+		if gateway.MsgMng().Db != nil {
+			gateway.MsgMng().Db.Read(gateway.MsgMng().GidForTid(req.Gid, req.Tid), req.LastId)
+		}
+	}
+
+	return Result_Succ_Rep, nil
+}
+
+func (g GatewayIs) Unread(ctx context.Context, req *gw.UnreadReq) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdHashS(req.Gid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
+	if grp == nil {
+		return Result_Fail_Rep, nil
+	}
+
+	// 未读消息
+	grp.GetOrNewSess(true).UnreadRecv(req.Tid, req.Num, req.LastId)
+	return Result_Succ_Rep, nil
+}
+
+func (g GatewayIs) Unreads(ctx context.Context, reqs *gw.UnreadReqs) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdHashS(reqs.Gid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	grp := gateway.MsgMng().GetOrNewMsgGrp(reqs.Gid)
+	if grp == nil {
+		return Result_Fail_Rep, nil
+	}
+
+	if reqs.Reqs != nil {
+		sess := grp.GetOrNewSess(true)
+		for _, req := range reqs.Reqs {
+			// 未读消息
+			sess.UnreadRecv(req.Tid, req.Num, req.LastId)
+		}
+	}
+
+	return Result_Succ_Rep, nil
+}
+
+func (g GatewayIs) UnreadTids(ctx context.Context, tids *gw.UnreadTids) (*gw.Id32Rep, error) {
+	if !gateway.Server.IsProdHashS(tids.Gid) {
+		return Result_ProdErr_Rep, nil
+	}
+
+	gateway.MsgMng().UnreadTids(tids.Gid, tids.Tids)
+	return Result_Succ_Rep, nil
 }

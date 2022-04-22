@@ -167,3 +167,7 @@ func (g GatewayS) DialProxy(ctx context.Context, req *gw.DialProxyReq) (*gw.Bool
 func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.BoolsRep, error) {
 	return nil, nil
 }
+
+func (g GatewayS) UnreadTids(ctx context.Context, tids *gw.UnreadTids) (*gw.Id32Rep, error) {
+	return gateway.Server.GetProdGid(tids.Gid).GetGWIClient().UnreadTids(ctx, tids)
+}

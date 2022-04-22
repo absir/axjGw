@@ -121,6 +121,7 @@ func main() {
 			})
 
 			if Config.HttpWsOrigin {
+
 				s := websocket.Server{Handler: handler, Handshake: func(config *websocket.Config, req *http.Request) (err error) {
 					config.Origin, err = websocket.Origin(config, req)
 					if err == nil && config.Origin == nil {

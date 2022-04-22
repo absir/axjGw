@@ -58,6 +58,10 @@ func (that gatewayISC) GidCid(ctx context.Context, in *gw.CidGidReq, opts ...grp
 	return that.Server.GidCid(ctx, in)
 }
 
+func (that gatewayISC) Rep(ctx context.Context, in *gw.RepReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.Rep(ctx, in)
+}
+
 func (that gatewayISC) Last(ctx context.Context, in *gw.ILastReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
 	return that.Server.Last(ctx, in)
 }
@@ -108,4 +112,20 @@ func (that gatewayISC) TStarts(ctx context.Context, in *gw.GidReq, opts ...grpc.
 
 func (that gatewayISC) SetProds(ctx context.Context, in *gw.ProdsRep, opts ...grpc.CallOption) (*gw.BoolRep, error) {
 	return that.Server.SetProds(ctx, in)
+}
+
+func (that gatewayISC) Read(ctx context.Context, in *gw.ReadReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.Read(ctx, in)
+}
+
+func (that gatewayISC) Unread(ctx context.Context, in *gw.UnreadReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.Unread(ctx, in)
+}
+
+func (that gatewayISC) Unreads(ctx context.Context, in *gw.UnreadReqs, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.Unreads(ctx, in)
+}
+
+func (that gatewayISC) UnreadTids(ctx context.Context, in *gw.UnreadTids, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
+	return that.Server.UnreadTids(ctx, in)
 }
