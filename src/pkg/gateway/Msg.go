@@ -91,6 +91,7 @@ type MsgRead struct {
 type MsgReadNum struct {
 	Gid  string
 	Num  int32
+	Id   int64
 	Uri  string
 	Data []byte
 }
@@ -112,7 +113,7 @@ type MsgDb interface {
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
 	Revoke(id int64, gid string, push func() error) error                              // 撤销消息
 	Read(gid string, lastId int64) error                                               // 消息已读
-	UnReads(gids []string) []MsgReadNum                                                // 未读消息列表
+	UnReads(gid string, tids []string) []MsgReadNum                                    // 未读消息列表
 }
 
 type MsgGorm struct {
@@ -316,20 +317,60 @@ func (that *MsgGorm) UnRead(gid string) int {
 	return num
 }
 
-func (that *MsgGorm) UnReads(gids []string) []MsgReadNum {
+func (that *MsgGorm) UnReads(gid string, tids []string) []MsgReadNum {
 	sb := strings.Builder{}
-	for i, gid := range gids {
+	for i, tid := range tids {
 		if i > 0 {
 			sb.WriteByte(',')
 		}
 
-		sb.WriteString(gid)
+		sb.WriteByte('"')
+		sb.WriteString(tid)
+		sb.WriteByte('"')
 	}
 
-	var nums []MsgReadNum = nil
-	that.db.Raw("SELECT a.num as num, a.gid as gid, b.uri as uri, b.data as data FROM (" +
+	var numAs []MsgReadNum = nil
+	that.db.Raw("SELECT a.num as num, a.gid as gid, b.id as id, b.uri as uri, b.data as data FROM (" +
+		"SELECT COUNT(a.id) as num, gid as gid, MAX(id) as id FROM msg_ds LEFT JOIN msg_reads as b ON b.gid = CONCAT(\"" + gid + "/\", a.gid) WHERE a.gid IN (" + sb.String() + ") AND a.id > b.lastId GROUP BY a.gid" +
+		") as a LEFT JOIN msg_ds as b ON b.id = a.id",
+	).Find(&numAs)
+
+	sb.Reset()
+	for i, tid := range tids {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+
+		sb.WriteString(MsgMng().GidForTid(gid, tid))
+	}
+
+	var numBs []MsgReadNum = nil
+	that.db.Raw("SELECT a.num as num, a.gid as gid, b.id as id, b.uri as uri, b.data as data FROM (" +
 		"SELECT COUNT(a.id) as num, gid as gid, MAX(id) as id FROM msg_ds LEFT JOIN msg_reads as b ON b.gid = a.gid WHERE a.gid IN (" + sb.String() + ") AND a.id > b.lastId GROUP BY a.gid" +
 		") as a LEFT JOIN msg_ds as b ON b.id = a.id",
-	).Find(&nums)
-	return nums
+	).Find(&numBs)
+	for _, numA := range numAs {
+		numA.Gid = MsgMng().GidForTid(gid, numA.Gid)
+	}
+
+	for i, numA := range numAs {
+		for _, numB := range numBs {
+			if numA.Gid == numB.Gid {
+				numB.Num += numA.Num
+				if numB.Id < numA.Id {
+					numB.Id = numA.Id
+					numB.Uri = numA.Uri
+					numB.Data = numA.Data
+				}
+
+				i = -1
+			}
+		}
+
+		if i >= 0 {
+			numBs = append(numBs, numA)
+		}
+	}
+
+	return numBs
 }

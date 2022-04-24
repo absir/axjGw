@@ -829,8 +829,13 @@ func (that *MsgSess) UnreadRecv(gid string, num int32, lastId int64, uri string,
 	}
 
 	if lastId > 0 {
-		// 未读消息数++
-		unread.num++
+		if unread.lastId < lastId {
+			unread.lastId = lastId
+			if num <= 0 {
+				// 未读消息数++
+				unread.num++
+			}
+		}
 	}
 
 	// 未读版本

@@ -41,6 +41,14 @@ func (Z zDevAcl) DiscBack(ctx context.Context, in *gw.LoginBack, opts ...grpc.Ca
 }
 
 func (Z zDevAcl) Team(ctx context.Context, in *gw.GidReq, opts ...grpc.CallOption) (*gw.TeamRep, error) {
+	if in.Gid == "t1" {
+		members := make([]*gw.Member, 1)
+		members[0] = &gw.Member{Gid: "1"}
+		return &gw.TeamRep{
+			Members: members,
+		}, nil
+	}
+
 	return nil, nil
 }
 
