@@ -472,112 +472,108 @@ func (that *chatMng) Send(req *gw.SendReq) (bool, error) {
 
 // 发送群聊天 调用注意分布一致hash 入口
 func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
-	var qs int32 = 2
-	if req.Db {
-		qs = 3
-	}
-
+	// 群成员
 	var team *gw.TeamRep = nil
 	mLen := 0
 	unreadFeed := false
-	if !req.ReadFeed {
-		if MsgMng().Db == nil {
-			qs = 2
-		}
-
+	if !req.ReadFeed || req.UnreadFeed {
 		team = TeamMng().GetTeam(req.Tid)
 		if team == nil {
 			return false, ANet.ERR_NOWAY
 		}
 
 		unreadFeed = team.UnreadFeed || req.UnreadFeed
-		if !team.ReadFeed {
-			if team.Members != nil {
-				mLen = len(team.Members)
-			}
+	}
 
-			if mLen <= 0 {
-				return false, ANet.ERR_NOWAY
-			}
+	var qs int32 = 2
+	if req.Db {
+		qs = 3
+	}
 
-			var fidStatus int64 = 0
-			if req.Db && MsgMng().Db != nil {
-				fidStatus = F_SENDING
-			}
-
-			// 写扩散
-			fClient := Server.GetProdGid(req.FromId).GetGWIClient()
-			var fid int64 = 0
-			if req.FromId != "" {
-				rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
-					Gid:   req.FromId,
-					Uri:   req.Uri,
-					Data:  req.Data,
-					Qs:    qs,
-					Queue: req.Queue,
-					Fid:   fidStatus,
-				})
-
-				fid = Server.Id64(rep)
-				if !Server.Id64Succ(fid, true) {
-					return false, err
-				}
-			}
-
-			msgTeam := &MsgTeam{
-				Id:      fid,
-				Sid:     req.FromId,
-				Tid:     req.Tid,
-				Members: team.Members,
-				Index:   0,
-				Rand:    int(rand.Int31n(int32(mLen))),
-				Uri:     req.Uri,
-				Data:    req.Data,
-				Unique:  req.Unique,
-			}
-
-			if unreadFeed {
-				msgTeam.UnreadFeed = 1
-			}
-
-			msgDb := MsgMng().Db != nil && qs == 3
-
-			if msgTeam.Id <= 0 {
-				msgTeam.Id = MsgMng().idWorkder.Generate()
-			}
-
-			if msgDb {
-				err := MsgMng().Db.TeamInsert(msgTeam)
-				if err != nil {
-					if fidStatus > 0 {
-						fClient.GPushA(Server.Context, &gw.IGPushAReq{
-							Gid:  req.FromId,
-							Id:   fid,
-							Succ: false,
-						})
-					}
-
-					return false, err
-				}
-			}
-
-			if fidStatus > 0 {
-				fClient.GPushA(Server.Context, &gw.IGPushAReq{
-					Gid:  req.FromId,
-					Id:   fid,
-					Succ: true,
-				})
-			}
-
-			if msgDb {
-				that.TeamStart(req.Tid, nil)
-
-			} else {
-				that.TeamStart(req.Tid, msgTeam)
-			}
-
-			return true, nil
+	if !req.ReadFeed {
+		// 写扩散
+		if MsgMng().Db == nil {
+			qs = 2
 		}
+
+		var fidStatus int64 = 0
+		if req.Db && MsgMng().Db != nil {
+			fidStatus = F_SENDING
+		}
+
+		// 写扩散
+		fClient := Server.GetProdGid(req.FromId).GetGWIClient()
+		var fid int64 = 0
+		if req.FromId != "" {
+			rep, err := fClient.GPush(Server.Context, &gw.GPushReq{
+				Gid:   req.FromId,
+				Uri:   req.Uri,
+				Data:  req.Data,
+				Qs:    qs,
+				Queue: req.Queue,
+				Fid:   fidStatus,
+			})
+
+			fid = Server.Id64(rep)
+			if !Server.Id64Succ(fid, true) {
+				return false, err
+			}
+		}
+
+		msgTeam := &MsgTeam{
+			Id:      fid,
+			Sid:     req.FromId,
+			Tid:     req.Tid,
+			Members: team.Members,
+			Index:   0,
+			Rand:    int(rand.Int31n(int32(mLen))),
+			Uri:     req.Uri,
+			Data:    req.Data,
+			Unique:  req.Unique,
+		}
+
+		if unreadFeed {
+			// 写扩散，未读消息扩散
+			msgTeam.UnreadFeed = 1
+		}
+
+		msgDb := MsgMng().Db != nil && qs == 3
+
+		if msgTeam.Id <= 0 {
+			msgTeam.Id = MsgMng().idWorkder.Generate()
+		}
+
+		if msgDb {
+			err := MsgMng().Db.TeamInsert(msgTeam)
+			if err != nil {
+				if fidStatus > 0 {
+					fClient.GPushA(Server.Context, &gw.IGPushAReq{
+						Gid:  req.FromId,
+						Id:   fid,
+						Succ: false,
+					})
+				}
+
+				return false, err
+			}
+		}
+
+		if fidStatus > 0 {
+			fClient.GPushA(Server.Context, &gw.IGPushAReq{
+				Gid:  req.FromId,
+				Id:   fid,
+				Succ: true,
+			})
+		}
+
+		if msgDb {
+			that.TeamStart(req.Tid, nil)
+
+		} else {
+			that.TeamStart(req.Tid, msgTeam)
+		}
+
+		return true, nil
 	}
 
 	// 读扩散
@@ -597,7 +593,7 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 	}
 
 	if unreadFeed && mLen > 0 {
-		// 未读扩散对象
+		// 读扩散，未读消息扩散
 		msgTeam := &MsgTeam{
 			Id:         fid,
 			Sid:        req.FromId,
