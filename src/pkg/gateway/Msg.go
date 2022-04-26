@@ -111,7 +111,7 @@ type MsgDb interface {
 	TeamUpdate(msgTeam *MsgTeam, index int) error                                      // 群组消息更新 index >= mLen || index < 0 TeamDelete
 	TeamList(tid string, limit int) []*MsgTeam                                         // 群组消息列表
 	TeamStarts(workId int32, limit int) []string                                       // 群组消息发送管道,冷启动tid列表
-	Revoke(id int64, gid string, push func() error) error                              // 撤销消息
+	Revoke(delete bool, id int64, gid string, push func() error) error                 // 撤销消息
 	Read(gid string, lastId int64) error                                               // 消息已读
 	UnReads(gid string, tids []string) []MsgReadNum                                    // 未读消息列表
 }
@@ -274,16 +274,19 @@ func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 	return tIds
 }
 
-func (that *MsgGorm) Revoke(id int64, gid string, push func() error) error {
+func (that *MsgGorm) Revoke(delete bool, id int64, gid string, push func() error) error {
 	var tid int64 = 0
 	that.db.Raw("SELECT id FROM msg_ds WHERE id = ? AND gid = ?", id, gid).Find(&tid)
 	if tid <= 0 {
 		return ANet.ERR_DENIED
 	}
 
-	err := that.DeleteF(id)
-	if err != nil {
-		return err
+	var err error
+	if !delete {
+		err = that.DeleteF(id)
+		if err != nil {
+			return err
+		}
 	}
 
 	if push != nil {

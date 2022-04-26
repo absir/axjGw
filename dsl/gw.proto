@@ -381,6 +381,8 @@ message RevokeReq {
     GPushReq push = 3;
     // 消息撤销通知
     TPushReq tPush = 4;
+    // 删除消息
+    bool delete = 5;
 }
 
 message ProxyReq {

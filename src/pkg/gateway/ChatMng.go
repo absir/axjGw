@@ -667,7 +667,7 @@ func (that *chatMng) Revoke(ctx context.Context, req *gw.RevokeReq) (bool, error
 		}
 	}
 
-	err := MsgMng().Db.Revoke(req.Id, req.Gid, push)
+	err := MsgMng().Db.Revoke(req.Delete, req.Id, req.Gid, push)
 	if err != nil {
 		return false, err
 	}
