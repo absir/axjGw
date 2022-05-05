@@ -327,8 +327,13 @@ func (that *ClientCnn) RepCData(bufferP bool, req int32, uri string, uriI int32,
 }
 
 func CloseDelay(conn Conn, drt time.Duration) {
-	if drt < 1 {
-		drt = 1
+	if drt < time.Second {
+		if drt < 1 {
+			drt = time.Second
+
+		} else {
+			drt *= time.Second
+		}
 	}
 
 	time.Sleep(drt)
