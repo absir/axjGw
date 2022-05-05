@@ -54,6 +54,8 @@ func initConfig(workId int32) {
 
 	Config.PassProd = Config.AclProd
 	APro.SubCfgBind("gateway", Config)
+	// 配置计算时间间隔
+	Config.KickDrt = Config.KickDrt * time.Second
 	Config.WorkId = workId
 	Config.WorkHash = int(workId)
 }

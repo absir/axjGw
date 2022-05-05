@@ -54,7 +54,9 @@ func (c consul) Cfg(unique string, paras string) interface{} {
 	}
 
 	APro.SubCfgBind("consul."+paras, cCfg)
-
+	// 配置计算时间间隔
+	cCfg.WaitTime = cCfg.WaitTime * time.Second
+	cCfg.WatcherDrt = cCfg.WatcherDrt * time.Second
 	// 初始化client
 	client, err := api.NewClient(cCfg.Config)
 	Kt.Panic(err)
