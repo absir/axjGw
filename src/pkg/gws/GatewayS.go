@@ -52,7 +52,7 @@ func (g GatewayS) Onlines(ctx context.Context, req *gw.GidsReq) (*gw.BoolsRep, e
 			}
 		}
 
-		if pIdIdx <= 0 || pIdNext == 0 {
+		if pIdIdx <= 0 {
 			break
 		}
 
