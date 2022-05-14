@@ -67,6 +67,10 @@ func (g GatewayS) Onlines(ctx context.Context, req *gw.GidsReq) (*gw.BoolsRep, e
 			nVals[nIdxs[i]] = boolsRep.Vals[i]
 		}
 
+		if pId == pIdNext {
+			break
+		}
+
 		pId = pIdNext
 	}
 
