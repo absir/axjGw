@@ -760,6 +760,11 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			case 2:
 				errS = "PROD_ERR"
 				break
+			case 16:
+				if data == nil {
+					data = KtBytes.EMPTY_BYTES
+				}
+				break
 			default:
 				errS = "SERV_ERR"
 				break
