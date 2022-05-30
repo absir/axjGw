@@ -749,6 +749,14 @@ func (that *Client) reqLoop(adapter *Adapter) {
 			continue
 		}
 
+		if uriI == 16 {
+			// PROD_SUCC
+			uriI = 0
+			if data == nil {
+				data = KtBytes.EMPTY_BYTES
+			}
+		}
+
 		if req > ANet.REQ_ONEWAY {
 			errS := ""
 			switch uriI {
@@ -759,11 +767,6 @@ func (that *Client) reqLoop(adapter *Adapter) {
 				break
 			case 2:
 				errS = "PROD_ERR"
-				break
-			case 16:
-				if data == nil {
-					data = KtBytes.EMPTY_BYTES
-				}
 				break
 			default:
 				errS = "SERV_ERR"
