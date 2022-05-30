@@ -137,13 +137,7 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 
 		} else {
 			*pReped = true
-			if result.Err == 0 && result.Data != nil && len(result.Data) == 0 {
-				// 空字符 成功特殊处理
-				clientG.Get().Rep(true, req, "", ERR_PORD_SUCC, result.Data, false, false, 0)
-
-			} else {
-				clientG.Get().Rep(true, req, "", result.Err, result.Data, false, false, 0)
-			}
+			clientG.Get().Rep(true, req, "", result.Err, result.Data, false, false, 0)
 		}
 
 	} else {
