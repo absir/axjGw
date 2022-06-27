@@ -522,7 +522,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 				chr = Kt.If(chr == '{', '}', ']').(rune)
 				start = splitStrBrC(str, sps, trim, start+1, br, chr, sts, strict)
 				strs.PushBack(splitStrM(sts, chr))
-				ei = -2
+				ei = -3
 				continue
 
 			} else if chr == brc {
@@ -557,7 +557,7 @@ func splitStrBrC(str []rune, sps []rune, trim bool, start int, br bool, brc rune
 			ei = -1
 
 		} else {
-			if strict {
+			if strict && ei != -3 {
 				strs.PushBack("")
 			}
 
