@@ -2,6 +2,8 @@
 cd `dirname $0`
 args=$*
 
+mkdir -p src/bin
+
 cd src/bin
 export CGO_ENABLED=0
 
@@ -11,7 +13,7 @@ export GOARCH=mipsle
 export GOMIPS=softfloat
 #export GOARM=5
 #export GODEBUG=madvdontneed=1
-go build -tags wsN -o ./agent-mips ../cmd/agent/Agent.go
+go build -tags wsN,httpN -o ./agent-mips ../cmd/agent/Agent.go
 fi
 
 if [[ $args =~ "arm5" ]];then

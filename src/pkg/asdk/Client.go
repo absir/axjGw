@@ -13,6 +13,7 @@ import (
 	"container/list"
 	"encoding/json"
 	"go.uber.org/zap"
+	"math/rand"
 	"net"
 	"strings"
 	"sync"
@@ -66,6 +67,8 @@ type Opt interface {
 type Client struct {
 	locker      sync.Locker
 	addr        string
+	addrs       []string
+	http        bool
 	ws          bool
 	sendP       bool // 写入内存池
 	readP       bool // 读取内存池
@@ -141,11 +144,24 @@ type rqDt struct {
 	req     int32 // 自定义发送
 }
 
+func WsAddr(addr string) bool {
+	return strings.HasPrefix(addr, "ws:") || strings.HasPrefix(addr, "wss:")
+}
+
 func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int, dataMax int, checkDrt int, rqIMax int, opt Opt) *Client {
 	that := new(Client)
 	that.locker = new(sync.Mutex)
 	that.addr = addr
-	that.ws = strings.HasPrefix(addr, "ws:") || strings.HasPrefix(addr, "wss:")
+	if strings.IndexByte(addr, ',') >= 0 {
+		that.addrs = KtStr.SplitByte(addr, ',', true, 0, 0)
+
+	} else if strings.HasPrefix(addr, "http:") || strings.HasPrefix(addr, "https:") {
+		that.http = true
+
+	} else if WsAddr(addr) {
+		that.ws = true
+	}
+
 	that.sendP = sendP
 	that.readP = readP
 	that.encry = encry
@@ -203,11 +219,29 @@ func (that *Client) GetProcessor() interface{} {
 
 // interface{}保护，避免sdk导出类型复杂
 func (that *Client) DialConn() (interface{}, error) {
-	if that.ws {
-		return wsDial(that.addr)
+	if that.addrs != nil {
+		addr := that.addrs[rand.Int31n(int32(len(that.addrs)))]
+		return dialConn(WsAddr(addr), addr)
+
+	} else if that.http {
+		addr, err := HttpAddr(that.addr)
+		if addr == "" || err != nil {
+			return nil, err
+		}
+
+		return dialConn(WsAddr(addr), addr)
 
 	} else {
-		conn, err := net.Dial("tcp", that.addr)
+		return dialConn(that.ws, that.addr)
+	}
+}
+
+func dialConn(ws bool, addr string) (interface{}, error) {
+	if ws {
+		return wsDial(addr)
+
+	} else {
+		conn, err := net.Dial("tcp", addr)
 		if conn == nil || err != nil {
 			return nil, err
 		}
