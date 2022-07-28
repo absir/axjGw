@@ -67,6 +67,7 @@ type Opt interface {
 type Client struct {
 	locker      sync.Locker
 	addr        string
+	AddrHash    int
 	addrs       []string
 	http        bool
 	ws          bool
@@ -148,10 +149,30 @@ func WsAddr(addr string) bool {
 	return strings.HasPrefix(addr, "ws:") || strings.HasPrefix(addr, "wss:")
 }
 
+func HashAddr(addrs []string, hash int) string {
+	if addrs == nil {
+		return ""
+	}
+
+	addrsLen := len(addrs)
+	if addrsLen <= 0 {
+		return ""
+	}
+
+	if hash >= 0 {
+		// 一致性hash
+		return addrs[hash%addrsLen]
+	}
+
+	// 随机地址
+	return addrs[rand.Int31n(int32(addrsLen))]
+}
+
 func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int, dataMax int, checkDrt int, rqIMax int, opt Opt) *Client {
 	that := new(Client)
 	that.locker = new(sync.Mutex)
 	that.addr = addr
+	that.AddrHash = -1
 	if strings.IndexByte(addr, ',') >= 0 {
 		that.addrs = KtStr.SplitByte(addr, ',', true, 0, 0)
 
@@ -201,6 +222,10 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 	return that
 }
 
+func (that *Client) getAddrs(addrs []string) {
+
+}
+
 // 设置连接地址
 func (that *Client) SetAddr(addr string) {
 	that.addr = addr
@@ -220,11 +245,11 @@ func (that *Client) GetProcessor() interface{} {
 // interface{}保护，避免sdk导出类型复杂
 func (that *Client) DialConn() (interface{}, error) {
 	if that.addrs != nil {
-		addr := that.addrs[rand.Int31n(int32(len(that.addrs)))]
+		addr := HashAddr(that.addrs, that.AddrHash)
 		return dialConn(WsAddr(addr), addr)
 
 	} else if that.http {
-		addr, err := HttpAddr(that.addr)
+		addr, err := HttpAddr(that.addr, that.AddrHash)
 		if addr == "" || err != nil {
 			return nil, err
 		}

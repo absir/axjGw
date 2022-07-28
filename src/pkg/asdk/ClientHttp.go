@@ -7,12 +7,11 @@ import (
 	"axj/Kt/Kt"
 	"axj/Kt/KtStr"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"strings"
 )
 
-func HttpAddr(url string) (string, error) {
+func HttpAddr(url string, hash int) (string, error) {
 	rep, err := http.Get(url)
 	if rep == nil || err != nil {
 		return "", err
@@ -40,7 +39,5 @@ func HttpAddr(url string) (string, error) {
 		return str, nil
 	}
 
-	// 随机地址
-	strs := KtStr.SplitByte(str, ',', true, 0, 0)
-	return strs[rand.Int31n(int32(len(strs)))], nil
+	return HashAddr(KtStr.SplitByte(str, ',', true, 0, 0), hash), nil
 }

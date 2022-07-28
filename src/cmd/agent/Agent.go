@@ -22,6 +22,7 @@ import (
 
 type config struct {
 	Proxy       string // 代理地址
+	ProxyHash   bool   // 代理地址一致性hash
 	ClientKey   string // 客户端Key
 	ClientCert  string // 客户端证书
 	ClientId    string // 客户端唯一编号
@@ -39,6 +40,7 @@ type config struct {
 
 var Config = &config{
 	Proxy:       "127.0.0.1:8783",
+	ProxyHash:   false,
 	SendP:       true,
 	ReadP:       true,
 	Encry:       true,
@@ -69,6 +71,10 @@ func main() {
 	// 内存池
 	Util.SetBufferPoolsS(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240").(string))
 	Client = asdk.NewClient(Config.Proxy, Config.SendP, Config.ReadP, Config.Encry, Config.CompressMin, Config.DataMax, Config.CheckDrt, Config.RqIMax, &Opt{})
+	if Config.ProxyHash {
+		Client.AddrHash = Kt.HashCode(KtUnsafe.StringToBytes(Machineid))
+	}
+
 	agent.Client = Client
 	agent.CloseDelay = Config.CloseDelay
 	go func() {
