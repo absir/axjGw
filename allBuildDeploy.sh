@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-cliDir="/e/open/axj/axj-cli"
+cliDir="/e/open/axj2/axj-cli"
 
 cd `dirname $0`
 args=$*
