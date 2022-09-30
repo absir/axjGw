@@ -41,7 +41,7 @@ func initPrxMng() {
 	PrxMng = that
 }
 
-func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Duration) bool {
+func (that *prxMng) Dial(cid int64, gid string, addr string, timeout int64) bool {
 	client := that.Client(cid, gid)
 	if client == nil {
 		return false
@@ -75,6 +75,7 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 	}
 
 	that.locker.Unlock()
+	//fmt.Printf("Dial %d %s \r\n", id, addr)
 	if dials == nil {
 		return false
 	}
@@ -88,15 +89,17 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 		return false
 	}
 
-	if timeout <= 0 {
-		timeout = Config.DialTimeout
+	aTimeout := Config.DialTimeout
+	if timeout > 0 {
+		aTimeout = time.Duration(timeout)
 	}
 
+	aTimeout *= time.Second
 	select {
 	case dial := <-dials:
 		that.dialsMap.Delete(id)
 		return dial
-	case <-time.After(timeout):
+	case <-time.After(aTimeout):
 		that.dialsMap.Delete(id)
 		return false
 	}
@@ -106,6 +109,7 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 }
 
 func (that *prxMng) DialRep(id int32, ok bool) {
+	//fmt.Printf("DialRep %d %t \r\n", id, ok)
 	that.locker.Lock()
 	val, _ := that.dialsMap.LoadAndDelete(id)
 	that.locker.Unlock()

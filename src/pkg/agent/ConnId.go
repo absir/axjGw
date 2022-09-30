@@ -32,6 +32,8 @@ var Client *asdk.Client
 var CloseDelay int
 var CloseDelayIn int
 
+var DialBytes = make([]byte, 1)
+
 func dialAddr(addr string, timeout time.Duration) error {
 	if strings.HasPrefix(addr, "-") {
 		// arp mac -> ip
@@ -57,6 +59,12 @@ func dialAddr(addr string, timeout time.Duration) error {
 		conn, err = net.Dial("tcp", addr)
 	}
 
+	if err == nil && conn != nil {
+		_, err = conn.Write(DialBytes)
+	}
+
+	//fmt.Printf("dialAddr %s %t \r\n", addr, err == nil)
+	//Kt.Err(err, false)
 	if conn != nil {
 		conn.Close()
 	}

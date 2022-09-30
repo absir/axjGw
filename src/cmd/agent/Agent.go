@@ -162,7 +162,7 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 			timeout = KtBytes.GetInt64(data, 0, nil)
 		}
 
-		go agent.DialProxy(uri, uriI, time.Duration(timeout))
+		go agent.DialProxy(uri, uriI, time.Duration(timeout)*time.Second)
 		return
 	case agent.REQ_CONN:
 		// 发送连接
