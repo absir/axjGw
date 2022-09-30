@@ -44,7 +44,7 @@ func testMapRange() {
 			sb = cmap.SizeBuckets()
 			fmt.Printf("%d => %d\n", cmap.CountFast(), cmap.SizeBuckets())
 			{
-				sTime := time.Now().UnixNano() / 10000000
+				sTime := time.Now().Unix()
 				cmap.Range(rangFun)
 
 				fmt.Printf("Range %d span %dms\n", cmap.CountFast(), time.Now().UnixNano()/10000000-sTime)
@@ -52,7 +52,7 @@ func testMapRange() {
 
 			{
 				var buff []interface{} = nil
-				sTime := time.Now().UnixNano() / 10000000
+				sTime := time.Now().Unix()
 				cmap.RangeBuff(rangFun, &buff, 16)
 
 				fmt.Printf("RangeBuff %d span %dms\n", cmap.CountFast(), time.Now().UnixNano()/10000000-sTime)
@@ -61,7 +61,7 @@ func testMapRange() {
 			{
 				var buffs [][]interface{} = nil
 				var wait *Util.DoneWait = nil
-				sTime := time.Now().UnixNano() / 10000000
+				sTime := time.Now().Unix()
 				cmap.RangeBuffs(rangFun, &buffs, 16, &wait)
 
 				fmt.Printf("RangeBuffs %d span %dms\n", cmap.CountFast(), time.Now().UnixNano()/10000000-sTime)

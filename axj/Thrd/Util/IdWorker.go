@@ -67,7 +67,7 @@ func (that *IdWorker) Generate() int64 {
 
 func (that *IdWorker) GenerateM(mod int, flg int) int64 {
 	that.Lock()
-	now := time.Now().UnixNano() / 1000000
+	now := time.Now().Unix()
 	if that.timestamp == now {
 		sequence := (that.sequence + 1) & sequenceMask
 		if mod > 1 {
@@ -77,7 +77,7 @@ func (that *IdWorker) GenerateM(mod int, flg int) int64 {
 		if sequence <= that.sequence {
 			for now <= that.timestamp {
 				time.Sleep(time.Nanosecond)
-				now = time.Now().UnixNano() / 1000000
+				now = time.Now().Unix()
 			}
 		}
 
