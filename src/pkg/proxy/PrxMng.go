@@ -84,6 +84,7 @@ func (that *prxMng) Dial(cid int64, gid string, addr string, timeout time.Durati
 	err := client.Get().Rep(false, agent.REQ_DIAL, addr, id, bs, false, false, 0)
 	if err != nil {
 		AZap.Logger.Warn("REQ_DIAL err", zap.Error(err))
+		that.dialsMap.Delete(id)
 		return false
 	}
 
