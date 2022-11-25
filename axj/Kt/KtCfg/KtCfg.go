@@ -294,7 +294,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 		index := KtStr.IndexBytes(str, splits, 0)
 		if index > 0 && index < sLen {
 			chr = str[index-1]
-			if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' || chr == '$' {
+			if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' || chr == '_' || chr == '$' {
 				if index < 1 {
 					return
 				}
@@ -339,9 +339,8 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 						pMap = cfg
 					}
 
-					if name[0] == '+' {
+					if chr == '+' || chr == '-' {
 						// 支持数组
-						name = name[1:]
 						o := GetType(mp, name, nil, nil).(*list.List)
 						if o == nil {
 							o = list.New()
@@ -442,6 +441,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				}
 				break
 			case '+':
+			case '-':
 				o := GetType(mp, name, nil, nil).(*list.List)
 				if o == nil {
 					o = list.New()
@@ -450,7 +450,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 
 				o.PushBack(str)
 				break
-			case '-':
+			case '_':
 				mp.Remove(name)
 				break
 			case '$':
