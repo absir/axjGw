@@ -334,11 +334,24 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				// yaml字典key 例如 server:
 				if len(strings.TrimSpace(str[index:])) == 1 {
 					mp := new(Kt.LinkedMap).Init()
-					if yMap == nil {
-						cfg.Put(name, mp)
+					var pMap Kt.Map = yMap
+					if pMap == nil {
+						pMap = cfg
+					}
+
+					if name[0] == '+' {
+						// 支持数组
+						name = name[1:]
+						o := GetType(mp, name, nil, nil).(*list.List)
+						if o == nil {
+							o = list.New()
+							pMap.Put(name, o)
+						}
+
+						o.PushBack(mp)
 
 					} else {
-						yMap.Put(name, mp)
+						pMap.Put(name, mp)
 					}
 
 					if ybMaps == nil {
