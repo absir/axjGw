@@ -141,7 +141,17 @@ func (that *MsgGorm) Insert(msg *MsgD) error {
 
 func (that *MsgGorm) Next(gid string, lastId int64, limit int) []*MsgD {
 	var msgDS []*MsgD = nil
-	that.db.Where("gid = ? AND id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+	that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ? AND a.id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+	if msgDS != nil {
+		mLen := len(msgDS)
+		for i := 0; i < mLen; i++ {
+			var msgD = msgDS[i]
+			if msgD.cData != nil && len(msgD.cData) > 0 {
+				msgD.Data = msgD.cData
+				msgD.cData = nil
+			}
+		}
+	}
 	return msgDS
 }
 
@@ -153,17 +163,22 @@ func (that *MsgGorm) LastId(gid string, limit int) int64 {
 
 func (that *MsgGorm) Last(gid string, limit int) []*MsgD {
 	var msgDS []*MsgD = nil
-	that.db.Where("gid = ?", gid).Order("id DESC").Limit(limit).Find(&msgDS)
+	that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ?", gid).Order("a.id DESC").Limit(limit).Find(&msgDS)
 	if msgDS != nil {
 		// 倒序
 		mLen := len(msgDS)
 		last := mLen - 1
 		mLen = mLen / 2
 		for i := 0; i < mLen; i++ {
-			msg := msgDS[i]
+			msgD := msgDS[i]
+			if msgD.cData != nil && len(msgD.cData) > 0 {
+				msgD.Data = msgD.cData
+				msgD.cData = nil
+			}
+
 			j := last - i
 			msgDS[i] = msgDS[j]
-			msgDS[j] = msg
+			msgDS[j] = msgD
 		}
 	}
 

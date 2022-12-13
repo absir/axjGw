@@ -439,11 +439,11 @@ func (that *chatMng) Send(req *gw.SendReq) (bool, error) {
 	}
 
 	rep, err = Server.GetProdGid(req.ToId).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
-		Gid:  req.ToId,
-		Uri:  req.Uri,
-		Data: req.Data,
-		Qs:   qs,
-		Fid:  fid,
+		Gid: req.ToId,
+		Uri: req.Uri,
+		// Data: req.Data,
+		Qs:  qs,
+		Fid: fid,
 	})
 
 	tid := Server.Id64(rep)
@@ -528,8 +528,8 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 			Index:   0,
 			Rand:    int(rand.Int31n(int32(mLen))),
 			Uri:     req.Uri,
-			Data:    req.Data,
-			Unique:  req.Unique,
+			// Data:    req.Data,
+			Unique: req.Unique,
 		}
 
 		if unreadFeed {
