@@ -87,7 +87,7 @@ func (that *chatMng) CheckLoop() {
 		time.Sleep(that.FDrt)
 		checkTime := time.Now().UnixNano()
 		that.checkTime = checkTime
-		MsgMng().Db.FidRange(F_SENDING, that.FStep, MsgMng().idWorkder.Timestamp(checkTime-that.FTimeout), MsgMng().idWorkder.Timestamp(checkTime-that.FTimeoutD), that.checkMsgD)
+		MsgMng().Db.FidRange(F_SENDING, that.FStep, MsgMng().idWorker.Timestamp(checkTime-that.FTimeout), MsgMng().idWorker.Timestamp(checkTime-that.FTimeoutD), that.checkMsgD)
 		if that.tStartTime < checkTime {
 			that.tStartTime = checkTime + that.TStartsDrt
 			tIds := MsgMng().Db.TeamStarts(Config.WorkId, that.TStartsLimit)
@@ -439,11 +439,11 @@ func (that *chatMng) Send(req *gw.SendReq) (bool, error) {
 	}
 
 	rep, err = Server.GetProdGid(req.ToId).GetGWIClient().GPush(Server.Context, &gw.GPushReq{
-		Gid: req.ToId,
-		Uri: req.Uri,
-		// Data: req.Data,
-		Qs:  qs,
-		Fid: fid,
+		Gid:  req.ToId,
+		Uri:  req.Uri,
+		Data: req.Data,
+		Qs:   qs,
+		Fid:  fid,
 	})
 
 	tid := Server.Id64(rep)
@@ -528,8 +528,8 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 			Index:   0,
 			Rand:    int(rand.Int31n(int32(mLen))),
 			Uri:     req.Uri,
-			// Data:    req.Data,
-			Unique: req.Unique,
+			Data:    req.Data,
+			Unique:  req.Unique,
 		}
 
 		if unreadFeed {
@@ -540,7 +540,7 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 		msgDb := MsgMng().Db != nil && qs == 3
 
 		if msgTeam.Id <= 0 {
-			msgTeam.Id = MsgMng().idWorkder.Generate()
+			msgTeam.Id = MsgMng().idWorker.Generate()
 		}
 
 		if msgDb {
@@ -610,7 +610,7 @@ func (that *chatMng) TeamPush(req *gw.TPushReq) (bool, error) {
 		// 未读扩散持久化
 		msgDb := MsgMng().Db != nil && qs == 3
 		if msgTeam.Id <= 0 {
-			msgTeam.Id = MsgMng().idWorkder.Generate()
+			msgTeam.Id = MsgMng().idWorker.Generate()
 		}
 
 		if msgDb {

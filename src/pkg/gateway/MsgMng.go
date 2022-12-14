@@ -23,6 +23,7 @@ type msgMng struct {
 	LastMaxAll    int           // 所有消息队列对打
 	LastLoad      bool          // 是否执行 last消息队类，初始化载入列表数
 	LastUri       string        // 消息持久化，数据库连接
+	LastDataF     bool          // 消息持久化，引用
 	ClearCron     string        // 消息清理，执行周期
 	ClearDay      int64         // 清理消息过期天数
 	CheckDrt      time.Duration // 执行检查逻辑，间隔
@@ -36,7 +37,8 @@ type msgMng struct {
 	checkTime     int64
 	checkBuff     []interface{}
 	Db            MsgDb
-	idWorkder     *Util.IdWorker
+	idWorker      *Util.IdWorker
+	IdWorkerMin   int64
 	locker        sync.Locker
 	connVer       int32
 	grpMap        *cmap.CMap
@@ -88,7 +90,8 @@ func initMsgMng() {
 	that.LastMaxAll = that.LastMax
 
 	// 属性初始化
-	that.idWorkder = Util.NewIdWorkerPanic(Config.WorkId)
+	that.idWorker = Util.NewIdWorkerPanic(Config.WorkId)
+	that.IdWorkerMin = that.idWorker.MinId()
 	that.locker = new(sync.Mutex)
 	that.grpMap = cmap.NewCMapInit()
 
@@ -115,7 +118,7 @@ func initMsgMng() {
 // 清理过期消息
 func (that *msgMng) ClearPass() {
 	if that.Db != nil && that.ClearDay > 0 {
-		oId := that.idWorkder.Timestamp(time.Now().UnixNano() - that.ClearDay*24*int64(time.Hour))
+		oId := that.idWorker.Timestamp(time.Now().UnixNano() - that.ClearDay*24*int64(time.Hour))
 		that.Db.Clear(oId)
 	}
 }

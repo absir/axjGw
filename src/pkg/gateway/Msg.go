@@ -136,12 +136,22 @@ func (that *MsgGorm) AutoMigrate() {
 }
 
 func (that *MsgGorm) Insert(msg *MsgD) error {
+	if MsgMng().LastDataF && msg.Fid != msg.Id && msg.Fid > MsgMng().IdWorkerMin {
+		msg.Data = nil
+	}
+
 	return that.db.Create(msg).Error
 }
 
 func (that *MsgGorm) Next(gid string, lastId int64, limit int) []*MsgD {
 	var msgDS []*MsgD = nil
-	that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ? AND a.id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+	if MsgMng().LastDataF {
+		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ? AND a.id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+
+	} else {
+		that.db.Where("gid = ? AND id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+	}
+
 	if msgDS != nil {
 		mLen := len(msgDS)
 		for i := 0; i < mLen; i++ {
@@ -163,7 +173,13 @@ func (that *MsgGorm) LastId(gid string, limit int) int64 {
 
 func (that *MsgGorm) Last(gid string, limit int) []*MsgD {
 	var msgDS []*MsgD = nil
-	that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ?", gid).Order("a.id DESC").Limit(limit).Find(&msgDS)
+	if MsgMng().LastDataF {
+		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ?", gid).Order("a.id DESC").Limit(limit).Find(&msgDS)
+
+	} else {
+		that.db.Where("gid = ?", gid).Order("id DESC").Limit(limit).Find(&msgDS)
+	}
+
 	if msgDS != nil {
 		// 倒序
 		mLen := len(msgDS)

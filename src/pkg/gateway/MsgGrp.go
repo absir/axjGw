@@ -419,7 +419,7 @@ func (that *MsgGrp) lastQueuePush(sess *MsgSess, msg Msg, fid int64) {
 	sess.lastQueueLoad()
 	// 锁加入队列
 	that.rwLocker.Lock()
-	msgD.Id = _msgMng.idWorkder.Generate()
+	msgD.Id = _msgMng.idWorker.Generate()
 	sess.lastQueue.Push(msg, true)
 	that.rwLocker.Unlock()
 }
@@ -441,7 +441,7 @@ func (that *MsgGrp) lastDbInsert(msgD *MsgD) error {
 			return _msgMng.Db.Insert(msgD)
 		}
 
-		msgD.Id = _msgMng.idWorkder.Generate()
+		msgD.Id = _msgMng.idWorker.Generate()
 		err := _msgMng.Db.Insert(msgD)
 		dbLocker.Unlock()
 		return err

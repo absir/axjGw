@@ -93,6 +93,10 @@ func (that *IdWorker) GenerateM(mod int, flg int) int64 {
 	return id
 }
 
+func (that *IdWorker) MinId() int64 {
+	return (1)<<timestampShift | (that.workerId << workerIdShift) | int64(that.sequence)
+}
+
 func (that *IdWorker) Timestamp(nanoTime int64) int64 {
 	now := nanoTime / 1000000
 	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift)
