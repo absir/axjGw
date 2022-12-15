@@ -226,6 +226,21 @@ func Cmp(str string, to string, m int, n int) int {
 	return mtx[m][n]
 }
 
+func IndentB(str string) int {
+	len := len(str)
+	i := 0
+	for ; i < len; i++ {
+		chr := str[i]
+		if chr == ' ' || chr == '\t' {
+			continue
+		}
+
+		return i
+	}
+
+	return i
+}
+
 func Sim(str, to string) float32 {
 	if str == to {
 		return 1

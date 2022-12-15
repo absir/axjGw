@@ -293,17 +293,28 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 		sLen = len(str)
 		index := KtStr.IndexBytes(str, splits, 0)
 		if index > 0 && index < sLen {
-			chr = str[index-1]
-			if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' || chr == '_' || chr == '$' {
-				if index < 1 {
-					return
+			if chr == '-' {
+				chr = '+'
+				if index > 1 {
+					name = name[1:index]
+
+				} else {
+					name = "a"
 				}
 
-				name = str[0 : index-1]
-
 			} else {
-				chr = 0
-				name = str[0:index]
+				chr = str[index-1]
+				if chr == '.' || chr == '#' || chr == ',' || chr == '+' || chr == '-' || chr == '$' {
+					if index < 1 {
+						return
+					}
+
+					name = str[0 : index-1]
+
+				} else {
+					chr = 0
+					name = str[0:index]
+				}
 			}
 
 			name = strings.TrimSpace(name)
@@ -314,7 +325,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 
 			// yml支持
 			if str[index] == ':' {
-				b := index - nLen
+				b := KtStr.IndentB(str)
 				for {
 					if b > yB || ybMaps == nil {
 						break
@@ -444,7 +455,6 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				}
 				break
 			case '+':
-			case '-':
 				o := GetType(mp, name, nil, nil).(*list.List)
 				if o == nil {
 					o = list.New()
@@ -453,7 +463,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 
 				o.PushBack(str)
 				break
-			case '_':
+			case '-':
 				mp.Remove(name)
 				break
 			case '$':
