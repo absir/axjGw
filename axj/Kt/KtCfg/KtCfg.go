@@ -295,8 +295,9 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 		if index > 0 && index < sLen {
 			if chr == '-' {
 				chr = '+'
-				if index > 1 {
-					name = name[1:index]
+				ci := strings.IndexByte(str, '-') + 1
+				if index > ci {
+					name = name[ci:index]
 
 				} else {
 					name = "a"
