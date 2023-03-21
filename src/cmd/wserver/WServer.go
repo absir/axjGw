@@ -9,13 +9,15 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/AZap/AZapIst"
 	"axj/Thrd/Util"
-	"axjGW/pkg/gateway"
+	gatewayExt "axjGW/cmd/wserver/gateway"
+	gateway "axjGW/pkg/gateway"
 	"axjGW/pkg/gws"
+	"bufio"
 	"fmt"
-	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
-	"net"
 	"net/http"
+	"os"
+
 	//_ "net/http/pprof"
 	"runtime"
 	"strings"
@@ -26,8 +28,6 @@ type config struct {
 	HttpWs       bool     // 启用ws网关
 	HttpWsPath   string   // ws连接地址
 	HttpWsOrigin bool     // ws Origin校验
-	SocketAddr   string   // socket服务地址
-	SocketPoll   bool     // socketPoll读取
 	FrameMax     int      // 最大帧数
 	GrpcAddr     string   // grpc服务地址
 	GrpcIps      []string // grpc调用Ip白名单，支持*通配
@@ -37,10 +37,8 @@ type config struct {
 var Config = &config{
 	HttpAddr:     ":8682",
 	HttpWs:       true,
-	HttpWsPath:   "/gw",
+	HttpWsPath:   "/",
 	HttpWsOrigin: false,
-	SocketAddr:   ":8683",
-	SocketPoll:   true,
 	GrpcAddr:     "0.0.0.0:8082",
 	GrpcIps:      KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -52,7 +50,7 @@ func main() {
 	APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 		return runtime.Caller(0)
 	}, "../../resources")
-	APro.Load(nil, "config.yml")
+	APro.Load(nil, "WServer.yml")
 
 	// 内存池
 	Util.SetBufferPoolsS(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240").(string))
@@ -65,7 +63,8 @@ func main() {
 	}
 
 	// Gw服务初始化
-	gateway.Server.Init(APro.WorkId(), nil, APro.Cfg, new(gws.GatewayIs))
+	gateway.Server.Init(APro.WorkId(), gatewayExt.InitGateWay, APro.Cfg, new(gws.GatewayIs))
+
 	if APro.Cfg.Get("msg") != nil {
 		// 初始化MsgMng
 		gateway.MsgMng()
@@ -74,40 +73,6 @@ func main() {
 	gateway.Server.StartGw()
 	// Grpc服务开启
 	gateway.Server.StartGrpc(Config.GrpcAddr, Config.GrpcIps, new(gws.GatewayS))
-
-	// socket连接
-	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
-		// socket服务
-		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
-		serv, err := net.Listen("tcp", Config.SocketAddr)
-		Kt.Panic(err)
-		defer serv.Close()
-		go func() {
-			for !APro.Stopped {
-				conn, err := serv.Accept()
-				if err != nil {
-					if APro.Stopped {
-						return
-					}
-
-					AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
-					continue
-				}
-
-				tConn := conn.(*net.TCPConn)
-				sConn := ANet.NewConnSocket(tConn)
-				if Config.SocketPoll {
-					// 优先ePoll模式
-					gateway.Server.ConnPoll(sConn)
-
-				} else {
-					Util.GoSubmit(func() {
-						gateway.Server.ConnLoop(sConn)
-					})
-				}
-			}
-		}()
-	}
 
 	// websocket连接
 	if Config.HttpAddr != "" && !strings.HasPrefix(Config.HttpAddr, "!") {
@@ -146,9 +111,44 @@ func main() {
 	}
 
 	// 启动完成
-	AZap.Logger.Info("Gateway all AXJ started")
+	AZap.Logger.Info("WServer all AXJ started")
 	// 日志配置
 	AZapIst.InitCfg(true)
 	// 等待关闭
-	APro.Signal()
+	//APro.Signal()
+	input := bufio.NewScanner(os.Stdin)
+	// 逐行扫描
+	for input.Scan() && !APro.Stopped {
+		line := strings.TrimSpace(input.Text())
+		if line == "" {
+			break
+		}
+
+		cid := line
+		msg := ""
+		idx := strings.IndexByte(line, ' ')
+		if idx > 0 {
+			cid = strings.ToLower(line[0:idx])
+			msg = strings.TrimSpace(line[idx+1:])
+
+		} else {
+			cid = strings.ToLower(line)
+		}
+
+		if cid == "." {
+			gateway.Server.Manager.ClientMap().Range(func(key, value interface{}) bool {
+				cid = KtCvt.ToString(key)
+				return false
+			})
+		}
+
+		client := gateway.Server.Manager.Client(KtCvt.ToInt64(cid))
+		if client == nil {
+			Kt.Log("Client No " + cid)
+			continue
+		}
+
+		client.Get().RepCData(true, 0, msg, 0, nil, 0, false, false, 0)
+		Kt.Log("Client Rep " + cid + " <= " + msg)
+	}
 }

@@ -136,7 +136,7 @@ func (h handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, 
 	clientG.Get().Rep(true, req, "", gateway.ERR_PROD_NO, nil, false, false, 0)
 }
 
-func (h handler) Processor() *ANet.Processor {
+func (h handler) Processor() ANet.Processor {
 	return Processor
 }
 

@@ -79,7 +79,7 @@ type Client struct {
 	checkTime   int64
 	checksAsync *Util.NotifierAsync
 	rqIMax      int32
-	processor   *ANet.Processor
+	processor   *ANet.ProcessorV
 	opt         Opt
 	adapter     *Adapter
 	uriMapUriI  map[string]int32
@@ -203,7 +203,7 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 		that.rqIMax = KtBytes.VINT_2_MAX
 	}
 
-	processor := &ANet.Processor{
+	processor := &ANet.ProcessorV{
 		Protocol:    &ANet.ProtocolV{},
 		Compress:    &ANet.CompressZip{},
 		CompressMin: compressMin,

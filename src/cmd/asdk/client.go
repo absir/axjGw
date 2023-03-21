@@ -247,7 +247,7 @@ func (that *clientsState) send(uri string) {
 	sTime := time.Now().Unix()
 	sTimeS := strconv.FormatInt(sTime, 10)
 	jsonData, _ := json.Marshal([]string{uri, sTimeS})
-	client.Req("test/sendU", jsonData, true, 30, func(s string, bytes []byte, buffer asdk.Buffer) {
+	client.Req("dev/send", jsonData, true, 30, func(s string, bytes []byte, buffer asdk.Buffer) {
 		fmt.Printf("send rep %s span %dms, err %s\n", sTimeS, (time.Now().UnixNano()/1000000 - sTime), s)
 		asdk.BufferFree(buffer)
 	})

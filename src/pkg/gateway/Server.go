@@ -72,7 +72,7 @@ func (that *server) CidGen(compress bool) int64 {
 }
 
 func (that *server) CidCompress(cid int64) bool {
-	return (cid & 0X01) == 1
+	return (cid & 0x01) == 1
 }
 
 func (that *server) Cron(locker bool) *cron.Cron {
@@ -130,11 +130,15 @@ func (that *server) getLiveLimiter() Util.Limiter {
 	return that.getLimiter(&that.liveLimiter, Config.LiveLimit)
 }
 
-func (that *server) Init(workId int32, cfg map[interface{}]interface{}, gatewayI gw.GatewayIServer) {
+func (that *server) Init(workId int32, init func(), cfg map[interface{}]interface{}, gatewayI gw.GatewayIServer) {
 	// 全局锁
 	that.Locker = new(sync.Mutex)
 	// 配置初始化
 	initConfig(workId)
+	if init != nil {
+		init()
+	}
+
 	// 初始化服务
 	that.initProds(cfg)
 	// Handler初始化
@@ -293,10 +297,10 @@ func (that *server) ConnLoop(conn ANet.Conn) {
 func (that *server) connOpen(pConn *ANet.Conn) ANet.Client {
 	conn := *pConn
 	var encryptKey []byte = nil
-	fun := that.connOpenFun(pConn, &encryptKey)
+	i, fun := that.connOpenFun(pConn, &encryptKey)
 	var buffer *KtBuffer.Buffer = nil
 	for {
-		done, client := fun(that.Manager.Processor().Req(&buffer, conn, encryptKey))
+		done, client := fun(that.Manager.Processor().ReqOpen(*i, &buffer, conn, encryptKey))
 		Util.PutBuffer(buffer)
 		buffer = nil
 		if done {
@@ -317,7 +321,7 @@ func (that *server) ConnPoll(conn ANet.Conn) {
 	var done bool
 	var client ANet.Client
 	var encryptKey []byte = nil
-	fun := that.connOpenFun(&conn, &encryptKey)
+	_, fun := that.connOpenFun(&conn, &encryptKey)
 	connPoll.FrameStart(func(el interface{}) {
 		frame, _ := el.(*ANet.ReqFrame)
 		if frame == nil {
@@ -347,13 +351,13 @@ func (that *server) ConnPoll(conn ANet.Conn) {
 	})
 }
 
-func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err error, req int32, uri string, uriI int32, data []byte) (bool, ANet.Client) {
+func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) (*int, func(err error, req int32, uri string, uriI int32, data []byte) (bool, ANet.Client)) {
 	conn := *pConn
 	var flag int32
 	var compress bool
 	var encryptKey []byte
 	_i := 0
-	return func(err error, req int32, uri string, uriI int32, data []byte) (_done bool, _client ANet.Client) {
+	return &_i, func(err error, req int32, uri string, uriI int32, data []byte) (_done bool, _client ANet.Client) {
 		_done = true
 		if err != nil {
 			return
@@ -366,9 +370,10 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) func(err 
 			// 连接压缩
 			compress = (flag & ANet.FLG_COMPRESS) != 0
 			processor := that.Manager.Processor()
+			processorV := processor.Get()
 			// 连接密钥
-			if (flag&ANet.FLG_ENCRYPT) != 0 && processor.Encrypt != nil {
-				sKey, cKey := processor.Encrypt.NewKeys()
+			if (flag&ANet.FLG_ENCRYPT) != 0 && processorV.Encrypt != nil {
+				sKey, cKey := processorV.Encrypt.NewKeys()
 				if sKey != nil && cKey != nil {
 					encryptKey = sKey
 					if pEncryptKey != nil {

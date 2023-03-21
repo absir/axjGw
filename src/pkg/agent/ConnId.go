@@ -148,7 +148,7 @@ func ConnProxy(addr string, id int32, data []byte, buffer asdk.Buffer) {
 
 			connId.aConn = aConn
 			// 代理连接协议
-			aProcessor, _ := Client.GetProcessor().(*ANet.Processor)
+			aProcessor, _ := Client.GetProcessor().(*ANet.ProcessorV)
 			if aConn == nil || aProcessor == nil {
 				return
 			}

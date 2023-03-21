@@ -27,7 +27,7 @@ func (that *ConnPoll) IsClose() bool {
 	return that.conn == nil
 }
 
-func (that *ConnPoll) OnRead(processor *Processor, bs []byte, bufferP bool) error {
+func (that *ConnPoll) OnRead(processor *ProcessorV, bs []byte, bufferP bool) error {
 	pBs := &bs
 	for {
 		err := processor.Protocol.ReqFrame(pBs, that.frameReader, processor.DataMax, bufferP)

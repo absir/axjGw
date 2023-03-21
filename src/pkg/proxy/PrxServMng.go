@@ -32,7 +32,7 @@ type prxServMng struct {
 
 var PrxServMng = new(prxServMng)
 
-var Processor *ANet.Processor
+var Processor *ANet.ProcessorV
 var Handler = &handler{}
 var AclClient gw.AclClient
 
@@ -42,7 +42,7 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 	that.locker = new(sync.Mutex)
 	that.idWorker = Util.NewIdWorkerPanic(wordId)
 	that.servMap = cmap.NewCMapInit()
-	Processor = &ANet.Processor{
+	Processor = &ANet.ProcessorV{
 		Protocol:    &ANet.ProtocolV{},
 		CompressMin: Config.CompressMin,
 		DataMax:     Config.DataMax,

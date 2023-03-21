@@ -86,7 +86,7 @@ func NewManager(handlerM HandlerM, workerId int32, idleDrt int64, checkDrt time.
 	that.clientMap = cmap.NewCMapInit()
 	that.checkDrt = checkDrt
 	that.idleDrt = idleDrt
-	that.beatBytes, _ = handlerM.Processor().Protocol.Rep(REQ_BEAT, "", 0, nil, 0, false, 0, 0, nil)
+	that.beatBytes, _ = handlerM.Processor().Get().Protocol.Rep(REQ_BEAT, "", 0, nil, 0, false, 0, 0, nil)
 	return that
 }
 
@@ -127,7 +127,7 @@ func (that *Manager) OnReqIO(client Client, req int32, uri string, uriI int32, d
 	that.handlerM.OnReqIO(client, req, uri, uriI, data)
 }
 
-func (that *Manager) Processor() *Processor {
+func (that *Manager) Processor() Processor {
 	return that.handlerM.Processor()
 }
 

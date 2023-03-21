@@ -1,6 +1,9 @@
 package gateway
 
 import (
+	"axj/Kt/Kt"
+	"axj/Kt/KtCvt"
+	"axj/Kt/KtUnsafe"
 	"axj/Thrd/Util"
 	"axjGW/gen/gw"
 	"context"
@@ -27,7 +30,7 @@ func (Z zDevAcl) LoginBack(ctx context.Context, in *gw.LoginBack, opts ...grpc.C
 		Server.gatewayISC.GLasts(ctx, &gw.GLastsReq{
 			Cid:        in.Cid,
 			Unique:     strconv.FormatInt(in.Cid, 10),
-			Gid:        "ZG",
+			Gid:        "Dev",
 			Continuous: 1,
 		}, opts...)
 	})
@@ -53,20 +56,24 @@ func (Z zDevAcl) Team(ctx context.Context, in *gw.GidReq, opts ...grpc.CallOptio
 }
 
 func (Z zDevAcl) Req(ctx context.Context, in *gw.PassReq, opts ...grpc.CallOption) (*gw.DataRep, error) {
-	if in.Uri == "test/sendU" {
+	if in.Uri == "dev/send" {
 		// 向ZG组发送消息
 		var strs []string
 		json.Unmarshal(in.Data, &strs)
 		data := []byte(strs[1])
 		Util.GoSubmit(func() {
 			Server.gatewayISC.GPush(ctx, &gw.GPushReq{
-				Gid:  "ZG",
+				Gid:  "Dev",
 				Qs:   3,
 				Uri:  strs[0],
 				Data: data,
 			}, opts...)
 		})
 		return &gw.DataRep{}, nil
+	}
+
+	if in.Uri == "S" && in.Data != nil {
+		Kt.Log("Client " + KtCvt.ToString(in.Cid) + " => " + KtUnsafe.BytesToString(in.Data))
 	}
 
 	return nil, ERR_FAIL

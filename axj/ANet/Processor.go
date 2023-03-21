@@ -6,7 +6,18 @@ import (
 	"io"
 )
 
-type Processor struct {
+type Processor interface {
+	Get() *ProcessorV
+	ReqOpen(i int, pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, []byte)
+	Req(pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, []byte)
+	ReqPId(pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, int64, []byte)
+	ReqFrame(frame *ReqFrame, decryKey []byte) (err error, req int32, uri string, uriI int32, data []byte)
+	Rep(bufferP bool, conn Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error
+	RepCData(bufferP bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, cData []byte, isolate bool, id int64) error
+	RepComprCData(bufferP bool, conn Conn, encryKey []byte, compr Compress, req int32, uri string, uriI int32, data []byte, cData bool, isolate bool, id int64) error
+}
+
+type ProcessorV struct {
 	Protocol    Protocol
 	Compress    Compress
 	CompressMin int
@@ -14,17 +25,25 @@ type Processor struct {
 	DataMax     int32
 }
 
-func (that *Processor) Req(pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
+func (that *ProcessorV) Get() *ProcessorV {
+	return that
+}
+
+func (that *ProcessorV) ReqOpen(i int, pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
+	return that.Req(pBuffer, conn, decryKey)
+}
+
+func (that *ProcessorV) Req(pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, []byte) {
 	return req(pBuffer, conn, that.Protocol, that.Compress, that.Encrypt, decryKey, nil, that.DataMax)
 }
 
-func (that *Processor) ReqPId(pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, int64, []byte) {
+func (that *ProcessorV) ReqPId(pBuffer **KtBuffer.Buffer, conn Conn, decryKey []byte) (error, int32, string, int32, int64, []byte) {
 	var pid int64 = 0
 	err, req, uri, uriI, data := req(pBuffer, conn, that.Protocol, that.Compress, that.Encrypt, decryKey, &pid, that.DataMax)
 	return err, req, uri, uriI, pid, data
 }
 
-func (that *Processor) ReqFrame(frame *ReqFrame, decryKey []byte) (err error, req int32, uri string, uriI int32, data []byte) {
+func (that *ProcessorV) ReqFrame(frame *ReqFrame, decryKey []byte) (err error, req int32, uri string, uriI int32, data []byte) {
 	head := frame.Head
 	data = frame.Data
 	if data != nil {
@@ -49,7 +68,7 @@ func (that *Processor) ReqFrame(frame *ReqFrame, decryKey []byte) (err error, re
 	return
 }
 
-func (that *Processor) Rep(bufferP bool, conn Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
+func (that *ProcessorV) Rep(bufferP bool, conn Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
 	compr := that.Compress
 	if !compress {
 		compr = nil
@@ -61,11 +80,11 @@ func (that *Processor) Rep(bufferP bool, conn Conn, encryKey []byte, compress bo
 /*
  * 推送数据 cData已压缩状态
  */
-func (that *Processor) RepCData(bufferP bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, cData []byte, isolate bool, id int64) error {
+func (that *ProcessorV) RepCData(bufferP bool, conn Conn, encryKey []byte, req int32, uri string, uriI int32, cData []byte, isolate bool, id int64) error {
 	return that.RepComprCData(bufferP, conn, encryKey, nil, req, uri, uriI, cData, true, isolate, id)
 }
 
-func (that *Processor) RepComprCData(bufferP bool, conn Conn, encryKey []byte, compr Compress, req int32, uri string, uriI int32, data []byte, cData bool, isolate bool, id int64) error {
+func (that *ProcessorV) RepComprCData(bufferP bool, conn Conn, encryKey []byte, compr Compress, req int32, uri string, uriI int32, data []byte, cData bool, isolate bool, id int64) error {
 	// 内存池
 	var pBuffer **KtBuffer.Buffer = nil
 	if bufferP {

@@ -16,26 +16,32 @@ const (
 	ERR_PORD_SUCC = int32(gw.Result_Succ)    // 服务成功
 )
 
-var Processor *ANet.Processor
-var Handler *handler
+var Processor ANet.Processor = nil
+var Handler *handler = nil
 
 func initHandler() {
-	Processor = &ANet.Processor{
-		Protocol:    &ANet.ProtocolV{},
-		CompressMin: Config.CompressMin,
-		DataMax:     Config.DataMax,
+	if Processor == nil {
+		processor := &ANet.ProcessorV{
+			Protocol:    &ANet.ProtocolV{},
+			CompressMin: Config.CompressMin,
+			DataMax:     Config.DataMax,
+		}
+
+		// CompressMin < 0 不压缩
+		if Config.CompressMin >= 0 {
+			processor.Compress = &ANet.CompressZip{}
+		}
+
+		if Config.Encrypt {
+			processor.Encrypt = &ANet.EncryptSr{}
+		}
+
+		Processor = processor
 	}
 
-	// CompressMin < 0 不压缩
-	if Config.CompressMin >= 0 {
-		Processor.Compress = &ANet.CompressZip{}
+	if Handler == nil {
+		Handler = new(handler)
 	}
-
-	if Config.Encrypt {
-		Processor.Encrypt = &ANet.EncryptSr{}
-	}
-
-	Handler = new(handler)
 }
 
 type handler struct {
@@ -162,7 +168,7 @@ func (that *handler) reqRcvr(client ANet.Client, req int32, reped *bool) {
 	}
 }
 
-func (that *handler) Processor() *ANet.Processor {
+func (that *handler) Processor() ANet.Processor {
 	return Processor
 }
 
@@ -197,12 +203,13 @@ func CompressorCData(data []byte, cDataP *[]byte, cDidP *bool) {
 	}
 
 	dLen := len(data)
-	if Processor.Compress == nil || dLen <= 0 || dLen < Processor.CompressMin {
+	processorV := Processor.Get()
+	if processorV.Compress == nil || dLen <= 0 || dLen < processorV.CompressMin {
 		*cDataP = data
 		return
 	}
 
-	cData, err := Processor.Compress.Compress(data)
+	cData, err := processorV.Compress.Compress(data)
 	if cData == nil || err != nil || len(cData) >= dLen {
 		if err != nil {
 			// 压缩错误
