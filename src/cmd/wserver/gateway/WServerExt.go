@@ -21,7 +21,7 @@ func (that *ProcessorExt) ReqOpen(i int, pBuffer **KtBuffer.Buffer, conn ANet.Co
 		if websocket, ok := conn.(*ANet.ConnWebsocket); ok {
 			req := websocket.Conn().Request()
 			data, err := json.Marshal([]interface{}{req.RequestURI, req.Header})
-			//Kt.Log(KtUnsafe.BytesToString(data))
+			// Kt.Log(KtUnsafe.BytesToString(data))
 			return err, 0, "", 0, data
 		}
 	}
