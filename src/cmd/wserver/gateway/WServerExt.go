@@ -45,7 +45,7 @@ func (that *ProcessorExt) Rep(bufferP bool, conn ANet.Conn, encryKey []byte, com
 		return nil
 	}
 
-	if uri != "" {
+	if uri != "" && req != ANet.REQ_LOOP {
 		if web, ok := conn.(*ANet.ConnWebsocket); ok {
 			return websocket.Message.Send(web.Conn(), uri)
 		}
