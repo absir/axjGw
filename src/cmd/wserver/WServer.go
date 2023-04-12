@@ -114,41 +114,44 @@ func main() {
 	AZap.Logger.Info("WServer all AXJ started")
 	// 日志配置
 	AZapIst.InitCfg(true)
+	go func() {
+		input := bufio.NewScanner(os.Stdin)
+		// 逐行扫描
+		for input.Scan() && !APro.Stopped {
+			line := strings.TrimSpace(input.Text())
+			if line == "" {
+				break
+			}
+
+			cid := line
+			msg := ""
+			idx := strings.IndexByte(line, ' ')
+			if idx > 0 {
+				cid = strings.ToLower(line[0:idx])
+				msg = strings.TrimSpace(line[idx+1:])
+
+			} else {
+				cid = strings.ToLower(line)
+			}
+
+			if cid == "." {
+				gateway.Server.Manager.ClientMap().Range(func(key, value interface{}) bool {
+					cid = KtCvt.ToString(key)
+					return false
+				})
+			}
+
+			client := gateway.Server.Manager.Client(KtCvt.ToInt64(cid))
+			if client == nil {
+				Kt.Log("Client No " + cid)
+				continue
+			}
+
+			client.Get().RepCData(true, 0, msg, 0, nil, 0, false, false, 0)
+			Kt.Log("Client Rep " + cid + " <= " + msg)
+		}
+	}()
+
 	// 等待关闭
-	//APro.Signal()
-	input := bufio.NewScanner(os.Stdin)
-	// 逐行扫描
-	for input.Scan() && !APro.Stopped {
-		line := strings.TrimSpace(input.Text())
-		if line == "" {
-			break
-		}
-
-		cid := line
-		msg := ""
-		idx := strings.IndexByte(line, ' ')
-		if idx > 0 {
-			cid = strings.ToLower(line[0:idx])
-			msg = strings.TrimSpace(line[idx+1:])
-
-		} else {
-			cid = strings.ToLower(line)
-		}
-
-		if cid == "." {
-			gateway.Server.Manager.ClientMap().Range(func(key, value interface{}) bool {
-				cid = KtCvt.ToString(key)
-				return false
-			})
-		}
-
-		client := gateway.Server.Manager.Client(KtCvt.ToInt64(cid))
-		if client == nil {
-			Kt.Log("Client No " + cid)
-			continue
-		}
-
-		client.Get().RepCData(true, 0, msg, 0, nil, 0, false, false, 0)
-		Kt.Log("Client Rep " + cid + " <= " + msg)
-	}
+	APro.Signal()
 }
