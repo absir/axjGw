@@ -1,0 +1,6 @@
+GrpcAddr: 0.0.0.0:8082
+#log:
+#  level: 1
+prods:
+  acl:
+    1: 127.0.0.1:8083
