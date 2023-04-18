@@ -39,5 +39,10 @@ fi
 if [[ $args =~ "win" ]];then
 export GOOS=windows
 export GOARCH=amd64
-go build -tags wsN -o ./agent-win ../cmd/agent/Agent.go
+go build -tags wsN -o ./agent-win.exe ../cmd/agent/Agent.go
+mkdir ../../bin/win
+rm -rf ../../bin/win/*
+cp -rf agent-win.exe ../../bin/win/
+cp -rf ../../install/agent.yml ../../bin/win/
+cp -rf ../../install/win/* ../../bin/win/
 fi

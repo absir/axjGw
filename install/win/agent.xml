@@ -1,0 +1,13 @@
+<configuration> 
+    <id>agent-win</id>
+    <name>agent-wint</name>
+    <description>This is agent-win service.</description>
+    <executable>agent-win.exe</executable>
+    <arguments></arguments>
+    <!-- 开机启动 -->
+    <startmode>Automatic</startmode>
+    <delayedAutoStart>true</delayedAutoStart>
+    <onfailure action="restart" delay="20 sec"/>
+    <!-- 日志配置 -->
+    <log logpath="logs" stdoutPath="logs" stderrPath="stderrPath" mode="roll"></log>
+ </configuration>
