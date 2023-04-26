@@ -4,3 +4,5 @@ GrpcAddr: 0.0.0.0:8082
 prods:
   acl:
     1: 127.0.0.1:8083
+msg:
+  QueueMax: 0

@@ -228,12 +228,12 @@ func (that *MsgSess) QueueStart() {
 }
 
 // 队列添加消息
-func (that *MsgSess) QueuePush(msg Msg) (bool, error) {
+func (that *MsgSess) QueuePush(msg Msg, qs int32) (bool, error) {
 	if msg == nil {
 		return false, nil
 	}
 
-	if that.getOrNewQueue() == nil {
+	if qs <= 0 || that.getOrNewQueue() == nil {
 		client := that.client
 		if client != nil {
 			msgD := msg.Get()

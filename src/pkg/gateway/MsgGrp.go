@@ -363,11 +363,11 @@ func (that *MsgGrp) Push(uri string, data []byte, isolate bool, qs int32, queue 
 		}
 
 		msg := NewMsg(uri, data, unique)
-		succ, err := sess.QueuePush(msg)
+		succ, err := sess.QueuePush(msg, qs)
 		return msg.Get().Id, succ, err
 
 	} else {
-		if qs >= 0 && fid > 0 && _msgMng.Db != nil {
+		if fid > 0 && _msgMng.Db != nil {
 			// 唯一性校验
 			id := _msgMng.Db.FidGet(fid, that.gid)
 			if id > 0 {

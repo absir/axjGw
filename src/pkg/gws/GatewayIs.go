@@ -406,6 +406,10 @@ func (g GatewayIs) GPush(ctx context.Context, req *gw.GPushReq) (*gw.Id64Rep, er
 		return Result_Fail_Rep64, err
 	}
 
+	if id <= Result_Succ_Rep64.Id {
+		return Result_Succ_Rep64, nil
+	}
+
 	return &gw.Id64Rep{Id: id}, nil
 }
 

@@ -37,8 +37,8 @@ func (that *ProcessorExt) Req(pBuffer **KtBuffer.Buffer, conn ANet.Conn, decryKe
 func (that *ProcessorExt) Rep(bufferP bool, conn ANet.Conn, encryKey []byte, compress bool, req int32, uri string, uriI int32, data []byte, isolate bool, id int64) error {
 	if req < 0 {
 		// websocket心跳
-		if web, ok := conn.(*ANet.ConnWebsocket); ok {
-			return websocket.Message.Send(web.Conn(), "")
+		if _, ok := conn.(*ANet.ConnWebsocket); ok {
+			return nil
 		}
 
 	} else if req > 0 {
