@@ -401,9 +401,9 @@ func (g GatewayIs) GPush(ctx context.Context, req *gw.GPushReq) (*gw.Id64Rep, er
 	}
 
 	grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
-	id, succ, err := grp.Push(req.Uri, req.Data, req.Isolate, req.Qs, req.Queue, req.Unique, req.Fid)
+	id, succ, _ := grp.Push(req.Uri, req.Data, req.Isolate, req.Qs, req.Queue, req.Unique, req.Fid)
 	if !succ {
-		return Result_Fail_Rep64, err
+		return Result_Fail_Rep64, nil
 	}
 
 	if id <= Result_Succ_Rep64.Id {
@@ -427,7 +427,7 @@ func (g GatewayIs) GPushA(ctx context.Context, req *gw.IGPushAReq) (*gw.Id32Rep,
 	}
 
 	if err != nil {
-		return Result_Fail_Rep, err
+		return Result_Fail_Rep, nil
 	}
 
 	return Result_Succ_Rep, nil
@@ -440,7 +440,7 @@ func (g GatewayIs) Send(ctx context.Context, req *gw.SendReq) (*gw.Id32Rep, erro
 
 	succ, err := gateway.ChatMng().Send(req)
 	if !succ || err != nil {
-		return Result_Fail_Rep, err
+		return Result_Fail_Rep, nil
 	}
 
 	return Result_Succ_Rep, nil
@@ -453,7 +453,7 @@ func (g GatewayIs) TPush(ctx context.Context, req *gw.TPushReq) (*gw.Id32Rep, er
 
 	succ, err := gateway.ChatMng().TeamPush(req)
 	if !succ || err != nil {
-		return Result_Fail_Rep, err
+		return Result_Fail_Rep, nil
 	}
 
 	return Result_Succ_Rep, nil
