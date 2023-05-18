@@ -4,10 +4,6 @@ go 1.17
 
 require (
 	axj v0.0.0
-	github.com/Picovoice/porcupine/binding/go/v2 v2.2.0
-	github.com/Picovoice/pvrecorder/sdk/go v1.1.1
-	github.com/faiface/beep v1.1.0
-	github.com/gen2brain/malgo v0.11.10
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.12
 	github.com/robfig/cron/v3 v3.0.1
@@ -24,8 +20,6 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
-	github.com/hajimehoshi/oto v0.7.1 // indirect
 	github.com/hashicorp/consul/api v1.12.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-hclog v0.12.0 // indirect
@@ -47,9 +41,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	go.uber.org/atomic v1.8.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
-	golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8 // indirect
-	golang.org/x/image v0.0.0-20190227222117-0694c2d4d067 // indirect
-	golang.org/x/mobile v0.0.0-20190415191353-3e0bab5405d6 // indirect
 	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
