@@ -9,13 +9,16 @@ import (
 	"axj/Thrd/Util"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/asdk"
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	snowboy "github.com/brentnd/go-snowboy"
-	"github.com/gordonklaus/portaudio"
+	porcupine "github.com/Picovoice/porcupine/binding/go/v2"
+	pvrecorder "github.com/Picovoice/pvrecorder/sdk/go"
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/mp3"
+	"github.com/faiface/beep/speaker"
+	"github.com/gen2brain/malgo"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"runtime"
@@ -57,8 +60,8 @@ var Config = &config{
 	RqIMax:         0,
 	ConnDrt:        30,
 	CloseDelay:     30,
-	inputChannels:  1,
-	outputChannels: 0,
+	inputChannels:  -1,
+	outputChannels: -1,
 	sampleRate:     16000,
 }
 
@@ -95,8 +98,26 @@ func main() {
 		}
 	}()
 
+	// 打印音频设备
+	printAudioDevices()
+
+	// 播放声音
+	f, err := os.Open("E:\\doc\\恐龙\\upan\\success.mp3")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	streamer, format, err := mp3.Decode(f)
+	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+	done := make(chan bool)
+	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
+		done <- true
+	})))
+
+	<-done
+
 	// 监听唤醒词
-	go Listen()
+	go ListenKeywords()
 
 	// 启动完成
 	AZap.Info("Agent %s all AXJ started", agent.Version)
@@ -177,66 +198,78 @@ func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32,
 	fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
 }
 
-// Sound represents a sound stream with io.Reader interface.
-type Sound struct {
-	stream *portaudio.Stream
-	data   []int16
+func printAudioDevices() {
+	context, err := malgo.InitContext(nil, malgo.ContextConfig{}, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		_ = context.Uninit()
+		context.Free()
+	}()
+
+	// Capture devices.
+	infos, err := context.Devices(malgo.Capture)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Capture Devices")
+	for i, info := range infos {
+		fmt.Printf("    %d: %s\n", i, strings.Replace(info.Name(), "\x00", "", -1))
+	}
 }
 
-// Read is the implementation of the io.Reader interface.
-func (s *Sound) Read(p []byte) (int, error) {
-	s.stream.Read()
+func ListenKeywords() {
+	builtInKeyword := porcupine.BuiltInKeyword("hey siri")
+	fmt.Printf("", builtInKeyword)
 
-	buf := &bytes.Buffer{}
-	for _, v := range s.data {
-		binary.Write(buf, binary.LittleEndian, v)
-	}
+	p := porcupine.Porcupine{}
+	p.AccessKey = ""
+	p.BuiltInKeywords = append(p.BuiltInKeywords, builtInKeyword)
+	p.Sensitivities = []float32{1}
 
-	copy(p, buf.Bytes())
-	return len(p), nil
-}
-
-func Listen() {
-	framesPerBuffer := make([]int16, Config.sampleRate)
-	// initialize the audio recording interface
-	err := portaudio.Initialize()
+	err := p.Init()
 	if err != nil {
-		fmt.Errorf("Error initialize audio interface: %s", err)
-		return
+		log.Fatal(err)
+	}
+	defer func() {
+		err := p.Delete()
+		if err != nil {
+			log.Fatalf("Failed to release resources: %s", err)
+		}
+	}()
+
+	recorder := pvrecorder.PvRecorder{
+		DeviceIndex:    Config.inputChannels,
+		FrameLength:    porcupine.FrameLength,
+		BufferSizeMSec: 1000,
+		LogOverflow:    0,
 	}
 
-	defer portaudio.Terminate()
-
-	// open the sound input for the microphone
-	stream, err := portaudio.OpenDefaultStream(Config.inputChannels, Config.outputChannels, float64(Config.sampleRate), len(framesPerBuffer), framesPerBuffer)
-	if err != nil {
-		fmt.Errorf("Error open default audio stream: %s", err)
-		return
+	if err := recorder.Init(); err != nil {
+		log.Fatalf("Error: %s.\n", err.Error())
 	}
-	defer stream.Close()
+	defer recorder.Delete()
 
-	// open the snowboy detector
-	d := snowboy.NewDetector(os.Args[1])
-	defer d.Close()
+	log.Printf("Using device: %s", recorder.GetSelectedDevice())
 
-	d.HandleFunc(snowboy.NewHotword(os.Args[2], 0.5), func(string) {
-		fmt.Println("Handle func for snowboy Hotword")
-	})
-
-	d.HandleSilenceFunc(500*time.Millisecond, func(string) {
-		fmt.Println("Silence detected")
-	})
-
-	sr, nc, bd := d.AudioFormat()
-	fmt.Printf("sample rate=%d, num channels=%d, bit depth=%d\n", sr, nc, bd)
-
-	err = stream.Start()
-	if err != nil {
-		fmt.Errorf("Error on stream start: %s", err)
-		return
+	if err := recorder.Start(); err != nil {
+		log.Fatalf("Error: %s.\n", err.Error())
 	}
 
-	sound := &Sound{stream, framesPerBuffer}
+	log.Printf("Listening...")
 
-	d.ReadAndDetect(sound)
+	for {
+		pcm, err := recorder.Read()
+		if err != nil {
+			log.Fatalf("Error: %s.\n", err.Error())
+		}
+
+		keywordIndex, err := p.Process(pcm)
+		if keywordIndex >= 0 {
+			fmt.Printf("keywordIndex = %d\n", keywordIndex)
+		}
+	}
+
 }
