@@ -14,7 +14,9 @@ import (
 	"axjGW/pkg/gws"
 	"bufio"
 	"fmt"
+	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
+	"net"
 	"net/http"
 	"os"
 
@@ -28,6 +30,8 @@ type config struct {
 	HttpWs       bool     // 启用ws网关
 	HttpWsPath   string   // ws连接地址
 	HttpWsOrigin bool     // ws Origin校验
+	HttpWsHeadIp string   // ws 地址代理头
+	SocketAddr   string   // socket服务地址
 	FrameMax     int      // 最大帧数
 	GrpcAddr     string   // grpc服务地址
 	GrpcIps      []string // grpc调用Ip白名单，支持*通配
@@ -39,6 +43,8 @@ var Config = &config{
 	HttpWs:       true,
 	HttpWsPath:   "/",
 	HttpWsOrigin: false,
+	HttpWsHeadIp: "",
+	SocketAddr:   ":8683",
 	GrpcAddr:     "0.0.0.0:8082",
 	GrpcIps:      KtStr.SplitByte("*", ',', true, 0, 0),
 }
@@ -74,8 +80,37 @@ func main() {
 	// Grpc服务开启
 	gateway.Server.StartGrpc(Config.GrpcAddr, Config.GrpcIps, new(gws.GatewayS))
 
+	// socket连接
+	if Config.SocketAddr != "" && !strings.HasPrefix(Config.SocketAddr, "!") {
+		// socket服务
+		AZap.Logger.Info("StartSocket: " + Config.SocketAddr)
+		serv, err := net.Listen("tcp", Config.SocketAddr)
+		Kt.Panic(err)
+		defer serv.Close()
+		go func() {
+			for !APro.Stopped {
+				conn, err := serv.Accept()
+				if err != nil {
+					if APro.Stopped {
+						return
+					}
+
+					AZap.Logger.Warn("Serv Accept Err", zap.Error(err))
+					continue
+				}
+
+				tConn := conn.(*net.TCPConn)
+				sConn := ANet.NewConnSocket(tConn)
+				Util.GoSubmit(func() {
+					gateway.Server.ConnLoop(sConn)
+				})
+			}
+		}()
+	}
+
 	// websocket连接
 	if Config.HttpAddr != "" && !strings.HasPrefix(Config.HttpAddr, "!") {
+		ANet.ConnWebsocket_HeadIp = Config.HttpWsHeadIp
 		// http服务
 		AZap.Logger.Info("StartHttp: " + Config.HttpAddr)
 		if Config.HttpWs {

@@ -120,6 +120,8 @@ func (that *ConnSocket) ConnPoll() *ConnPoll {
 
 type ConnWebsocket websocket.Conn
 
+var ConnWebsocket_HeadIp string = ""
+
 func NewConnWebsocket(conn *websocket.Conn) *ConnWebsocket {
 	if conn == nil {
 		return nil
@@ -166,9 +168,33 @@ func (that *ConnWebsocket) Close(immed bool) {
 
 func (that *ConnWebsocket) RemoteAddr() string {
 	request := that.Conn().Request()
+	if ConnWebsocket_HeadIp != "" {
+		ip := request.Header.Get(ConnWebsocket_HeadIp)
+		if ip != "" {
+			return ip
+		}
+	}
+
 	return Kt.IpAddrStr(request.RemoteAddr)
 }
 
 func (that *ConnWebsocket) ConnPoll() *ConnPoll {
 	return nil
+}
+
+type ConnWebsocketProxy struct {
+	ConnWebsocket
+	headerIp string
+}
+
+func (that *ConnWebsocketProxy) RemoteAddr() string {
+	if that.headerIp != "" {
+		request := that.Conn().Request()
+		ip := request.Header.Get(that.headerIp)
+		if ip != "" {
+			return ip
+		}
+	}
+
+	return that.ConnWebsocket.RemoteAddr()
 }

@@ -26,6 +26,7 @@ type config struct {
 	HttpWs       bool     // 启用ws网关
 	HttpWsPath   string   // ws连接地址
 	HttpWsOrigin bool     // ws Origin校验
+	HttpWsHeadIp string   // ws 地址代理头
 	SocketAddr   string   // socket服务地址
 	SocketPoll   bool     // socketPoll读取
 	FrameMax     int      // 最大帧数
@@ -39,6 +40,7 @@ var Config = &config{
 	HttpWs:       true,
 	HttpWsPath:   "/gw",
 	HttpWsOrigin: false,
+	HttpWsHeadIp: "",
 	SocketAddr:   ":8683",
 	SocketPoll:   true,
 	GrpcAddr:     "0.0.0.0:8082",
@@ -111,6 +113,7 @@ func main() {
 
 	// websocket连接
 	if Config.HttpAddr != "" && !strings.HasPrefix(Config.HttpAddr, "!") {
+		ANet.ConnWebsocket_HeadIp = Config.HttpWsHeadIp
 		// http服务
 		AZap.Logger.Info("StartHttp: " + Config.HttpAddr)
 		if Config.HttpWs {

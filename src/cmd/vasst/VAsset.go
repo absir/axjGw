@@ -3,17 +3,21 @@ package main
 import (
 	"axj/APro"
 	"axj/Kt/Kt"
-	"axj/Kt/KtBytes"
 	"axj/Kt/KtCvt"
 	"axj/Kt/KtUnsafe"
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axjGW/pkg/agent"
 	"axjGW/pkg/asdk"
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	snowboy "github.com/brentnd/go-snowboy"
+	"github.com/gordonklaus/portaudio"
 	"io/ioutil"
 	"net"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -21,35 +25,41 @@ import (
 )
 
 type config struct {
-	Proxy       string                 // 代理地址
-	ProxyHash   bool                   // 代理地址一致性hash
-	ClientKey   string                 // 客户端Key
-	ClientCert  string                 // 客户端证书
-	ClientId    string                 // 客户端唯一编号
-	SendP       bool                   // 发送buff池
-	ReadP       bool                   // 读取buff池
-	Encry       bool                   // 加密
-	CompressMin int                    // 最小压缩
-	DataMax     int                    // 最大数据
-	CheckDrt    int                    // 检查间隔
-	RqIMax      int                    // 最大预留ReqId
-	ConnDrt     time.Duration          // 连接间隔
-	CloseDelay  int                    // 关闭延迟秒数
-	Rules       map[string]*agent.RULE // 代理规则
+	Proxy       string // 代理地址
+	ProxyHash   bool   // 代理地址一致性hash
+	ClientKey   string // 客户端Key
+	ClientCert  string // 客户端证书
+	ClientId    string // 客户端唯一编号
+	SendP       bool
+	ReadP       bool
+	Encry       bool
+	CompressMin int
+	DataMax     int
+	CheckDrt    int
+	RqIMax      int
+	ConnDrt     time.Duration
+	CloseDelay  int // 关闭延迟秒数
+	// 音频相关
+	inputChannels  int // 输出频道
+	outputChannels int // 输出频道
+	sampleRate     int // 采样率
 }
 
 var Config = &config{
-	Proxy:       "127.0.0.1:8783",
-	ProxyHash:   false,
-	SendP:       true,
-	ReadP:       true,
-	Encry:       true,
-	CompressMin: 1024,
-	DataMax:     1024 << 4,
-	CheckDrt:    10,
-	RqIMax:      0,
-	ConnDrt:     30,
-	CloseDelay:  30,
+	Proxy:          "127.0.0.1:8783",
+	ProxyHash:      false,
+	SendP:          true,
+	ReadP:          true,
+	Encry:          true,
+	CompressMin:    1024,
+	DataMax:        1024 << 4,
+	CheckDrt:       10,
+	RqIMax:         0,
+	ConnDrt:        30,
+	CloseDelay:     30,
+	inputChannels:  1,
+	outputChannels: 0,
+	sampleRate:     16000,
 }
 
 var Machineid string
@@ -65,7 +75,7 @@ func main() {
 	APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
 		return runtime.Caller(0)
 	}, "../../resources")
-	APro.Load(nil, "agent.yml")
+	APro.Load(nil, "vasset.yml")
 	loadConfig()
 	Config.ConnDrt *= time.Second
 	// 内存池
@@ -84,6 +94,10 @@ func main() {
 			time.Sleep(Config.ConnDrt)
 		}
 	}()
+
+	// 监听唤醒词
+	go Listen()
+
 	// 启动完成
 	AZap.Info("Agent %s all AXJ started", agent.Version)
 	APro.Signal()
@@ -155,44 +169,74 @@ func (o Opt) OnState(adapter *asdk.Adapter, state int, err string, data []byte, 
 
 func (o Opt) OnReserve(adapter *asdk.Adapter, req int32, uri string, uriI int32, data []byte, buffer asdk.Buffer) {
 	switch req {
-	case agent.REQ_DIAL:
-		// 连接代理
-		var timeout int64 = 0
-		if data != nil {
-			timeout = KtBytes.GetInt64(data, 0, nil)
-		}
-
-		asdk.BufferFree(buffer)
-		go agent.DialProxy(uri, uriI, time.Duration(timeout)*time.Second)
-		return
-	case agent.REQ_CONN:
-		// 发送连接
-		go agent.ConnProxy(uri, uriI, data, buffer)
-		return
-	case agent.REQ_RULES:
-		// 本地映射配置
-		if Config.Rules != nil {
-			bs, err := json.Marshal(Config.Rules)
-			if err != nil {
-				Kt.Err(err, false)
-
-			} else if bs != nil {
-				adapter.Rep(Client, agent.REQ_RULES, "", 0, bs, false, 0)
-			}
-		}
-
-		// 内存池释放
-		asdk.BufferFree(buffer)
-		return
-	case agent.REQ_ON_RULE:
-		// 映射规则
-		fmt.Println("OnRule " + uri)
-		// 内存池释放
-		asdk.BufferFree(buffer)
-		return
+	// 自定义reqId处理
 	}
 
 	// 内存池释放
 	asdk.BufferFree(buffer)
 	fmt.Println("OnReserve " + strconv.Itoa(int(req)) + ", " + uri + ", " + strconv.Itoa(int(uriI)))
+}
+
+// Sound represents a sound stream with io.Reader interface.
+type Sound struct {
+	stream *portaudio.Stream
+	data   []int16
+}
+
+// Read is the implementation of the io.Reader interface.
+func (s *Sound) Read(p []byte) (int, error) {
+	s.stream.Read()
+
+	buf := &bytes.Buffer{}
+	for _, v := range s.data {
+		binary.Write(buf, binary.LittleEndian, v)
+	}
+
+	copy(p, buf.Bytes())
+	return len(p), nil
+}
+
+func Listen() {
+	framesPerBuffer := make([]int16, Config.sampleRate)
+	// initialize the audio recording interface
+	err := portaudio.Initialize()
+	if err != nil {
+		fmt.Errorf("Error initialize audio interface: %s", err)
+		return
+	}
+
+	defer portaudio.Terminate()
+
+	// open the sound input for the microphone
+	stream, err := portaudio.OpenDefaultStream(Config.inputChannels, Config.outputChannels, float64(Config.sampleRate), len(framesPerBuffer), framesPerBuffer)
+	if err != nil {
+		fmt.Errorf("Error open default audio stream: %s", err)
+		return
+	}
+	defer stream.Close()
+
+	// open the snowboy detector
+	d := snowboy.NewDetector(os.Args[1])
+	defer d.Close()
+
+	d.HandleFunc(snowboy.NewHotword(os.Args[2], 0.5), func(string) {
+		fmt.Println("Handle func for snowboy Hotword")
+	})
+
+	d.HandleSilenceFunc(500*time.Millisecond, func(string) {
+		fmt.Println("Silence detected")
+	})
+
+	sr, nc, bd := d.AudioFormat()
+	fmt.Printf("sample rate=%d, num channels=%d, bit depth=%d\n", sr, nc, bd)
+
+	err = stream.Start()
+	if err != nil {
+		fmt.Errorf("Error on stream start: %s", err)
+		return
+	}
+
+	sound := &Sound{stream, framesPerBuffer}
+
+	d.ReadAndDetect(sound)
 }

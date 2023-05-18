@@ -4,6 +4,8 @@ go 1.17
 
 require (
 	axj v0.0.0
+	github.com/brentnd/go-snowboy v0.0.0-20190301212623-e19133c572af
+	github.com/gordonklaus/portaudio v0.0.0-20221027163845-7c3b689db3cc
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.12
 	github.com/robfig/cron/v3 v3.0.1
@@ -16,6 +18,7 @@ require (
 )
 
 require (
+	github.com/Kitt-AI/snowboy v1.3.0 // indirect
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
