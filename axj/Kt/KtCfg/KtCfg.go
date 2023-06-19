@@ -295,9 +295,9 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 		sLen = len(str)
 		index := KtStr.IndexBytes(str, splits, 0)
 		if index > 0 && index < sLen {
-			if chr == '-' {
+			if chr == '-' || chr == '+' {
+				ci := strings.IndexByte(str, chr) + 1
 				chr = '+'
-				ci := strings.IndexByte(str, '-') + 1
 				if index > ci {
 					name = name[ci:index]
 
@@ -346,10 +346,12 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 					}
 
 					ybMap = ybMaps.Pop().(*BLinkedMap)
+					yB = ybMap.b
 				}
 
 				// yaml字典key 例如 server:
-				if len(strings.TrimSpace(str[index:])) == 1 {
+				val := strings.TrimSpace(str[index+1:])
+				if len(val) == 0 || (chr == '+' && ybMap != nil) {
 					mp := new(Kt.LinkedMap).Init()
 					var pMap Kt.Map
 					if ybMap == nil {
@@ -359,15 +361,32 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 						pMap = ybMap.mp
 					}
 
-					if chr == '+' || chr == '-' {
-						// 支持数组
-						o := GetType(pMap, name, nil, nil).(*list.List)
-						if o == nil {
-							o = list.New()
-							pMap.Put(name, o)
-						}
+					if chr == '+' {
+						if len(val) > 0 {
+							mp.Put(name, val)
+							if !ybMap.list {
+								ybMap.list = true
+								ybMap.pMap.Remove(ybMap.name)
+							}
 
-						o.PushBack(mp)
+							o := GetType(ybMap.pMap, ybMap.name, nil, nil).(*list.List)
+							if o == nil {
+								o = list.New()
+								ybMap.pMap.Put(ybMap.name, o)
+							}
+
+							o.PushBack(mp)
+
+						} else {
+							// 支持数组
+							o := GetType(pMap, name, nil, nil).(*list.List)
+							if o == nil {
+								o = list.New()
+								pMap.Put(name, o)
+							}
+
+							o.PushBack(mp)
+						}
 
 					} else {
 						pMap.Put(name, mp)
@@ -382,7 +401,6 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 					}
 
 					ybMap = &BLinkedMap{b: b, mp: mp, name: name, pMap: pMap}
-					ybMaps.Push(ybMap)
 					return
 				}
 			}
