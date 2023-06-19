@@ -455,7 +455,11 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				}
 			}
 
-			mp := Kt.If(ybMap == nil, cfg, ybMap.mp).(Kt.Map)
+			var mp = cfg
+			if ybMap != nil {
+				mp = ybMap.mp
+			}
+
 			switch chr {
 			case '.':
 				o := mp.Get(name)
