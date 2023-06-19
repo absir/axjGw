@@ -226,15 +226,17 @@ type Read func(str string)
 var splits = []byte("=:")
 
 type BLinkedMap struct {
-	b  int
-	mp *Kt.LinkedMap
+	b    int
+	mp   *Kt.LinkedMap
+	name string
+	pMap Kt.Map
+	list bool
 }
 
 func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 	var bBuilder *strings.Builder
 	var bAppend int
-	var yB int
-	var yMap *Kt.LinkedMap
+	var ybMap *BLinkedMap
 	var ybMaps *Kt.Stack
 	return func(str string) {
 		sLen := len(str)
@@ -326,6 +328,11 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 
 			// yml支持
 			if str[index] == ':' {
+				yB := 0
+				if ybMap != nil {
+					yB = ybMap.b
+				}
+
 				b := KtStr.IndentB(str)
 				for {
 					if b > yB || ybMaps == nil {
@@ -334,29 +341,27 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 
 					if ybMaps.IsEmpty() {
 						yB = 0
-						yMap = nil
+						ybMap = nil
 						break
 					}
 
-					ybMap := ybMaps.Pop().(*BLinkedMap)
-					yB = ybMap.b
-					yMap = ybMap.mp
+					ybMap = ybMaps.Pop().(*BLinkedMap)
 				}
 
 				// yaml字典key 例如 server:
 				if len(strings.TrimSpace(str[index:])) == 1 {
 					mp := new(Kt.LinkedMap).Init()
 					var pMap Kt.Map
-					if yMap == nil {
+					if ybMap == nil {
 						pMap = cfg
 
 					} else {
-						pMap = yMap
+						pMap = ybMap.mp
 					}
 
 					if chr == '+' || chr == '-' {
 						// 支持数组
-						o := GetType(mp, name, nil, nil).(*list.List)
+						o := GetType(pMap, name, nil, nil).(*list.List)
 						if o == nil {
 							o = list.New()
 							pMap.Put(name, o)
@@ -372,14 +377,12 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 						ybMaps = new(Kt.Stack).Init()
 					}
 
-					if yMap != nil {
-						ybMaps.Push(&BLinkedMap{b: yB, mp: yMap})
+					if ybMap != nil {
+						ybMaps.Push(ybMap)
 					}
 
-					yB = b
-					yMap = mp
-
-					ybMaps.Push(&BLinkedMap{b: yB, mp: yMap})
+					ybMap = &BLinkedMap{b: b, mp: mp, name: name, pMap: pMap}
+					ybMaps.Push(ybMap)
 					return
 				}
 			}
@@ -434,7 +437,7 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 				}
 			}
 
-			mp := Kt.If(yMap == nil, cfg, yMap).(Kt.Map)
+			mp := Kt.If(ybMap == nil, cfg, ybMap.mp).(Kt.Map)
 			switch chr {
 			case '.':
 				o := mp.Get(name)
@@ -473,6 +476,23 @@ func ReadFunc(cfg Kt.Map, readMap *map[string]Read) Read {
 			default:
 				mp.Put(name, str)
 				break
+			}
+
+		} else if ybMap != nil && (chr == '-' || chr == '+') {
+			name = strings.TrimSpace(name[1:])
+			if len(name) > 0 {
+				if !ybMap.list {
+					ybMap.list = true
+					ybMap.pMap.Remove(ybMap.name)
+				}
+
+				o := GetType(ybMap.pMap, ybMap.name, nil, nil).(*list.List)
+				if o == nil {
+					o = list.New()
+					ybMap.pMap.Put(ybMap.name, o)
+				}
+
+				o.PushBack(name)
 			}
 		}
 	}
