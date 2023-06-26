@@ -29,16 +29,40 @@ var Active = true
 
 var Started = false
 
-// 信息日志
-func Info(info string) {
-	fmt.Println(time.Now().Format(time.RFC3339) + " Info " + info)
-}
+var LogOut = log.New(os.Stdout, "", log.LstdFlags)
 
-var info = log.New(os.Stdout, "", log.LstdFlags)
+var LogErr = log.New(os.Stderr, "", log.LstdFlags)
 
 // 日志
 func Log(v ...interface{}) {
-	info.Output(2, fmt.Sprintln(v...))
+	LogOut.Output(2, fmt.Sprintln(v...))
+}
+
+// 信息日志
+func Info(info ...interface{}) {
+	if info == nil {
+		return
+	}
+
+	last := len(info)
+	if last <= 0 {
+		return
+	}
+
+	if last == 1 {
+		LogOut.Output(2, time.Now().Format(time.RFC3339)+" Info "+fmt.Sprintln(info[0]))
+		return
+	}
+
+	// 多个参数打印
+	LogOut.Output(2, time.Now().Format(time.RFC3339)+" Info "+fmt.Sprint(info[0]))
+	for i := 1; i < last; i++ {
+		LogOut.Output(2, ", ")
+		LogOut.Output(2, fmt.Sprint(info[i]))
+	}
+
+	LogOut.Output(2, ", ")
+	LogOut.Output(2, fmt.Sprintln(info[last]))
 }
 
 // 错误提示
@@ -47,17 +71,29 @@ func Err(err error, stack bool) {
 		return
 	}
 
-	log.Println(err)
+	LogOut.Output(2, fmt.Sprintln(err))
 	if stack {
 		pc, file, line, ok := runtime.Caller(1)
 		if ok {
 			fun := runtime.FuncForPC(pc)
-			log.Printf("\tat %s:%d (Method %s)\nCause by: %s\n", file, line, fun.Name(), err.Error())
+			LogOut.Output(2, fmt.Sprintf("\tat %s:%d (Method %s)\nCause by: %s\n", file, line, fun.Name(), err.Error()))
 
 		} else {
-			log.Print("get call stack err ...\n")
+			LogOut.Output(2, "get call stack err ...\n")
 		}
 	}
+}
+
+func Error(info string, err error) {
+	ErrorS(info, err, false)
+}
+
+func ErrorS(info string, err error, stack bool) {
+	if info != "" {
+		LogOut.Output(2, time.Now().Format(time.RFC3339)+" Error "+info+"\n")
+	}
+
+	Err(err, stack)
 }
 
 func Panic(err error) {
