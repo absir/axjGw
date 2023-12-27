@@ -1,6 +1,9 @@
 package agent
 
-import "axj/ANet"
+import (
+	"axj/ANet"
+	"time"
+)
 
 const (
 	REQ_CONN     = ANet.REQ_ROUTE + 1
@@ -20,6 +23,8 @@ type RULE struct {
 	Port string
 	// 本地连接地址
 	Addr string
+	// 流量上报
+	TrafficDrt time.Duration
 	// 服务配置
 	Cfg map[string]string
 }

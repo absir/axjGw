@@ -97,3 +97,7 @@ func (Z zDevAcl) Prods(ctx context.Context, in *gw.Void, opts ...grpc.CallOption
 func (Z zDevAcl) GwReg(ctx context.Context, in *gw.GwRegReq, opts ...grpc.CallOption) (*gw.BoolRep, error) {
 	return nil, nil
 }
+
+func (Z zDevAcl) Traffic(ctx context.Context, in *gw.TrafficReq, opts ...grpc.CallOption) (*gw.BoolRep, error) {
+	return nil, nil
+}

@@ -251,7 +251,7 @@ func (that *prxMng) adapClose(id int32) {
 
 func (that *prxMng) Client(cid int64, gid string) ANet.Client {
 	for i := 0; i < 2; i++ {
-		if cid > 0 {
+		if cid != 0 {
 			client := PrxServMng.Manager.Client(cid)
 			if client != nil {
 				return client
@@ -261,7 +261,12 @@ func (that *prxMng) Client(cid int64, gid string) ANet.Client {
 		if i == 0 && gid != "" {
 			val, _ := that.gidMap.Load(gid)
 			if val != nil {
-				cid, _ = val.(int64)
+				_cid, _ := val.(int64)
+				if _cid == cid {
+					return nil
+				}
+
+				cid = _cid
 				continue
 			}
 		}

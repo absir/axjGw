@@ -15,18 +15,20 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PrxServ struct {
-	Name  string
-	Addr  string
-	Proto PrxProto
-	Cfg   interface{}
-	cid   int64
-	rule  *agent.RULE
+	Name       string
+	Addr       string
+	TrafficDrt time.Duration
+	Proto      PrxProto
+	Cfg        interface{}
+	cid        int64
+	rule       *agent.RULE
 }
 
-func StartServ(name string, addr string, proto PrxProto, cfg map[string]string) *PrxServ {
+func StartServ(name string, addr string, trafficDrt time.Duration, proto PrxProto, cfg map[string]string) *PrxServ {
 	if addr == "" || proto == nil {
 		return nil
 	}
@@ -45,6 +47,8 @@ func StartServ(name string, addr string, proto PrxProto, cfg map[string]string) 
 	that.Name = name
 	that.Addr = addr
 	that.Proto = proto
+	// 流量上报间隔
+	that.TrafficDrt = trafficDrt * time.Second
 	// 协议配置
 	that.Cfg = that.Proto.NewCfg()
 	if cfg != nil {
@@ -154,7 +158,7 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 	}
 
 	// 解析代理连接成功
-	client, pAddr := that.clientPAddr(name, that.Proto)
+	client, pAddr, gid, sub := that.clientPAddr(name, that.Proto)
 	if client == nil || pAddr == "" {
 		Util.PutBuffer(outBuffer)
 		Util.PutBuffer(buffer)
@@ -165,6 +169,23 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 	data := buffer.Bytes()
 	buffer.Reset()
 	id, adap := PrxMng.adapOpen(that, conn, outBuff, outBuffer, ctx, buffer)
+	if that.TrafficDrt > 0 && AclClient != nil {
+		trafficReq := &gw.TrafficReq{}
+		adap.trafficReq = trafficReq
+		cid := KtCvt.ToString(client.CId())
+		if cid != "" {
+			trafficReq.Cid = &cid
+		}
+
+		if gid != "" {
+			trafficReq.Gid = &gid
+		}
+
+		if sub != "" {
+			trafficReq.Sub = &sub
+		}
+	}
+
 	err = client.Get().Rep(true, agent.REQ_CONN, strconv.Itoa(that.Proto.ReadBufferSize(that.Cfg))+"/"+pAddr, id, data, false, false, 0)
 	if err != nil {
 		adap.Close(err)
@@ -173,7 +194,7 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 }
 
 // 获取代理客户端，代理地址
-func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, string) {
+func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, string, string, string) {
 	idx := strings.IndexByte(name, '.')
 	str := name
 	if idx >= 0 {
@@ -195,24 +216,24 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 			if rule != nil && rule.Addr != "" {
 				client = PrxMng.Client(rule.Cid, rule.Gid)
 				if client != nil {
-					return client, rule.Addr
+					return client, rule.Addr, gid, sub
 				}
 			}
 		}
 
-		if that.cid > 0 && that.rule != nil {
+		if that.cid != 0 && that.rule != nil {
 			client = PrxServMng.Manager.Client(that.cid)
 			if client == nil {
-				return nil, ""
+				return nil, "", gid, sub
 			}
 
-			return client, that.rule.Addr
+			return client, that.rule.Addr, gid, sub
 		}
 
 	} else if gid != "" {
 		client = PrxMng.Client(0, gid)
 		if client == nil {
-			return nil, ""
+			return nil, "", gid, sub
 		}
 
 		clientG := Handler.ClientG(client)
@@ -221,7 +242,7 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 			// 服务名一致，不需要别名
 			sName := sub
 			if sName == that.Name {
-				return client, ""
+				return client, "", gid, sub
 
 			} else if sName == "" {
 				sName = that.Name
@@ -230,11 +251,11 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 			ruleServ := clientG.ruleServs[sName]
 			if ruleServ != nil {
 				if ruleServ.serv != that {
-					return client, ""
+					return client, "", gid, sub
 				}
 
 				// 返回客户端，规则地址
-				return client, ruleServ.rule.Addr
+				return client, ruleServ.rule.Addr, gid, sub
 			}
 		}
 	}
@@ -257,9 +278,9 @@ func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, stri
 				client = PrxMng.Client(rep.Cid, rep.Gid)
 			}
 
-			return client, rep.Addr
+			return client, rep.Addr, gid, sub
 		}
 	}
 
-	return client, ""
+	return client, "", gid, sub
 }

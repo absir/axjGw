@@ -2,24 +2,28 @@ package proxy
 
 import (
 	"axj/Kt/KtBuffer"
+	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
+	"axjGW/gen/gw"
+	"go.uber.org/zap"
 	"net"
 	"sync"
 	"time"
 )
 
 type PrxAdap struct {
-	id        int32
-	locker    sync.Locker
-	closed    bool
-	serv      *PrxServ
-	outConn   *net.TCPConn // 外部代理连接
-	outBuff   []byte
-	outBuffer *KtBuffer.Buffer
-	outCtx    interface{}
-	buffer    *KtBuffer.Buffer
-	passTime  int64        // 超时时间
-	inConn    *net.TCPConn // 内部处理连接
+	id         int32
+	locker     sync.Locker
+	closed     bool
+	serv       *PrxServ
+	outConn    *net.TCPConn // 外部代理连接
+	outBuff    []byte
+	outBuffer  *KtBuffer.Buffer
+	outCtx     interface{}
+	buffer     *KtBuffer.Buffer
+	passTime   int64          // 超时时间
+	inConn     *net.TCPConn   // 内部处理连接
+	trafficReq *gw.TrafficReq // 流量监控
 }
 
 func (that *PrxAdap) Close(err error) {
@@ -62,6 +66,30 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 
 	that.inConn = inConn
 	that.locker.Unlock()
+	trafficReq := that.trafficReq
+	if trafficReq != nil {
+		trafficDrt := that.serv.TrafficDrt
+		trafficReq0 := &gw.TrafficReq{Cid: trafficReq.Cid, Gid: trafficReq.Gid, Sub: trafficReq.Sub}
+		Util.GoSubmit(func() {
+			for !that.closed {
+				time.Sleep(trafficDrt)
+				trafficReq0.Start = trafficReq.Start
+				trafficReq0.In = trafficReq.In
+				trafficReq0.Out = trafficReq.Out
+				rep, err := AclClient.Traffic(Config.AclCtx(), trafficReq0)
+				if rep != nil && rep.Val {
+					trafficReq.Start = time.Now().Unix()
+					trafficReq.In -= trafficReq0.In
+					trafficReq.Out -= trafficReq0.Out
+				}
+
+				if err != nil {
+					AZap.Logger.Warn("Acl TrafficReq Err "+Config.Acl, zap.Error(err))
+				}
+			}
+		})
+	}
+
 	{
 		var inBuffer *KtBuffer.Buffer
 		inBuff := Util.GetBufferBytes(that.serv.Proto.ReadBufferSize(that.serv.Cfg), &inBuffer)
@@ -72,6 +100,10 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				if err != nil {
 					that.Close(err)
 					break
+				}
+
+				if trafficReq != nil {
+					trafficReq.In += int64(size)
 				}
 
 				that.OnKeep()
@@ -98,6 +130,10 @@ func (that *PrxAdap) doInConn(inConn *net.TCPConn) {
 				if err != nil {
 					that.Close(err)
 					break
+				}
+
+				if trafficReq != nil {
+					trafficReq.Out += int64(size)
 				}
 
 				that.OnKeep()

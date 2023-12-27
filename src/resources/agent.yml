@@ -1,18 +1,18 @@
 #Proxy: 47.102.86.20:18783
 #ClientKey: 61A583A27A845A3835A32D4C
-Rules:
-  http:
-    Addr: -24-4b-fe-d3-fa-50:80
-  2:
-    Serv: http
-    Addr: 127.0.0.1:8787
-  rtsp:
-    Addr: 192.168.44.142:554
-#  http2:
-#    Addr: 192.168.50.41:80
-#    Proto: http
-#    Port: 9081
-#  tcp:
+#Rules:
+#  http:
+#    Addr: -24-4b-fe-d3-fa-50:80
+#  2:
+#    Serv: http
 #    Addr: 127.0.0.1:8787
-#    Proto: tcp
-#    Port: 9082
+#  rtsp:
+#    Addr: 192.168.44.142:554
+##  http2:
+##    Addr: 192.168.50.41:80
+##    Proto: http
+##    Port: 9081
+##  tcp:
+##    Addr: 127.0.0.1:8787
+##    Proto: tcp
+##    Port: 9082

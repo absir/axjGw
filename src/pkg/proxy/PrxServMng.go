@@ -81,10 +81,7 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 func (that *prxServMng) Start() {
 	if Config.Servs != nil {
 		for name, serv := range Config.Servs {
-			s := StartServ(name, serv.Addr, FindProto(serv.Proto, true), serv.Cfg)
-			if s != nil {
-				serv.Addr = s.Addr
-			}
+			StartServ(name, serv.Addr, serv.TrafficDrt, FindProto(serv.Proto, true), serv.Cfg)
 		}
 	}
 

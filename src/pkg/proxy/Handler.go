@@ -98,7 +98,7 @@ func (h handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int32, 
 						continue
 					}
 
-					serv = StartServ(name, rule.Port, proto, rule.Cfg)
+					serv = StartServ(name, rule.Port, rule.TrafficDrt, proto, rule.Cfg)
 
 				} else {
 					servName = name

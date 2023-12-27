@@ -122,7 +122,7 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 		return false
 	}
 
-	if client == nil || (cid > 0 && cid != client.cid) {
+	if client == nil || (cid != 0 && cid != client.cid) {
 		return false
 	}
 

@@ -32,9 +32,10 @@ type config struct {
 }
 
 type Serv struct {
-	Addr  string
-	Proto string
-	Cfg   map[string]string
+	Addr       string
+	Proto      string
+	TrafficDrt time.Duration
+	Cfg        map[string]string
 }
 
 var Config *config

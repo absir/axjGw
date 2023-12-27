@@ -10,6 +10,7 @@ Servs:
   rtsp:
     Addr: 554
     Proto: rtsp
+    TrafficDrt: 15
     Cfg:
       ServName: proxy.yiyiny.com:554
   serv:
