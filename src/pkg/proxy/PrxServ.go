@@ -63,7 +63,7 @@ func StartServ(name string, addr string, trafficDrt time.Duration, proto PrxProt
 	}
 
 	PrxServMng.servMap.Store(addr, that)
-	AZap.Logger.Info("PrxServ Start " + proto.Name() + "://" + addr)
+	AZap.Logger.Info("PrxServ Start[" + strconv.Itoa((int)(trafficDrt)) + "] " + proto.Name() + "://" + addr)
 	Util.GoSubmit(func() {
 		for !APro.Stopped {
 			conn, err := serv.Accept()
