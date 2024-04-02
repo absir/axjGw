@@ -172,6 +172,31 @@ func (that *MsgGrp) closeClient(client *MsgClient, cid int64, unique string, kic
 	return true
 }
 
+// cids列表
+func (that *MsgGrp) GetCids() *[]int64 {
+	sess := that.sess
+	if sess == nil {
+		return nil
+	}
+
+	cids := make([]int64, sess.clientNum)
+	cids = cids[:0]
+	client := sess.client
+	if client != nil {
+		cids = append(cids, client.cid)
+	}
+
+	if sess.clientMap != nil {
+		sess.clientMap.RangeBuff(func(k, v interface{}) bool {
+			client, _ = v.(*MsgClient)
+			cids = append(cids, client.cid)
+			return true
+		}, &sess.checkBuff, Config.ClientPMax)
+	}
+
+	return &cids
+}
+
 // 消息客户端检查
 func (that *MsgGrp) checkClients() {
 	sess := that.sess

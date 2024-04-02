@@ -64,6 +64,11 @@ message BoolsRep {
   repeated bool vals = 1;
 }
 
+message CidsRep {
+  // cid列表
+  repeated int64 cids = 1;
+}
+
 message Id32Rep {
   // 整形编号
   int32 id = 1;
@@ -322,7 +327,7 @@ message GPushReq {
 
 message GConnReq {
   // 客户端编号
-  int64 cid = 1;
+  optional int64 cid = 1;
   // 群组，管道编号
   string gid = 2;
   // 群组，管道编号下连接唯一编号，可以cid或用户uid相同
@@ -331,17 +336,21 @@ message GConnReq {
   bool kick = 4;
   // 连接信息新版本，gw一般不用
   bool newVer = 5;
+  // 客户端gid
+  optional string cGid = 6;
 }
 
 message GDiscReq {
   // 客户端编号
-  int64 cid = 1;
+  optional int64 cid = 1;
   // 群组，管道编号
   string gid = 2;
   // 群组，管道编号下连接唯一编号，必须和连接一致
   string unique = 3;
   // 连接信息新版本
   int32 connVer = 4;
+  // 客户端gid
+  optional string cGid = 5;
 }
 
 message GLastsReq {
@@ -447,6 +456,8 @@ service Gateway {
   rpc rids(RidsReq) returns (Id32Rep);
   // 简单推送
   rpc push(PushReq) returns (Id32Rep);
+  // 查询cids
+  rpc cids(GidReq) returns (CidsRep);
   // 注册监听gid
   rpc gConn(GConnReq) returns (Id32Rep);
   // 断开监听gid

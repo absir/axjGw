@@ -99,6 +99,10 @@ func (g GatewayS) Push(ctx context.Context, req *gw.PushReq) (*gw.Id32Rep, error
 	return gateway.Server.GetProdCid(req.Cid).GetGWIClient().Push(ctx, req)
 }
 
+func (g GatewayS) Cids(ctx context.Context, req *gw.GidReq) (*gw.CidsRep, error) {
+	return gateway.Server.GetProdGid(req.Gid).GetGWIClient().Cids(ctx, req)
+}
+
 func (g GatewayS) GConn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, error) {
 	// req.Kick = false
 	req.NewVer = true

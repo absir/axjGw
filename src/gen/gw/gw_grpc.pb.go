@@ -519,6 +519,7 @@ const (
 	Gateway_Rid_FullMethodName        = "/gw.Gateway/rid"
 	Gateway_Rids_FullMethodName       = "/gw.Gateway/rids"
 	Gateway_Push_FullMethodName       = "/gw.Gateway/push"
+	Gateway_Cids_FullMethodName       = "/gw.Gateway/cids"
 	Gateway_GConn_FullMethodName      = "/gw.Gateway/gConn"
 	Gateway_GDisc_FullMethodName      = "/gw.Gateway/gDisc"
 	Gateway_GLast_FullMethodName      = "/gw.Gateway/gLast"
@@ -555,6 +556,8 @@ type GatewayClient interface {
 	Rids(ctx context.Context, in *RidsReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 简单推送
 	Push(ctx context.Context, in *PushReq, opts ...grpc.CallOption) (*Id32Rep, error)
+	// 查询cids
+	Cids(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*CidsRep, error)
 	// 注册监听gid
 	GConn(ctx context.Context, in *GConnReq, opts ...grpc.CallOption) (*Id32Rep, error)
 	// 断开监听gid
@@ -659,6 +662,15 @@ func (c *gatewayClient) Rids(ctx context.Context, in *RidsReq, opts ...grpc.Call
 func (c *gatewayClient) Push(ctx context.Context, in *PushReq, opts ...grpc.CallOption) (*Id32Rep, error) {
 	out := new(Id32Rep)
 	err := c.cc.Invoke(ctx, Gateway_Push_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayClient) Cids(ctx context.Context, in *GidReq, opts ...grpc.CallOption) (*CidsRep, error) {
+	out := new(CidsRep)
+	err := c.cc.Invoke(ctx, Gateway_Cids_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -811,6 +823,8 @@ type GatewayServer interface {
 	Rids(context.Context, *RidsReq) (*Id32Rep, error)
 	// 简单推送
 	Push(context.Context, *PushReq) (*Id32Rep, error)
+	// 查询cids
+	Cids(context.Context, *GidReq) (*CidsRep, error)
 	// 注册监听gid
 	GConn(context.Context, *GConnReq) (*Id32Rep, error)
 	// 断开监听gid
@@ -868,6 +882,9 @@ func (UnimplementedGatewayServer) Rids(context.Context, *RidsReq) (*Id32Rep, err
 }
 func (UnimplementedGatewayServer) Push(context.Context, *PushReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Push not implemented")
+}
+func (UnimplementedGatewayServer) Cids(context.Context, *GidReq) (*CidsRep, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Cids not implemented")
 }
 func (UnimplementedGatewayServer) GConn(context.Context, *GConnReq) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GConn not implemented")
@@ -1063,6 +1080,24 @@ func _Gateway_Push_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GatewayServer).Push(ctx, req.(*PushReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Gateway_Cids_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GidReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServer).Cids(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Gateway_Cids_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServer).Cids(ctx, req.(*GidReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1357,6 +1392,10 @@ var Gateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "push",
 			Handler:    _Gateway_Push_Handler,
+		},
+		{
+			MethodName: "cids",
+			Handler:    _Gateway_Cids_Handler,
 		},
 		{
 			MethodName: "gConn",

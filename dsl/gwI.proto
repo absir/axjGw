@@ -110,6 +110,8 @@ service GatewayI {
     rpc rid(RidReq) returns (Id32Rep);
     // 服务编号
     rpc rids(RidsReq) returns (Id32Rep);
+    // 查询cids
+    rpc cids(GidReq) returns (CidsRep);
     // 设置cidGid状态
     rpc cidGid(CidGidReq) returns (Id32Rep);
     // gidCid状态校验
