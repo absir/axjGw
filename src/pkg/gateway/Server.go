@@ -444,8 +444,9 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) (*int, fu
 			clientG.SetId(login.Uid, login.Sid, login.Unique, login.DiscBack)
 			if clientG.Gid() != "" {
 				// Gid连接
+				id := clientG.Id()
 				that.gateway.GConn(Server.Context, &gw.GConnReq{
-					Cid:    clientG.Id(),
+					Cid:    &id,
 					Gid:    clientG.Gid(),
 					Unique: clientG.Unique(),
 					Kick:   true,
