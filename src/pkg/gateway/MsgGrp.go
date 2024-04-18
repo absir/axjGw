@@ -287,6 +287,54 @@ func (that *MsgGrp) CheckConn(cid int64, unique string, gLast bool) bool {
 	return true
 }
 
+func (that *MsgGrp) HasCid(cid int64, unique *string) bool {
+	sess := that.sess
+	if sess == nil {
+		return false
+	}
+
+	if unique != nil {
+		uniqueS := *unique
+		var client *MsgClient
+		if len(uniqueS) <= 0 {
+			client = sess.client
+
+		} else {
+			clientMap := sess.clientMap
+			if clientMap == nil {
+				client = client
+
+			} else {
+				val, _ := clientMap.Load(uniqueS)
+				client, _ = val.(*MsgClient)
+			}
+		}
+
+		return client != nil && client.cid == cid
+	}
+
+	client := sess.client
+	if client != nil && client.cid == cid {
+		return true
+	}
+
+	hasCid := false
+	clientMap := sess.clientMap
+	if clientMap != nil {
+		clientMap.Range(func(key, val interface{}) bool {
+			client, _ := val.(*MsgClient)
+			if client != nil && client.cid == cid {
+				hasCid = true
+				return false
+			}
+
+			return true
+		})
+	}
+
+	return hasCid
+}
+
 // 消息客户端连接
 func (that *MsgGrp) Conn(cid int64, unique string, kick bool, newVer bool, cidGid bool) *MsgClient {
 	client := that.GetClient(unique)

@@ -3,6 +3,7 @@ package gateway
 import (
 	"axj/ANet"
 	"axj/Kt/KtBytes"
+	"axj/Kt/KtCvt"
 	"axj/Thrd/AZap"
 	"axjGW/gen/gw"
 	"go.uber.org/zap"
@@ -117,6 +118,45 @@ func (that *handler) OnReqIO(client ANet.Client, req int32, uri string, uriI int
 	}
 
 	if req > ANet.REQ_ONEWAY {
+		if len(uri) > 0 {
+			code := uri[0]
+			if code == '<' || code == '>' {
+				// 消息列表
+				idx0 := strings.IndexByte(uri, '/')
+				idx1 := strings.IndexByte(uri[idx0+1:], '/')
+				if idx0 > 0 && idx1 > 0 {
+					limit := KtCvt.ToInt32(uri[1:idx0])
+					idx0++
+					idx1 += idx0
+					id := KtCvt.ToInt64(uri[idx0:idx1])
+					gid := uri[idx1+1:]
+					if clientG.Gid() != gid {
+						result, err := Server.GetProdGid(gid).GetGWIClient().GidHasCid(prods.TimeoutCtx(), &gw.GidHasCidReq{
+							Gid: gid,
+							Cid: clientG.Id(),
+						})
+
+						if err != nil {
+							*pReped = true
+							clientG.Get().Rep(true, req, "", ERR_PORD_ERR, nil, false, false, 0)
+							return
+						}
+
+						if result == nil || !result.GetVal() {
+							*pReped = true
+							clientG.Get().Rep(true, req, "", 0, nil, false, false, 0)
+							return
+						}
+					}
+
+					rep := MsgMng().MsgListRep(gid, id, int(limit), code == '>')
+					*pReped = true
+					clientG.Get().Rep(true, req, "", 0, rep, false, false, 0)
+					return
+				}
+			}
+		}
+
 		// 请求返回
 		result, err := prod.GetPassClient().Req(prods.TimeoutCtx(), &gw.PassReq{
 			Cid:  clientG.Id(),

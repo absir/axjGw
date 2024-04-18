@@ -8,6 +8,7 @@ import (
 	"axj/Thrd/AZap"
 	"axj/Thrd/Util"
 	"axj/Thrd/cmap"
+	"axjGW/gen/gw"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -282,4 +283,45 @@ func (that *msgMng) UnreadTids(gid string, tids []string) {
 		// 未读消息数设置
 		sess.UnreadRecv(that.TidFromGidForTid(num.Gid), num.Num, num.Id, num.Uri, num.Data, true)
 	}
+}
+
+func (that *msgMng) MsgList(gid string, id int64, limit int, next bool) []*MsgD {
+	db := MsgMng().Db
+	if db == nil {
+		return nil
+	}
+
+	if next {
+		return db.Next(gid, id, limit)
+
+	} else {
+		return db.Prev(gid, id, limit)
+	}
+}
+
+func (that *msgMng) MsgListRep(gid string, id int64, limit int, next bool) *gw.MsgListRep {
+	msgDs := that.MsgList(gid, id, limit, next)
+	if msgDs == nil {
+		return nil
+	}
+
+	msgDsLen := len(msgDs)
+	if msgDsLen <= 0 {
+		return nil
+	}
+
+	list := make([]*gw.MsgListEl, msgDsLen)
+	for i, msgD := range msgDs {
+		el := &gw.MsgListEl{Id: msgD.Id, Fid: msgD.Fid}
+		list[i] = el
+		if len(msgD.Uri) > 0 {
+			el.Uri = &msgD.Uri
+		}
+
+		if len(msgD.Data) > 0 {
+			el.Data = msgD.Data
+		}
+	}
+
+	return &gw.MsgListRep{List: list}
 }

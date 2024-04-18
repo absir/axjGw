@@ -219,6 +219,19 @@ func (g GatewayIs) GidCid(ctx context.Context, req *gw.CidGidReq) (*gw.Id32Rep, 
 	return Result_Succ_Rep, nil
 }
 
+func (g GatewayIs) GidHasCid(ctx context.Context, req *gw.GidHasCidReq) (*gw.BoolRep, error) {
+	if !gateway.Server.IsProdHashS(req.Gid) {
+		return Result_Fasle, nil
+	}
+
+	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
+	if grp == nil || !grp.HasCid(req.Cid, req.Unique) {
+		return Result_Fasle, nil
+	}
+
+	return Result_True, nil
+}
+
 func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, error) {
 	if !gateway.Server.IsProdHashS(req.Gid) {
 		return Result_ProdErr_Rep, nil

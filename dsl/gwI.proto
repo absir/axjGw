@@ -7,153 +7,161 @@ import "dsl/gw.proto";
 option go_package = "./gw";
 
 enum GidState {
-    // 连接
-    Conn = 0;
-    // 拉取数据
-    GLast = 1;
-    // 断开
-    Disc = 2;
+  // 连接
+  Conn = 0;
+  // 拉取数据
+  GLast = 1;
+  // 断开
+  Disc = 2;
 }
 
 message CidGidReq {
-    int64 cid = 1;
-    string gid = 2;
-    string unique = 3;
-    GidState state = 4;
+  int64 cid = 1;
+  string gid = 2;
+  string unique = 3;
+  GidState state = 4;
+}
+
+message GidHasCidReq {
+  string gid = 1;
+  int64 cid = 2;
+  optional string unique = 3;
 }
 
 message RepReq {
-    int64 cid = 1;
-    // 写入类型
-    int32 req = 2;
-    // 写入连接
-    string uri = 3;
-    // 写入链接压缩
-    int32  uriI = 4;
-    // 写入数据
-    bytes data = 5;
-    // 已压缩
-    int32 cDid = 6; // 1 已压缩 2 已尝试压缩，未能压缩
-    // 加密
-    bool encry = 7;
-    // 独立数据
-    bool Isolate = 8;
+  int64 cid = 1;
+  // 写入类型
+  int32 req = 2;
+  // 写入连接
+  string uri = 3;
+  // 写入链接压缩
+  int32  uriI = 4;
+  // 写入数据
+  bytes data = 5;
+  // 已压缩
+  int32 cDid = 6; // 1 已压缩 2 已尝试压缩，未能压缩
+  // 加密
+  bool encry = 7;
+  // 独立数据
+  bool Isolate = 8;
 }
 
 message Msg {
-    string uri = 1;
-    bytes data = 2;
+  string uri = 1;
+  bytes data = 2;
 }
 
 message ILastReq {
-    int64 cid = 1;
-    string gid = 2;
-    int32 connVer = 3;
-    bool continuous = 4;
+  int64 cid = 1;
+  string gid = 2;
+  int32 connVer = 3;
+  bool continuous = 4;
 }
 
 message IGQueueReq {
-    string gid = 1;
-    int64 cid = 2;
-    string unique = 3;
-    bool clear = 4;
+  string gid = 1;
+  int64 cid = 2;
+  string unique = 3;
+  bool clear = 4;
 }
 
 message IGClearReq {
-    string gid = 1;
-    bool queue = 2;
-    bool last = 3;
+  string gid = 1;
+  bool queue = 2;
+  bool last = 3;
 }
 
 message IGPushAReq {
-    string gid = 1;
-    int64 id = 2;
-    bool succ = 3;
+  string gid = 1;
+  int64 id = 2;
+  bool succ = 3;
 }
 
 message ReadReq {
-    string gid = 1;
-    string tid = 2;
-    int64 lastId = 3;
+  string gid = 1;
+  string tid = 2;
+  int64 lastId = 3;
 }
 
 message UnreadReq {
-    string gid = 1;
-    string tid = 2;
-    int32  num = 3;
-    int64 lastId = 4;
-    string uri = 5;
-    bytes  data = 6;
-    bool entry = 7;
+  string gid = 1;
+  string tid = 2;
+  int32  num = 3;
+  int64 lastId = 4;
+  string uri = 5;
+  bytes  data = 6;
+  bool entry = 7;
 }
 
 message UnreadReqs {
-    string gid = 1;
-    repeated UnreadReq reqs = 2;
+  string gid = 1;
+  repeated UnreadReq reqs = 2;
 }
 
 // 网关内部
 service GatewayI {
-    // uid查询
-    rpc uid(CidReq) returns (UIdRep);
-    // 在线查询
-    rpc online(GidReq) returns (BoolRep);
-    // 在线查询
-    rpc onlines(GidsReq) returns (BoolsRep);
-    // 关闭连接
-    rpc close(CloseReq) returns (Id32Rep);
-    // 软关闭连接
-    rpc kick(KickReq) returns (Id32Rep);
-    // 存活 cid
-    rpc alive(CidReq) returns (Id32Rep);
-    // 服务编号
-    rpc rid(RidReq) returns (Id32Rep);
-    // 服务编号
-    rpc rids(RidsReq) returns (Id32Rep);
-    // 查询cids
-    rpc cids(GidReq) returns (CidsRep);
-    // 设置cidGid状态
-    rpc cidGid(CidGidReq) returns (Id32Rep);
-    // gidCid状态校验
-    rpc gidCid(CidGidReq) returns (Id32Rep);
-    // 连接
-    rpc conn(GConnReq) returns (Id32Rep);
-    // 断开
-    rpc disc(GDiscReq) returns (Id32Rep);
-    // 写入数据
-    rpc rep(RepReq) returns (Id32Rep);
-    // 最新消息通知
-    rpc last(ILastReq) returns (Id32Rep);
-    // 推送
-    rpc push(PushReq) returns (Id32Rep);
-    // 消息队列初始化
-    rpc gQueue(IGQueueReq) returns (Id32Rep);
-    // 消息队列清理
-    rpc gClear(IGClearReq) returns (Id32Rep);
-    // 主动获取消息
-    rpc gLasts(GLastsReq) returns (Id32Rep);
-    // 通知 gid
-    rpc gLast(GidReq) returns (Id32Rep);
-    // 推送
-    rpc gPush(GPushReq) returns (Id64Rep);
-    // 推送确认
-    rpc gPushA(IGPushAReq) returns (Id32Rep);
-    // 点对点聊天
-    rpc send(SendReq) returns (Id32Rep);
-    // 群消息发送
-    rpc tPush(TPushReq) returns (Id32Rep);
-    // 组更新、删除 tid
-    rpc tDirty(GidReq) returns (Id32Rep);
-    // 组发送管道启动 tid
-    rpc tStarts(GidReq) returns (Id32Rep);
-    // 设置服务列表
-    rpc setProds(ProdsRep) returns (BoolRep);
-    // 已读消息
-    rpc read(ReadReq) returns (Id32Rep);
-    // 未读消息
-    rpc unread(UnreadReq) returns (Id32Rep);
-    // 未读消息
-    rpc unreads(UnreadReqs) returns (Id32Rep);
-    // 未读消息.查询
-    rpc unreadTids(UnreadTids) returns (Id32Rep);
+  // uid查询
+  rpc uid(CidReq) returns (UIdRep);
+  // 在线查询
+  rpc online(GidReq) returns (BoolRep);
+  // 在线查询
+  rpc onlines(GidsReq) returns (BoolsRep);
+  // 关闭连接
+  rpc close(CloseReq) returns (Id32Rep);
+  // 软关闭连接
+  rpc kick(KickReq) returns (Id32Rep);
+  // 存活 cid
+  rpc alive(CidReq) returns (Id32Rep);
+  // 服务编号
+  rpc rid(RidReq) returns (Id32Rep);
+  // 服务编号
+  rpc rids(RidsReq) returns (Id32Rep);
+  // 查询cids
+  rpc cids(GidReq) returns (CidsRep);
+  // 设置cidGid状态
+  rpc cidGid(CidGidReq) returns (Id32Rep);
+  // gidCid状态校验
+  rpc gidCid(CidGidReq) returns (Id32Rep);
+  // gid
+  rpc gidHasCid(GidHasCidReq) returns (BoolRep);
+  // 连接
+  rpc conn(GConnReq) returns (Id32Rep);
+  // 断开
+  rpc disc(GDiscReq) returns (Id32Rep);
+  // 写入数据
+  rpc rep(RepReq) returns (Id32Rep);
+  // 最新消息通知
+  rpc last(ILastReq) returns (Id32Rep);
+  // 推送
+  rpc push(PushReq) returns (Id32Rep);
+  // 消息队列初始化
+  rpc gQueue(IGQueueReq) returns (Id32Rep);
+  // 消息队列清理
+  rpc gClear(IGClearReq) returns (Id32Rep);
+  // 主动获取消息
+  rpc gLasts(GLastsReq) returns (Id32Rep);
+  // 通知 gid
+  rpc gLast(GidReq) returns (Id32Rep);
+  // 推送
+  rpc gPush(GPushReq) returns (Id64Rep);
+  // 推送确认
+  rpc gPushA(IGPushAReq) returns (Id32Rep);
+  // 点对点聊天
+  rpc send(SendReq) returns (Id32Rep);
+  // 群消息发送
+  rpc tPush(TPushReq) returns (Id32Rep);
+  // 组更新、删除 tid
+  rpc tDirty(GidReq) returns (Id32Rep);
+  // 组发送管道启动 tid
+  rpc tStarts(GidReq) returns (Id32Rep);
+  // 设置服务列表
+  rpc setProds(ProdsRep) returns (BoolRep);
+  // 已读消息
+  rpc read(ReadReq) returns (Id32Rep);
+  // 未读消息
+  rpc unread(UnreadReq) returns (Id32Rep);
+  // 未读消息
+  rpc unreads(UnreadReqs) returns (Id32Rep);
+  // 未读消息.查询
+  rpc unreadTids(UnreadTids) returns (Id32Rep);
 }

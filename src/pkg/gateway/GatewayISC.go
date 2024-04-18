@@ -62,6 +62,10 @@ func (that gatewayISC) GidCid(ctx context.Context, in *gw.CidGidReq, opts ...grp
 	return that.Server.GidCid(ctx, in)
 }
 
+func (that gatewayISC) GidHasCid(ctx context.Context, in *gw.GidHasCidReq, opts ...grpc.CallOption) (*gw.BoolRep, error) {
+	return that.Server.GidHasCid(ctx, in)
+}
+
 func (that gatewayISC) Rep(ctx context.Context, in *gw.RepReq, opts ...grpc.CallOption) (*gw.Id32Rep, error) {
 	return that.Server.Rep(ctx, in)
 }
