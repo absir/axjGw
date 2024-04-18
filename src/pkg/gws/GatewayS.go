@@ -176,6 +176,41 @@ func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.Bo
 	return nil, nil
 }
 
-func (g GatewayS) UnreadTids(ctx context.Context, tids *gw.UnreadTids) (*gw.Id32Rep, error) {
-	return gateway.Server.GetProdGid(tids.Gid).GetGWIClient().UnreadTids(ctx, tids)
+func (g GatewayS) UnreadTids(ctx context.Context, req *gw.UnreadTids) (*gw.Id32Rep, error) {
+	return gateway.Server.GetProdGid(req.Gid).GetGWIClient().UnreadTids(ctx, req)
+}
+
+func (g GatewayS) MsgList(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListRep, error) {
+	db := gateway.MsgMng().Db
+	if db == nil {
+		return nil, nil
+	}
+
+	var msgDs []*gateway.MsgD
+	if req.GetNext() {
+		msgDs = db.Next(req.Gid, req.Id, int(req.Limit))
+
+	} else {
+		msgDs = db.Prev(req.Gid, req.Id, int(req.Limit))
+	}
+
+	msgDsLen := len(msgDs)
+	if msgDsLen <= 0 {
+		return nil, nil
+	}
+
+	list := make([]*gw.MsgListEl, msgDsLen)
+	for i, msgD := range msgDs {
+		el := &gw.MsgListEl{Id: msgD.Id, Fid: msgD.Fid}
+		list[i] = el
+		if len(msgD.Uri) > 0 {
+			el.Uri = &msgD.Uri
+		}
+
+		if len(msgD.Data) > 0 {
+			el.Data = msgD.Data
+		}
+	}
+
+	return &gw.MsgListRep{List: list}, nil
 }

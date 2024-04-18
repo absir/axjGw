@@ -534,6 +534,7 @@ const (
 	Gateway_DialProxy_FullMethodName  = "/gw.Gateway/dialProxy"
 	Gateway_DialsProxy_FullMethodName = "/gw.Gateway/dialsProxy"
 	Gateway_UnreadTids_FullMethodName = "/gw.Gateway/unreadTids"
+	Gateway_MsgList_FullMethodName    = "/gw.Gateway/msgList"
 )
 
 // GatewayClient is the client API for Gateway service.
@@ -586,6 +587,8 @@ type GatewayClient interface {
 	DialsProxy(ctx context.Context, in *DialsProxyReq, opts ...grpc.CallOption) (*BoolsRep, error)
 	// 未读消息.查询
 	UnreadTids(ctx context.Context, in *UnreadTids, opts ...grpc.CallOption) (*Id32Rep, error)
+	// 消息列表
+	MsgList(ctx context.Context, in *MsgListReq, opts ...grpc.CallOption) (*MsgListRep, error)
 }
 
 type gatewayClient struct {
@@ -803,6 +806,15 @@ func (c *gatewayClient) UnreadTids(ctx context.Context, in *UnreadTids, opts ...
 	return out, nil
 }
 
+func (c *gatewayClient) MsgList(ctx context.Context, in *MsgListReq, opts ...grpc.CallOption) (*MsgListRep, error) {
+	out := new(MsgListRep)
+	err := c.cc.Invoke(ctx, Gateway_MsgList_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayServer is the server API for Gateway service.
 // All implementations should embed UnimplementedGatewayServer
 // for forward compatibility
@@ -853,6 +865,8 @@ type GatewayServer interface {
 	DialsProxy(context.Context, *DialsProxyReq) (*BoolsRep, error)
 	// 未读消息.查询
 	UnreadTids(context.Context, *UnreadTids) (*Id32Rep, error)
+	// 消息列表
+	MsgList(context.Context, *MsgListReq) (*MsgListRep, error)
 }
 
 // UnimplementedGatewayServer should be embedded to have forward compatible implementations.
@@ -927,6 +941,9 @@ func (UnimplementedGatewayServer) DialsProxy(context.Context, *DialsProxyReq) (*
 }
 func (UnimplementedGatewayServer) UnreadTids(context.Context, *UnreadTids) (*Id32Rep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnreadTids not implemented")
+}
+func (UnimplementedGatewayServer) MsgList(context.Context, *MsgListReq) (*MsgListRep, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MsgList not implemented")
 }
 
 // UnsafeGatewayServer may be embedded to opt out of forward compatibility for this service.
@@ -1354,6 +1371,24 @@ func _Gateway_UnreadTids_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gateway_MsgList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgListReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServer).MsgList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Gateway_MsgList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServer).MsgList(ctx, req.(*MsgListReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Gateway_ServiceDesc is the grpc.ServiceDesc for Gateway service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1452,6 +1487,10 @@ var Gateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "unreadTids",
 			Handler:    _Gateway_UnreadTids_Handler,
+		},
+		{
+			MethodName: "msgList",
+			Handler:    _Gateway_MsgList_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

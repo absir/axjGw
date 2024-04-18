@@ -438,6 +438,24 @@ message UnreadTids {
   repeated string tids = 2;
 }
 
+message MsgListReq {
+  string gid = 1;
+  int64 id = 2;
+  int32 limit = 3;
+  optional bool next = 4;
+}
+
+message MsgListEl {
+  int64  id = 1;
+  int64  fid = 2;
+  optional string uri = 3;
+  optional bytes data = 4;
+}
+
+message MsgListRep {
+  repeated MsgListEl list = 1;
+}
+
 // 网关
 service Gateway {
   // uid查询
@@ -486,4 +504,6 @@ service Gateway {
   rpc dialsProxy(DialsProxyReq) returns (BoolsRep);
   // 未读消息.查询
   rpc unreadTids(UnreadTids) returns (Id32Rep);
+  // 消息列表
+  rpc msgList(MsgListReq) returns (MsgListRep);
 }

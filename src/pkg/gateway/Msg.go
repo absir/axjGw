@@ -6,6 +6,7 @@ import (
 	"axj/Kt/KtJson"
 	"axjGW/gen/gw"
 	"gorm.io/gorm"
+	"math"
 	"strings"
 )
 
@@ -99,6 +100,7 @@ type MsgReadNum struct {
 type MsgDb interface {
 	Insert(msg *MsgD) error                                                            // 插入消息
 	Next(gid string, lastId int64, limit int) []*MsgD                                  // 遍历消息
+	Prev(gid string, lastId int64, limit int) []*MsgD                                  // 遍历消息
 	LastId(gid string, limit int) int64                                                // 获取最近多少条起始Id
 	Last(gid string, limit int) []*MsgD                                                // 初始消息缓存
 	Delete(id int64) error                                                             // 删除消息
@@ -150,6 +152,32 @@ func (that *MsgGorm) Next(gid string, lastId int64, limit int) []*MsgD {
 
 	} else {
 		that.db.Where("gid = ? AND id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+	}
+
+	if msgDS != nil {
+		mLen := len(msgDS)
+		for i := 0; i < mLen; i++ {
+			var msgD = msgDS[i]
+			if msgD.cData != nil && len(msgD.cData) > 0 {
+				msgD.Data = msgD.cData
+				msgD.cData = nil
+			}
+		}
+	}
+	return msgDS
+}
+
+func (that *MsgGorm) Prev(gid string, lastId int64, limit int) []*MsgD {
+	if lastId <= 0 {
+		lastId = math.MaxInt64
+	}
+
+	var msgDS []*MsgD = nil
+	if MsgMng().LastDataF {
+		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ? AND a.id < ?", gid, lastId).Order("id DESC").Limit(limit).Find(&msgDS)
+
+	} else {
+		that.db.Where("gid = ? AND id < ?", gid, lastId).Order("id DESC").Limit(limit).Find(&msgDS)
 	}
 
 	if msgDS != nil {
