@@ -66,6 +66,10 @@ func (g GatewayS) Rids(ctx context.Context, req *gw.RidsReq) (*gw.Id32Rep, error
 	panic("implement me")
 }
 
+func (g GatewayS) Cids(ctx context.Context, req *gw.GidReq) (*gw.CidsRep, error) {
+	panic("implement me")
+}
+
 func (g GatewayS) Push(ctx context.Context, req *gw.PushReq) (*gw.Id32Rep, error) {
 	panic("implement me")
 }
@@ -175,5 +179,9 @@ func (g GatewayS) DialsProxy(ctx context.Context, req *gw.DialsProxyReq) (*gw.Bo
 }
 
 func (g GatewayS) UnreadTids(ctx context.Context, tids *gw.UnreadTids) (*gw.Id32Rep, error) {
+	return nil, nil
+}
+
+func (g GatewayS) MsgList(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListRep, error) {
 	return nil, nil
 }
