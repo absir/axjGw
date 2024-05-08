@@ -17,12 +17,14 @@ export servEnv="ulimit -v 20000"
 # crontabStart
 export crontabStart="*/10 * * * *"
 
+export SCP_OPTS="-O"
+
 $cliDir/mnt/mng/install.sh agent ./agent $2 $3 $4 $5
 
 argi=2
 source $cliDir/mnt/mas/_ssh.sh
 
-scp $pPort -i ~/.ssh/$rKey -r $1 $rUser@$rIp:/opt/agent/agent
+scp -O $pPort -i ~/.ssh/$rKey -r $1 $rUser@$rIp:/opt/agent/agent
 
 ssh $sPort $rUser@$rIp -i ~/.ssh/$rKey "$sshBin" << remotessh
 

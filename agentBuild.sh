@@ -16,18 +16,30 @@ export GOMIPS=softfloat
 go build -tags wsN,httpN -o ./agent-mips ../cmd/agent/Agent.go
 fi
 
+if [[ $args =~ "arm0" ]];then
+export GOOS=linux
+export GOARCH=arm
+go build -tags wsN,httpN -o ./agent-arm0 ../cmd/agent/Agent.go
+fi
+
+if [[ $args =~ "arm64" ]];then
+export GOOS=linux
+export GOARCH=arm64
+go build -tags wsN,httpN -o ./agent-arm64 ../cmd/agent/Agent.go
+fi
+
 if [[ $args =~ "arm5" ]];then
 export GOOS=linux
 export GOARCH=arm
 export GOARM=5
-go build -tags wsN -o ./agent-arm5 ../cmd/agent/Agent.go
+go build -tags wsN,httpN -o ./agent-arm5 ../cmd/agent/Agent.go
 fi
 
 if [[ $args =~ "arm7" ]];then
 export GOOS=linux
 export GOARCH=arm
-export GOARM=5
-go build -tags wsN -o ./agent-arm7 ../cmd/agent/Agent.go
+export GOARM=7
+go build -tags wsN,httpN -o ./agent-arm7 ../cmd/agent/Agent.go
 fi
 
 if [[ $args =~ "linux" ]];then
