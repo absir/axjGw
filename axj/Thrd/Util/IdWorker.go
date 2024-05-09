@@ -23,7 +23,7 @@ import (
 * 3. 12位序列，毫秒内的计数，同一机器，同一时间截并发4096个序号
  */
 const (
-	twepoch        = int64(1483228800000)        //开始时间截 (2017-01-01)
+	twepoch        = int64(1483228800)           //开始时间截 (2017-01-01)
 	workerIdBits   = uint(10)                    //机器id所占的位数
 	workerIdMax    = 1<<workerIdBits - 1         //支持的最大机器id数量
 	worderIdMask   = workerIdMax                 //机器id掩码

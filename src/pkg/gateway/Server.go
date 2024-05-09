@@ -493,7 +493,12 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) (*int, fu
 
 			// GLasts管道
 			if login.LastsReq != nil {
-				rep, err = that.gateway.GLasts(that.Context, login.LastsReq)
+				LastsReq := login.LastsReq
+				if LastsReq.Cid == 0 {
+					LastsReq.Cid = clientG.Id()
+				}
+
+				rep, err = that.gateway.GLasts(that.Context, LastsReq)
 				if Server.Id32(rep) < R_SUCC_MIN {
 					clientG.Close(err, nil)
 					return true, nil
@@ -502,6 +507,10 @@ func (that *server) connOpenFun(pConn *ANet.Conn, pEncryptKey *[]byte) (*int, fu
 
 			if login.LastsReqs != nil {
 				for _, lastsReqs := range login.LastsReqs {
+					if lastsReqs.Cid == 0 {
+						lastsReqs.Cid = clientG.Id()
+					}
+
 					rep, err = that.gateway.GLasts(that.Context, lastsReqs)
 					if Server.Id32(rep) < R_SUCC_MIN {
 						clientG.Close(err, nil)
