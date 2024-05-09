@@ -4,14 +4,9 @@
 log:
 #  level: 1
 
-#prods:
-#  gw:
-#    Dscv: consul:0
-#    DscvName: gw
-#  acl:
-#    Dscv: consul:0
-#    DscvName: @newFarm
-#    1: 127.0.0.1:8083
+prods:
+  acl:
+    1: 127.0.0.1:8083
 #  pass:
 #    1: 127.0.0.1:8083
 msg:

@@ -184,6 +184,10 @@ func (g GatewayIs) Rids(ctx context.Context, req *gw.RidsReq) (*gw.Id32Rep, erro
 
 func (g GatewayIs) Cids(ctx context.Context, req *gw.GidReq) (*gw.CidsRep, error) {
 	grp := gateway.MsgMng().GetMsgGrp(req.Gid)
+	if grp == nil {
+		return nil, nil
+	}
+
 	cids := grp.GetCids()
 	if cids == nil {
 		return nil, nil
@@ -237,41 +241,14 @@ func (g GatewayIs) Conn(ctx context.Context, req *gw.GConnReq) (*gw.Id32Rep, err
 		return Result_ProdErr_Rep, nil
 	}
 
-	if req.CGid != nil {
-		cGid := *req.CGid
-		if cGid != "" {
-			rep, err := gateway.Server.GetProdGid(cGid).GetGWIClient().Cids(ctx, &gw.GidReq{Gid: cGid})
-			if err != nil {
-				return Result_Fail_Rep, err
-			}
-
-			if rep != nil && rep.Cids != nil {
-				grp := gateway.MsgMng().GetOrNewMsgGrp(req.Gid)
-				fail := false
-				for _, cid := range rep.Cids {
-					client := grp.Conn(cid, req.Unique, req.Kick, req.NewVer, true)
-					if client == nil {
-						fail = true
-					}
-				}
-
-				if fail {
-					return Result_Fail_Rep, nil
-				}
-			}
-		}
+	client := gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Conn(req.Cid, req.Unique, req.Kick, req.NewVer, true)
+	if client == nil {
+		return Result_Fail_Rep, nil
 	}
 
-	if req.Cid != nil {
-		client := gateway.MsgMng().GetOrNewMsgGrp(req.Gid).Conn(*req.Cid, req.Unique, req.Kick, req.NewVer, true)
-		if client == nil {
-			return Result_Fail_Rep, nil
-		}
-
-		return &gw.Id32Rep{
-			Id: client.GetConnVer(),
-		}, nil
-	}
+	return &gw.Id32Rep{
+		Id: client.GetConnVer(),
+	}, nil
 
 	return &gw.Id32Rep{
 		Id: int32(gw.Result_Succ),

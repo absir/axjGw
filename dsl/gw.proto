@@ -327,7 +327,7 @@ message GPushReq {
 
 message GConnReq {
   // 客户端编号
-  optional int64 cid = 1;
+  int64 cid = 1;
   // 群组，管道编号
   string gid = 2;
   // 群组，管道编号下连接唯一编号，可以cid或用户uid相同
@@ -336,8 +336,6 @@ message GConnReq {
   bool kick = 4;
   // 连接信息新版本，gw一般不用
   bool newVer = 5;
-  // 客户端gid
-  optional string cGid = 6;
 }
 
 message GDiscReq {
