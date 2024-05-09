@@ -60,3 +60,15 @@ if [[ -z "$args" ]] || [[ $args =~ "6" ]];then
   tar -zcvf publish.tar.gz proxy
   $cliDir/mnt/mng/deployMng.sh axj-proxy-dev publish.tar.gz /opt/mng dev-1
 fi
+
+if [[ -z "$args" ]] || [[ $args =~ "7" ]];then
+  mkdir -p src/bin
+  cd src/bin
+  export CGO_ENABLED=0
+  export GOOS=linux
+  export GOARCH=amd64
+  go build -o ./gateway ../cmd/gateway/Gateway.go
+  rm -rf publish.tar.gz
+  tar -zcvf publish.tar.gz gateway
+  $cliDir/mnt/mng/deployMng.sh axj-gw-aigen publish.tar.gz /opt/mng dev-1
+fi
