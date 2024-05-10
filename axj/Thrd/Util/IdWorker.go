@@ -66,9 +66,14 @@ func (that *IdWorker) Generate() int64 {
 }
 
 func (that *IdWorker) GenerateM(mod int, flg int) int64 {
-	now := time.Now().UnixNano() / int64(time.Millisecond)
 	that.Lock()
-	if that.timestamp == now {
+	now := time.Now().UnixNano() / int64(time.Millisecond)
+	if now > that.timestamp {
+		// now时间增长后sequence回归
+		that.sequence = flg
+
+	} else {
+		// 保证now时间不回滚
 		now = that.timestamp
 		sequence := that.sequence
 		if mod > 1 {
@@ -78,17 +83,16 @@ func (that *IdWorker) GenerateM(mod int, flg int) int64 {
 			sequence = (sequence + 1) & sequenceMask
 		}
 
-		if sequence <= that.sequence {
+		if that.sequence < sequence {
+			// sequence增长
+			that.sequence = sequence
+
+		} else {
+			// sequence无法增长,now++
 			time.Sleep(time.Millisecond)
 			now++
 			that.sequence = flg
-
-		} else {
-			that.sequence = sequence
 		}
-
-	} else {
-		that.sequence = flg
 	}
 
 	that.timestamp = now
