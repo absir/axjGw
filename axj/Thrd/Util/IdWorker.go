@@ -66,22 +66,26 @@ func (that *IdWorker) Generate() int64 {
 }
 
 func (that *IdWorker) GenerateM(mod int, flg int) int64 {
+	now := time.Now().UnixNano() / int64(time.Millisecond)
 	that.Lock()
-	now := time.Now().Unix()
 	if that.timestamp == now {
-		sequence := (that.sequence + 1) & sequenceMask
+		now = that.timestamp
+		sequence := that.sequence
 		if mod > 1 {
-			sequence = ((that.sequence+1)/mod)*mod + flg
+			sequence = (((sequence+mod-1)/mod)*mod + flg) & sequenceMask
+
+		} else {
+			sequence = (sequence + 1) & sequenceMask
 		}
 
 		if sequence <= that.sequence {
-			for now <= that.timestamp {
-				time.Sleep(time.Nanosecond)
-				now = time.Now().Unix()
-			}
-		}
+			time.Sleep(time.Millisecond)
+			now++
+			that.sequence = flg
 
-		that.sequence = sequence
+		} else {
+			that.sequence = sequence
+		}
 
 	} else {
 		that.sequence = flg
@@ -98,7 +102,7 @@ func (that *IdWorker) MinId() int64 {
 }
 
 func (that *IdWorker) Timestamp(nanoTime int64) int64 {
-	now := nanoTime / 1000000
+	now := nanoTime / int64(time.Millisecond)
 	return (now-twepoch)<<timestampShift | (that.workerId << workerIdShift)
 }
 
