@@ -19,6 +19,7 @@ var Result_Fail_Rep64 *gw.Id64Rep
 var Result_IdNone_Rep64 *gw.Id64Rep
 var Result_ProdErr_Rep64 *gw.Id64Rep
 var Result_Succ_Rep64 *gw.Id64Rep
+var Msg_List_Empty *gw.MsgListRep
 
 func init() {
 	Result_ProdErr = errors.New("ProdErr")
@@ -52,6 +53,7 @@ func init() {
 	Result_Succ_Rep64 = &gw.Id64Rep{
 		Id: int64(gw.Result_Succ),
 	}
+	Msg_List_Empty = &gw.MsgListRep{}
 }
 
 type GatewayIs struct {

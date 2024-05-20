@@ -181,5 +181,10 @@ func (g GatewayS) UnreadTids(ctx context.Context, req *gw.UnreadTids) (*gw.Id32R
 }
 
 func (g GatewayS) MsgList(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListRep, error) {
-	return gateway.MsgMng().MsgListRep(req.Gid, req.Id, int(req.Limit), req.GetNext()), nil
+	msgList := gateway.MsgMng().MsgListRep(req.Gid, req.Id, int(req.Limit), req.GetNext())
+	if msgList == nil {
+		return Msg_List_Empty, nil
+	}
+
+	return msgList, nil
 }
