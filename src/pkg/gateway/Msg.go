@@ -7,6 +7,7 @@ import (
 	"axjGW/gen/gw"
 	"gorm.io/gorm"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -116,6 +117,7 @@ type MsgDb interface {
 	Revoke(delete bool, id int64, gid string, push func() error) error                 // 撤销消息
 	Read(gid string, lastId int64) error                                               // 消息已读
 	UnReads(gid string, tids []string) []MsgReadNum                                    // 未读消息列表
+	ReadLastLike(gidLike string, offset int, limit int) []*MsgD                        // 可读最近消息GidLike查询
 }
 
 type MsgGorm struct {
@@ -434,5 +436,15 @@ func (that *MsgGorm) UnReads(gid string, tids []string) []MsgReadNum {
 		}
 	}
 
+	return numBs
+}
+
+func (that *MsgGorm) ReadLastLike(gidLike string, offset int, limit int) []*MsgD {
+	var numBs []*MsgD = nil
+	that.db.Raw("SELECT b.gid as gid, b.id as id, b.uri as uri, b.data as data FROM (" +
+		"SELECT MAX(id) as id FROM msg_ds WHERE gid LIKE '" + gidLike + "' GROUP BY gid" +
+		" ORDER BY id DESC LIMIT " + strconv.Itoa(offset) + "," + strconv.Itoa(limit) +
+		") as a LEFT JOIN msg_ds as b ON b.id = a.id",
+	).Find(&numBs)
 	return numBs
 }

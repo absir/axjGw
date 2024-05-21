@@ -448,6 +448,7 @@ message MsgListEl {
   int64  fid = 2;
   optional string uri = 3;
   optional bytes data = 4;
+  optional string gid = 5;
 }
 
 message MsgListRep {
@@ -504,4 +505,6 @@ service Gateway {
   rpc unreadTids(UnreadTids) returns (Id32Rep);
   // 消息列表
   rpc msgList(MsgListReq) returns (MsgListRep);
+  // 可读最近消息GidLike查询
+  rpc readLastLike(MsgListReq) returns (MsgListRep);
 }

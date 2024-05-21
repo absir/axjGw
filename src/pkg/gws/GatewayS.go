@@ -188,3 +188,12 @@ func (g GatewayS) MsgList(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListR
 
 	return msgList, nil
 }
+
+func (g GatewayS) ReadLastLike(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListRep, error) {
+	msgList := gateway.MsgMng().ReadLastLike(req.Gid, int(req.Id), int(req.Limit))
+	if msgList == nil {
+		return Msg_List_Empty, nil
+	}
+
+	return msgList, nil
+}

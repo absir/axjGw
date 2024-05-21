@@ -325,3 +325,31 @@ func (that *msgMng) MsgListRep(gid string, id int64, limit int, next bool) *gw.M
 
 	return &gw.MsgListRep{List: list}
 }
+
+func (that *msgMng) ReadLastLike(gidLike string, offset int, limit int) *gw.MsgListRep {
+	db := MsgMng().Db
+	if db == nil {
+		return nil
+	}
+
+	msgDs := db.ReadLastLike(gidLike, offset, limit)
+	msgDsLen := len(msgDs)
+	if msgDsLen <= 0 {
+		return nil
+	}
+
+	list := make([]*gw.MsgListEl, msgDsLen)
+	for i, msgD := range msgDs {
+		el := &gw.MsgListEl{Id: msgD.Id, Fid: msgD.Fid, Gid: &msgD.Gid}
+		list[i] = el
+		if len(msgD.Uri) > 0 {
+			el.Uri = &msgD.Uri
+		}
+
+		if len(msgD.Data) > 0 {
+			el.Data = msgD.Data
+		}
+	}
+
+	return &gw.MsgListRep{List: list}
+}
