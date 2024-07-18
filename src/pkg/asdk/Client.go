@@ -29,7 +29,13 @@ const (
 	KICK  = 5 // 被剔
 )
 
+var CONN_TIMEOUT = 30 * time.Second
+
 var SUCC = make([]byte, 0)
+
+func SetConnTimeout(timeout int) {
+	CONN_TIMEOUT = time.Duration(timeout) * time.Second
+}
 
 func SetBufferPool(pool string) {
 	Util.SetBufferPoolsS(pool)
@@ -266,7 +272,7 @@ func dialConn(ws bool, addr string) (interface{}, error) {
 		return wsDial(addr)
 
 	} else {
-		conn, err := net.Dial("tcp", addr)
+		conn, err := net.DialTimeout("tcp", addr, CONN_TIMEOUT)
 		if conn == nil || err != nil {
 			return nil, err
 		}
