@@ -1,7 +1,7 @@
 //go:build sdk
 // +build sdk
 
-package basic
+package asdk
 
 import (
 	"axj/Kt/KtBuffer"

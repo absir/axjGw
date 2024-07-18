@@ -1,5 +1,16 @@
 # Mobile-SDK
 
+gomobile sdk
+
+go install golang.org/x/mobile/cmd/gomobile@latest
+
+go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20231127183840-76ac6878050a
+
+gomobile init
+
+set JAVA_TOOL_OPTIONS=-Dfile.encoding=utf-8
+export JAVA_TOOL_OPTIONS=-Dfile.encoding=utf-8
+
 ## 生成命令
 
 ```shell

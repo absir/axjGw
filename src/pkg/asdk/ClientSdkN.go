@@ -1,3 +1,4 @@
+//go:build !sdk
 // +build !sdk
 
 package asdk

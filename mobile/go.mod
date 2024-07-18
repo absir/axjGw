@@ -1,6 +1,6 @@
 module mobile
 
-go 1.17
+go 1.19
 
 require (
 	axj v0.0.0
