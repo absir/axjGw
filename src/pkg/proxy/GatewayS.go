@@ -185,3 +185,7 @@ func (g GatewayS) UnreadTids(ctx context.Context, tids *gw.UnreadTids) (*gw.Id32
 func (g GatewayS) MsgList(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListRep, error) {
 	return nil, nil
 }
+
+func (g GatewayS) ReadLastLike(ctx context.Context, req *gw.MsgListReq) (*gw.MsgListRep, error) {
+	return nil, nil
+}

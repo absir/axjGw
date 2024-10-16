@@ -124,6 +124,15 @@ type MsgGorm struct {
 	db *gorm.DB
 }
 
+func sqlLikeGridIf(sql string, likeSql string, gid string) string {
+	if strings.HasSuffix(gid, "%") {
+		return likeSql
+
+	} else {
+		return sql
+	}
+}
+
 func (that *MsgGorm) AutoMigrate() {
 	migrator := that.db.Migrator()
 	if (!migrator.HasTable(&MsgD{})) {
@@ -150,10 +159,10 @@ func (that *MsgGorm) Insert(msg *MsgD) error {
 func (that *MsgGorm) Next(gid string, lastId int64, limit int) []*MsgD {
 	var msgDS []*MsgD = nil
 	if MsgMng().LastDataF {
-		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ? AND a.id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where(sqlLikeGridIf("a.gid = ? AND a.id > ?", "a.gid LIKE ? AND a.id > ?", gid), gid, lastId).Order("id").Limit(limit).Find(&msgDS)
 
 	} else {
-		that.db.Where("gid = ? AND id > ?", gid, lastId).Order("id").Limit(limit).Find(&msgDS)
+		that.db.Where(sqlLikeGridIf("gid = ? AND id > ?", "gid LIKE ? AND id > ?", gid), gid, lastId).Order("id").Limit(limit).Find(&msgDS)
 	}
 
 	if msgDS != nil {
@@ -176,10 +185,10 @@ func (that *MsgGorm) Prev(gid string, lastId int64, limit int) []*MsgD {
 
 	var msgDS []*MsgD = nil
 	if MsgMng().LastDataF {
-		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ? AND a.id < ?", gid, lastId).Order("id DESC").Limit(limit).Find(&msgDS)
+		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where(sqlLikeGridIf("a.gid = ? AND a.id < ?", "a.gid LIKE ? AND a.id < ?", gid), gid, lastId).Order("id DESC").Limit(limit).Find(&msgDS)
 
 	} else {
-		that.db.Where("gid = ? AND id < ?", gid, lastId).Order("id DESC").Limit(limit).Find(&msgDS)
+		that.db.Where(sqlLikeGridIf("gid = ? AND id < ?", "gid LIKE ? AND id < ?", gid), gid, lastId).Order("id DESC").Limit(limit).Find(&msgDS)
 	}
 
 	if msgDS != nil {
@@ -197,17 +206,17 @@ func (that *MsgGorm) Prev(gid string, lastId int64, limit int) []*MsgD {
 
 func (that *MsgGorm) LastId(gid string, limit int) int64 {
 	var id int64 = 0
-	that.db.Raw("SELECT id FROM msg_ds WHERE gid = ? ORDER BY id DESC LIMIT ?, 1", gid, limit).Find(&id)
+	that.db.Raw(sqlLikeGridIf("SELECT id FROM msg_ds WHERE gid = ? ORDER BY id DESC LIMIT ?, 1", "SELECT id FROM msg_ds WHERE gid LIKE ? ORDER BY id DESC LIMIT ?, 1", gid), gid, limit).Find(&id)
 	return id
 }
 
 func (that *MsgGorm) Last(gid string, limit int) []*MsgD {
 	var msgDS []*MsgD = nil
 	if MsgMng().LastDataF {
-		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where("a.gid = ?", gid).Order("a.id DESC").Limit(limit).Find(&msgDS)
+		that.db.Table("msg_ds as a").Select("a.*, b.data as cData").Joins("LEFT JOIN msg_ds as b ON b.id = a.fid and b.id != a.id").Where(sqlLikeGridIf("a.gid = ?", "a.gid LIKE ?", gid), gid).Order("a.id DESC").Limit(limit).Find(&msgDS)
 
 	} else {
-		that.db.Where("gid = ?", gid).Order("id DESC").Limit(limit).Find(&msgDS)
+		that.db.Where(sqlLikeGridIf("a.gid = ?", "a.gid LIKE ?", gid), gid).Order("id DESC").Limit(limit).Find(&msgDS)
 	}
 
 	if msgDS != nil {
@@ -249,7 +258,7 @@ func (that *MsgGorm) UpdateF(id int64, fid int64) error {
 
 func (that *MsgGorm) FidGet(fid int64, gid string) int64 {
 	var id int64 = 0
-	that.db.Raw("SELECT id FROM msg_ds WHERE fid = ? AND gid = ?", fid, gid).Find(&id)
+	that.db.Raw(sqlLikeGridIf("SELECT id FROM msg_ds WHERE fid = ? AND gid = ?", "SELECT id FROM msg_ds WHERE fid = ? AND gid LIKE ?", gid), fid, gid).Find(&id)
 	return id
 }
 
@@ -337,7 +346,7 @@ func (that *MsgGorm) TeamStarts(workId int32, limit int) []string {
 
 func (that *MsgGorm) Revoke(delete bool, id int64, gid string, push func() error) error {
 	var tid int64 = 0
-	that.db.Raw("SELECT id FROM msg_ds WHERE id = ? AND gid = ?", id, gid).Find(&tid)
+	that.db.Raw(sqlLikeGridIf("SELECT id FROM msg_ds WHERE id = ? AND gid = ?", "SELECT id FROM msg_ds WHERE id = ? AND gid LIKE ?", gid), id, gid).Find(&tid)
 	if tid <= 0 {
 		return ANet.ERR_DENIED
 	}
@@ -357,7 +366,7 @@ func (that *MsgGorm) Revoke(delete bool, id int64, gid string, push func() error
 		}
 	}
 
-	tx := that.db.Exec("DELETE FROM msg_ds WHERE id = ? AND gid = ?", id, gid)
+	tx := that.db.Exec(sqlLikeGridIf("DELETE FROM msg_ds WHERE id = ? AND gid = ?", "DELETE FROM msg_ds WHERE id = ? AND gid LIKE ?", gid), id, gid)
 	return tx.Error
 }
 
