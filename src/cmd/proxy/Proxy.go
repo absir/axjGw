@@ -31,7 +31,7 @@ func main() {
 	// 内存池
 	Util.SetBufferPoolsS(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240,20480").(string))
 	// 代理服务初始化
-	proxy.PrxServMng.Init(APro.WorkId(), APro.Cfg)
+	proxy.PrxServMng.Init(APro.WorkId(), APro.Cfg, nil)
 	// 代理服务开启
 	proxy.PrxServMng.Start()
 

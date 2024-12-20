@@ -228,8 +228,8 @@ func NewClient(addr string, sendP bool, readP bool, encry bool, compressMin int,
 	return that
 }
 
-func (that *Client) getAddrs(addrs []string) {
-
+func (that *Client) GetAddr() string {
+	return that.addr
 }
 
 // 设置连接地址

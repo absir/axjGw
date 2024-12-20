@@ -36,7 +36,7 @@ var Processor *ANet.ProcessorV
 var Handler = &handler{}
 var AclClient gw.AclClient
 
-func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
+func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg, aclClient gw.AclClient) {
 	initConfig()
 	KtCvt.BindInterface(Config, Cfg)
 	that.locker = new(sync.Mutex)
@@ -60,7 +60,10 @@ func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg) {
 	initProtos()
 	initPrxMng()
 	// Acl服务客户端
-	if Config.Acl != "" {
+	if aclClient != nil {
+		AclClient = aclClient
+
+	} else if Config.Acl != "" {
 		go func() {
 			aclTry := Config.AclTry * time.Second
 			for {

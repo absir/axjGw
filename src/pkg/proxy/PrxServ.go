@@ -26,6 +26,7 @@ type PrxServ struct {
 	Cfg        interface{}
 	cid        int64
 	rule       *agent.RULE
+	serv       net.Listener
 }
 
 func StartServ(name string, addr string, trafficDrt time.Duration, proto PrxProto, cfg map[string]string) *PrxServ {
@@ -62,10 +63,11 @@ func StartServ(name string, addr string, trafficDrt time.Duration, proto PrxProt
 		return nil
 	}
 
+	that.serv = serv
 	PrxServMng.servMap.Store(addr, that)
 	AZap.Logger.Info("PrxServ Start[" + strconv.Itoa((int)(trafficDrt)) + "] " + proto.Name() + "://" + addr)
 	Util.GoSubmit(func() {
-		for !APro.Stopped {
+		for !APro.Stopped && that.serv != nil {
 			conn, err := serv.Accept()
 			if err != nil {
 				if APro.Stopped {
@@ -83,6 +85,16 @@ func StartServ(name string, addr string, trafficDrt time.Duration, proto PrxProt
 	})
 
 	return that
+}
+
+// 关闭服务
+func (that *PrxServ) Close() {
+	if that.serv == nil {
+		return
+	}
+
+	PrxServMng.servMap.Delete(that.Addr)
+	that.serv.Close()
 }
 
 func (that *PrxServ) Rule(proto PrxProto, clientG *ClientG, name string, rule *agent.RULE) {
@@ -195,17 +207,20 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 
 // 获取代理客户端，代理地址
 func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, string, string, string) {
-	idx := strings.IndexByte(name, '.')
-	str := name
-	if idx >= 0 {
-		str = name[0:idx]
-	}
-
-	strs := strings.SplitN(str, "_", 2)
-	gid := strs[0]
+	gid := ""
 	sub := ""
-	if len(strs) > 1 {
-		sub = strs[1]
+	if len(name) > 0 {
+		idx := strings.IndexByte(name, '.')
+		str := name
+		if idx >= 0 {
+			str = name[0:idx]
+		}
+
+		strs := strings.SplitN(str, "_", 2)
+		gid = strs[0]
+		if len(strs) > 1 {
+			sub = strs[1]
+		}
 	}
 
 	var client ANet.Client = nil
