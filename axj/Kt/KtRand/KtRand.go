@@ -2,6 +2,7 @@ package KtRand
 
 import (
 	"axj/Kt/KtBytes"
+	"axj/Kt/KtUnsafe"
 	"math/rand"
 )
 
@@ -14,7 +15,7 @@ func RandBytes(bLen int) []byte {
 	}
 
 	i := 0
-	for ; i < sLen; {
+	for i < sLen {
 		KtBytes.SetInt(bs, i, rand.Int31(), &i)
 	}
 
@@ -23,4 +24,14 @@ func RandBytes(bLen int) []byte {
 	}
 
 	return bs
+}
+
+func RandString(bLen int, chars []byte) string {
+	cLen := int32(len(chars))
+	bs := make([]byte, bLen)
+	for i := 0; i < bLen; i++ {
+		bs[i] = chars[rand.Int31n(cLen)]
+	}
+
+	return KtUnsafe.BytesToString(bs)
 }

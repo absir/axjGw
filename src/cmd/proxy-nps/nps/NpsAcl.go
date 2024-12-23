@@ -22,6 +22,7 @@ func (that *NpsAcl) Login(ctx context.Context, in *gw.LoginReq, opts ...grpc.Cal
 	client, _ := value.(*NpsClient)
 	if client != nil {
 		// 登录成功
+		client.Cid = in.Cid
 		return &gw.LoginRep{
 			Uid:  int64(client.Id),
 			Succ: true,

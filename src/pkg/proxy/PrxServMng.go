@@ -37,7 +37,7 @@ var Handler = &handler{}
 var AclClient gw.AclClient
 
 func (that *prxServMng) Init(wordId int32, Cfg KtCfg.Cfg, aclClient gw.AclClient) {
-	initConfig()
+	initConfig(aclClient != nil)
 	KtCvt.BindInterface(Config, Cfg)
 	that.locker = new(sync.Mutex)
 	that.idWorker = Util.NewIdWorkerPanic(wordId)

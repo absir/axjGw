@@ -41,7 +41,7 @@ type Serv struct {
 
 var Config *config
 
-func initConfig() {
+func initConfig(aclMain bool) {
 	Config = &config{
 		SocketAddr:    ":8783",
 		CompressMin:   256,
@@ -60,7 +60,7 @@ func initConfig() {
 		ClientKeys:    map[string]string{},
 		AclTry:        3,
 		AclTimeout:    30,
-		AclMain:       false,
+		AclMain:       aclMain,
 		GrpcAddr:      "0.0.0.0:8082",
 		GrpcIps:       KtStr.SplitByte("*", ',', true, 0, 0),
 	}

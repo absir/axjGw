@@ -32,11 +32,21 @@ func main() {
 	// 内存池
 	Util.SetBufferPoolsS(APro.GetCfg("bPools", KtCvt.String, "256,512,1024,5120,10240,20480").(string))
 	// 代理服务初始化
-	proxy.Config.AclMain = true
 	proxy.PrxServMng.Init(APro.WorkId(), APro.Cfg, &nps.NpsAcl{})
 	APro.SubCfgBind("nps", nps.NpsConfig)
 	// 代理服务开启
 	proxy.PrxServMng.Start()
+	nps.LoadAll()
+	if len(nps.NpsConfig.HttpAddr) > 1 {
+		proxy.StartServ("http", nps.NpsConfig.HttpAddr, 0, proxy.FindProto("http", true), nil)
+	}
+
+	if len(nps.NpsConfig.RtspAddr) > 1 {
+		proxy.StartServ("rtsp", nps.NpsConfig.RtspAddr, 0, proxy.FindProto("rtsp", true), nil)
+	}
+
+	// 开启面板
+	nps.NpsApiInit()
 
 	Config := proxy.Config
 	// socket连接
@@ -63,11 +73,8 @@ func main() {
 		}()
 	}
 
-	// Grpc服务开启
-	proxy.PrxServMng.StartGrpc()
-
 	// 启动完成
-	AZap.Logger.Info("Proxy all AXJ started")
+	AZap.Logger.Info("ProxyNps all AXJ started")
 	// 日志配置
 	AZapIst.InitCfg(true)
 	// 等待关闭
