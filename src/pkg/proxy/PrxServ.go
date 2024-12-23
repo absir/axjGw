@@ -209,68 +209,70 @@ func (that *PrxServ) accept(conn *net.TCPConn) {
 func (that *PrxServ) clientPAddr(name string, proto PrxProto) (ANet.Client, string, string, string) {
 	gid := ""
 	sub := ""
-	if len(name) > 0 {
-		idx := strings.IndexByte(name, '.')
-		str := name
-		if idx >= 0 {
-			str = name[0:idx]
-		}
-
-		strs := strings.SplitN(str, "_", 2)
-		gid = strs[0]
-		if len(strs) > 1 {
-			sub = strs[1]
-		}
-	}
-
 	var client ANet.Client = nil
-	if gid == "" && sub == "" {
-		var proxy = sProxy
-		if proxy != nil && proxy.Rules != nil {
-			var rule = proxy.Rules[that.Name]
-			if rule != nil && rule.Addr != "" {
-				client = PrxMng.Client(rule.Cid, rule.Gid)
-				if client != nil {
-					return client, rule.Addr, gid, sub
-				}
+	if !Config.AclMain {
+		if len(name) > 0 {
+			idx := strings.IndexByte(name, '.')
+			str := name
+			if idx >= 0 {
+				str = name[0:idx]
+			}
+
+			strs := strings.SplitN(str, "_", 2)
+			gid = strs[0]
+			if len(strs) > 1 {
+				sub = strs[1]
 			}
 		}
 
-		if that.cid != 0 && that.rule != nil {
-			client = PrxServMng.Manager.Client(that.cid)
+		if gid == "" && sub == "" {
+			var proxy = sProxy
+			if proxy != nil && proxy.Rules != nil {
+				var rule = proxy.Rules[that.Name]
+				if rule != nil && rule.Addr != "" {
+					client = PrxMng.Client(rule.Cid, rule.Gid)
+					if client != nil {
+						return client, rule.Addr, gid, sub
+					}
+				}
+			}
+
+			if that.cid != 0 && that.rule != nil {
+				client = PrxServMng.Manager.Client(that.cid)
+				if client == nil {
+					return nil, "", gid, sub
+				}
+
+				return client, that.rule.Addr, gid, sub
+			}
+
+		} else if gid != "" {
+			client = PrxMng.Client(0, gid)
 			if client == nil {
 				return nil, "", gid, sub
 			}
 
-			return client, that.rule.Addr, gid, sub
-		}
-
-	} else if gid != "" {
-		client = PrxMng.Client(0, gid)
-		if client == nil {
-			return nil, "", gid, sub
-		}
-
-		clientG := Handler.ClientG(client)
-		//AZap.Debug("clientPAddr ruleServs %s = %v", gid, clientG.ruleServs == nil)
-		if clientG.ruleServs != nil {
-			// 服务名一致，不需要别名
-			sName := sub
-			if sName == that.Name {
-				return client, "", gid, sub
-
-			} else if sName == "" {
-				sName = that.Name
-			}
-
-			ruleServ := clientG.ruleServs[sName]
-			if ruleServ != nil {
-				if ruleServ.serv != that {
+			clientG := Handler.ClientG(client)
+			//AZap.Debug("clientPAddr ruleServs %s = %v", gid, clientG.ruleServs == nil)
+			if clientG.ruleServs != nil {
+				// 服务名一致，不需要别名
+				sName := sub
+				if sName == that.Name {
 					return client, "", gid, sub
+
+				} else if sName == "" {
+					sName = that.Name
 				}
 
-				// 返回客户端，规则地址
-				return client, ruleServ.rule.Addr, gid, sub
+				ruleServ := clientG.ruleServs[sName]
+				if ruleServ != nil {
+					if ruleServ.serv != that {
+						return client, "", gid, sub
+					}
+
+					// 返回客户端，规则地址
+					return client, ruleServ.rule.Addr, gid, sub
+				}
 			}
 		}
 	}

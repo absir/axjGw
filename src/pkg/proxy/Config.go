@@ -27,6 +27,7 @@ type config struct {
 	Acl           string            // Acl服务地址
 	AclTry        time.Duration     // Acl服务地址
 	AclTimeout    time.Duration     // Acl调用超时
+	AclMain       bool              // Acl本地为主
 	GrpcAddr      string            // grpc服务地址
 	GrpcIps       []string          // grpc调用Ip白名单，支持*通配
 }
@@ -59,6 +60,7 @@ func initConfig() {
 		ClientKeys:    map[string]string{},
 		AclTry:        3,
 		AclTimeout:    30,
+		AclMain:       false,
 		GrpcAddr:      "0.0.0.0:8082",
 		GrpcIps:       KtStr.SplitByte("*", ',', true, 0, 0),
 	}
