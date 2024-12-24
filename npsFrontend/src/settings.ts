@@ -6,6 +6,9 @@ const globalSettings: Settings.all = {
   app: {
     colorScheme: '',
   },
+  home: {
+    enable: false,
+  },
   menu: {
     mode: 'single',
     subMenuUniqueOpened: false,

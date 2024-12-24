@@ -12,14 +12,14 @@ const dialogVisible = ref(false)
 const dialogEditVisible = ref(false)
 
 const addForm = reactive({
-  name: '',
-  secret: '',
+  Name: '',
+  Secret: '',
 })
 
 const editForm = reactive({
-  id: '',
-  name: '',
-  secret: '',
+  Id: '',
+  Name: '',
+  Secret: '',
 })
 
 const listData = ref([])
@@ -31,7 +31,7 @@ function getList() {
 }
 
 function add() {
-  if (addForm.name === '' || addForm.secret === '') {
+  if (addForm.Name === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -39,6 +39,7 @@ function add() {
     if (res === 'ok') {
       ElMessage.success('添加成功')
       dialogVisible.value = false
+      clearForm()
       getList()
     }
     else {
@@ -48,7 +49,7 @@ function add() {
 }
 
 function editSubmit() {
-  if (editForm.name === '' || editForm.secret === '' || editForm.id === '') {
+  if (editForm.Name === '' || editForm.Id === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -56,6 +57,7 @@ function editSubmit() {
     if (res === 'ok') {
       ElMessage.success('修改成功')
       dialogEditVisible.value = false
+      clearForm()
       getList()
     }
     else {
@@ -65,9 +67,9 @@ function editSubmit() {
 }
 
 function edit(row: any) {
-  editForm.id = row.Id
-  editForm.name = row.Name
-  editForm.secret = row.Secret
+  editForm.Id = row.Id
+  editForm.Name = row.Name
+  editForm.Secret = row.Secret
   dialogEditVisible.value = true
 }
 
@@ -98,12 +100,16 @@ function del(row: any) {
     })
 }
 
+function clearForm() {
+  addForm.Name = ''
+  addForm.Secret = ''
+  editForm.Id = ''
+  editForm.Name = ''
+  editForm.Secret = ''
+}
+
 function handleClose(done: () => void) {
-  addForm.name = ''
-  addForm.secret = ''
-  editForm.id = ''
-  editForm.name = ''
-  editForm.secret = ''
+  clearForm()
   done()
 }
 
@@ -142,10 +148,10 @@ onMounted(() => {
       <div>
         <el-form :model="addForm" label-width="auto">
           <el-form-item label="名称" required>
-            <el-input v-model="addForm.name" />
+            <el-input v-model="addForm.Name" />
           </el-form-item>
-          <el-form-item label="秘钥" required>
-            <el-input v-model="addForm.secret" />
+          <el-form-item label="秘钥">
+            <el-input v-model="addForm.Secret" />
           </el-form-item>
         </el-form>
       </div>
@@ -164,10 +170,10 @@ onMounted(() => {
       <div>
         <el-form :model="editForm" label-width="auto">
           <el-form-item label="名称" required>
-            <el-input v-model="editForm.name" />
+            <el-input v-model="editForm.Name" />
           </el-form-item>
-          <el-form-item label="秘钥" required>
-            <el-input v-model="editForm.secret" />
+          <el-form-item label="秘钥">
+            <el-input v-model="editForm.Secret" />
           </el-form-item>
         </el-form>
       </div>
