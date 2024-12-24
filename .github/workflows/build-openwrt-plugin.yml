@@ -17,10 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
+          - arch: linux
             sdk_url_path: https://downloads.openwrt.org/releases/23.05.5/targets/x86/64
             sdk_name: -sdk-23.05.5-x86-64_
-            build_platform: linux
+          - arch: arm7
+            sdk_url_path: https://downloads.openwrt.org/releases/23.05.5/targets/armsr/armv7
+            sdk_name: -sdk-23.05.5-armsr-armv7_
+          - arch: mips
+            sdk_url_path: https://downloads.openwrt.org/releases/23.05.5/targets/ramips/mt7621
+            sdk_name: -sdk-23.05.5-ramips-mt7621_
 
     env:
       SDK_URL_PATH: ${{ matrix.sdk_url_path }}
@@ -56,7 +61,7 @@ jobs:
           cd ..
           
           # 执行构建脚本
-          sh agentBuild.sh ${{ matrix.build_platform }}
+          sh agentBuild.sh ${{ matrix.arch }}
           
           # 创建必要的目录
           mkdir -p openwrt/files/usr/bin
