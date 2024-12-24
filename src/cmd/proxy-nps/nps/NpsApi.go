@@ -69,7 +69,7 @@ func NpsApiInit() {
 	regLoginedFunc("/del/", func(writer http.ResponseWriter, request *http.Request) {
 		path := request.URL.Path
 		parts := strings.Split(path[len("/del/"):], "/")
-		if len(parts) < 3 {
+		if len(parts) < 2 {
 			http.Error(writer, "Invalid request", http.StatusBadRequest)
 			return
 		}
@@ -104,7 +104,7 @@ func NpsApiInit() {
 			// 编辑单进程
 			editLocker.Lock()
 			defer editLocker.Unlock()
-			if npsId.GetId() == 0 {
+			if npsId.GetId() < 0 {
 				id := int(cmap.Count())
 				for {
 					if _, ok := cmap.Load(id); !ok {
@@ -121,6 +121,7 @@ func NpsApiInit() {
 			cmap.Store(npsId.GetId(), npsId)
 			MapDirty(cmap, npsId, old, false)
 			fmt.Fprintf(writer, "ok") // 返回"ok"消息
+			return
 		}
 
 		fmt.Fprintf(writer, "fail") // 返回"fail"消息
