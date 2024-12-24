@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=axjGw
+PKG_NAME:=axjGw-agent
 PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/axjGw
+define Package/axjGw-agent
 		SECTION:=utils
 		CATEGORY:=Utilities
 		TITLE:=AxjGw Agent Plugin
@@ -14,7 +14,7 @@ define Package/axjGw
 		PKGARCH:=all
 endef
 
-define Package/axjGw/description
+define Package/axjGw-agent/description
     	代理网关
 endef
 
@@ -22,7 +22,7 @@ define Build/Compile
 		echo "axjGw-agent $(PKG_VERSION)-$(PKG_RELEASE) `git rev-parse HEAD` `date +%s`" > $(PKG_BUILD_DIR)/version.txt
 endef
 
-define Package/axjGw/install
+define Package/axjGw-agent/install
 	  	$(INSTALL_DIR) $(1)/usr/bin
 	  	$(INSTALL_BIN) ./files/usr/bin/axjGw-agent $(1)/usr/bin/axjGw-agent
 
@@ -42,4 +42,4 @@ define Package/axjGw/install
 		$(INSTALL_DATA) ./files/usr/luci/view/*.htm $(1)/usr/lib/lua/luci/view/
 endef
 
-$(eval $(call BuildPackage,axjGw))
+$(eval $(call BuildPackage,axjGw-agent))
