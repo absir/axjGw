@@ -86,7 +86,7 @@ func NpsApiInit() {
 
 	regLoginedFunc("/edit/", func(writer http.ResponseWriter, request *http.Request) {
 		path := request.URL.Path
-		name := path[len("/list/"):]
+		name := path[len("/edit/"):]
 		cmap := mapForName(name)
 		if cmap != nil {
 			var npsId NpsId = nil

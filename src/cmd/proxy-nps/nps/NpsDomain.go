@@ -2,6 +2,7 @@ package nps
 
 import (
 	"axj/APro"
+	"axj/Kt/KtCvt"
 	"axj/Kt/KtRand"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
@@ -12,7 +13,6 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"math"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -323,14 +323,14 @@ func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
 			}
 
 		} else {
-			if npsTcpO.serv == nil || npsTcpO == nil || npsTcpO.Addr != npsTcp.Addr {
-				if npsTcpO.serv != nil {
+			if npsTcp.serv == nil || npsTcpO == nil || npsTcpO.Addr != npsTcp.Addr {
+				if npsTcpO != nil && npsTcpO.serv != nil {
 					// 关闭旧服务
 					npsTcpO.serv.Close()
 				}
 
 				// 开启新服务
-				addr := npsTcpO.Addr
+				addr := npsTcp.Addr
 				if strings.IndexByte(addr, ':') < 0 {
 					addr = "0.0.0.0:" + addr
 				}
@@ -358,12 +358,18 @@ func MapSave(cmap *cmap.CMap) {
 }
 
 func LoadAll() {
-	loadSave(ClientMap, "client.json", make([]*NpsClient, 0))
-	loadSave(HostMap, "host.json", make([]*NpsHost, 0))
-	loadSave(TcpMap, "tcp.json", make([]*NpsTcp, 0))
+	loadSave(ClientMap, "client.json", func() NpsId {
+		return &NpsClient{}
+	})
+	loadSave(HostMap, "host.json", func() NpsId {
+		return &NpsHost{}
+	})
+	loadSave(TcpMap, "tcp.json", func() NpsId {
+		return &NpsTcp{}
+	})
 }
 
-func loadSave(cmap *cmap.CMap, saveFile string, npsIds interface{}) {
+func loadSave(cmap *cmap.CMap, saveFile string, npsIdNew func() NpsId) {
 	file := APro.Open("save/" + saveFile)
 	if file == nil {
 		return
@@ -371,12 +377,15 @@ func loadSave(cmap *cmap.CMap, saveFile string, npsIds interface{}) {
 
 	defer file.Close()
 	bs, _ := io.ReadAll(file)
+	var npsIds []interface{} = nil
 	json.Unmarshal(bs, &npsIds)
-	value := reflect.ValueOf(npsIds)
-	for i := 0; i < value.Len(); i++ {
-		npsId, _ := value.Index(i).Interface().(NpsId)
-		if npsId != nil {
-			cmap.Store(npsId.GetId(), npsId)
+	if npsIds != nil {
+		for i := 0; i < len(npsIds); i++ {
+			npsId := npsIdNew()
+			KtCvt.BindInterface(npsId, npsIds[i])
+			if npsId.GetId() > 0 {
+				cmap.Store(npsId.GetId(), npsId)
+			}
 		}
 	}
 
