@@ -69,7 +69,7 @@ jobs:
           # 复制并重命名二进制文件
           ls -al src/bin/
           cp src/bin/* openwrt/files/usr/bin/axjGw-agent
-          cp src/bin/* axjGw-agent_${{ matrix.arch }}
+          cp src/bin/* axjGw-agent-${{ matrix.arch }}
 
       - name: Create Directories
         run: |
@@ -137,14 +137,20 @@ jobs:
           # Rename the ipk file with arch name
           find "${{ github.workspace }}" -type f -name "*.ipk" -exec mv {} "${{ github.workspace }}/axjGw-agent-openwrt-${{ matrix.arch }}.ipk" \;
 
+      - name: Get Git Hash
+        id: git_hash
+        run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Upload Binary Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: axjGw-agent_${{ matrix.arch }}
-          path: ${{ github.workspace }}/axjGw-agent_${{ matrix.arch }}
+          name: axjGw-agent-bin-${{ matrix.arch }}
+          path: ${{ github.workspace }}/axjGw-agent-${{ matrix.arch }}
+          retention-days: 1
 
-      - name: Upload Artifacts
+      - name: Upload IPK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: axjGw-agent-openwrt-${{ matrix.arch }}
+          name: axjGw-agent-ipk-${{ matrix.arch }}
           path: ${{ github.workspace }}/axjGw-agent-openwrt-${{ matrix.arch }}.ipk
+          retention-days: 1
