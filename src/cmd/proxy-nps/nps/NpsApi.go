@@ -104,8 +104,8 @@ func NpsApiInit() {
 			// 编辑单进程
 			editLocker.Lock()
 			defer editLocker.Unlock()
-			if npsId.GetId() < 0 {
-				id := int(cmap.Count())
+			if npsId.GetId() <= 0 {
+				id := int(cmap.Count()) + 1
 				for {
 					if _, ok := cmap.Load(id); !ok {
 						break

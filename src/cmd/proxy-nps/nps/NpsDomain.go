@@ -1,7 +1,7 @@
 package nps
 
 import (
-	"axj/Kt/KtFile"
+	"axj/APro"
 	"axj/Kt/KtRand"
 	"axj/Kt/KtStr"
 	"axj/Thrd/AZap"
@@ -253,11 +253,11 @@ func MapDel(cmap *cmap.CMap, id int) {
 		return
 	}
 
-	MapSave(cmap)
 	MapDirty(cmap, value, nil, true)
 }
 
 func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
+	MapSave(cmap)
 	if cmap == ClientMap {
 		npsClient, _ := value.(*NpsClient)
 		if npsClient.Secret == "" {
@@ -364,14 +364,14 @@ func LoadAll() {
 }
 
 func loadSave(cmap *cmap.CMap, saveFile string, npsIds interface{}) {
-	file := KtFile.Open("save/" + saveFile)
+	file := APro.Open("save/" + saveFile)
 	if file == nil {
 		return
 	}
 
 	defer file.Close()
 	bs, _ := io.ReadAll(file)
-	json.Unmarshal(bs, npsIds)
+	json.Unmarshal(bs, &npsIds)
 	value := reflect.ValueOf(npsIds)
 	for i := 0; i < value.Len(); i++ {
 		npsId, _ := value.Index(i).Interface().(NpsId)
@@ -389,7 +389,7 @@ func loadSave(cmap *cmap.CMap, saveFile string, npsIds interface{}) {
 
 func mapSave(cmap *cmap.CMap, saveFile string) {
 	// 打开文件，如果文件不存在则创建，如果文件已存在则截断为零
-	file := KtFile.Create("save/"+saveFile, false)
+	file := APro.Create("save/"+saveFile, false)
 	if file == nil {
 		return
 	}

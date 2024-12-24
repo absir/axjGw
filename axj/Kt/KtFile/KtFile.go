@@ -4,7 +4,7 @@ import (
 	"axj/Kt/Kt"
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 func Open(file string) *os.File {
@@ -18,7 +18,7 @@ func Open(file string) *os.File {
 }
 
 func Create(file string, append bool) *os.File {
-	err := CreateDir(path.Dir(file))
+	err := CreateDir(filepath.Dir(file))
 	if err != nil {
 		Kt.Err(err, true)
 		return nil
@@ -41,7 +41,7 @@ func CreateDir(dir string) error {
 
 	f, err := os.Stat(dir)
 	if os.IsNotExist(err) {
-		CreateDir(path.Dir(dir))
+		os.MkdirAll(dir, os.ModePerm)
 	}
 
 	if err != nil {
