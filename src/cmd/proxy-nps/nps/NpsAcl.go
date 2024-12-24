@@ -46,34 +46,10 @@ func (that *NpsAcl) Team(ctx context.Context, in *gw.GidReq, opts ...grpc.CallOp
 
 func (that *NpsAcl) Addr(ctx context.Context, in *gw.AddrReq, opts ...grpc.CallOption) (*gw.AddrRep, error) {
 	name := in.Name
-	var addrRep *gw.AddrRep = nil
+
 	if name != "" {
 		// host代理
-		// todo 还可以缓存优化
-		HostMap.Range(func(key, value interface{}) bool {
-			npsHost, _ := value.(*NpsHost)
-			if npsHost != nil && npsHost.Allow(name, false) {
-				addrRep = npsHost.AddrRep()
-				return false
-			}
-
-			return true
-		})
-
-		if addrRep != nil {
-			return addrRep, nil
-		}
-
-		HostMap.Range(func(key, value interface{}) bool {
-			npsHost, _ := value.(*NpsHost)
-			if npsHost != nil && npsHost.Allow(name, true) {
-				addrRep = npsHost.AddrRep()
-				return false
-			}
-
-			return true
-		})
-
+		addrRep := HostAddrRep(name)
 		return addrRep, nil
 	}
 

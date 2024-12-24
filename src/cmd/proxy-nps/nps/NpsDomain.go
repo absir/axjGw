@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"go.uber.org/zap"
 	"io"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -57,11 +58,64 @@ func (that *NpsHost) SetId(id int) {
 	that.Id = id
 }
 
-func (that *NpsHost) Allow(name string, wild bool) bool {
+// npsHost缓存加速
+var npsHostCurr = 0
+var npsHostDirty = 1
+var npsHostMap map[string]*NpsHost = nil
+var npsHostWilds []*NpsHost = nil
+
+func HostAddrRep(name string) *gw.AddrRep {
+	if npsHostCurr != npsHostDirty {
+		dirty := npsHostDirty
+		hostMap := make(map[string]*NpsHost)
+		hostWilds := make([]*NpsHost, 0)
+		HostMap.Range(func(key, value interface{}) bool {
+			npsHost, _ := value.(*NpsHost)
+			if npsHost != nil {
+				domains := npsHost.initDomains()
+				for _, domain := range domains {
+					hostMap[domain] = npsHost
+				}
+
+				if npsHost.wildDomains != nil {
+					hostWilds = append(hostWilds, npsHost)
+				}
+			}
+
+			return true
+		})
+
+		npsHostMap = hostMap
+		npsHostWilds = hostWilds
+		npsHostCurr = dirty
+	}
+
+	host := npsHostMap[name]
+	if host != nil {
+		return host.AddrRep()
+	}
+
+	wilds := npsHostWilds
+	for i := len(wilds) - 1; i >= 0; i-- {
+		host = npsHostWilds[i]
+		wildDomains := host.wildDomains
+		if wildDomains != nil {
+			for j := len(wildDomains) - 1; j >= 0; j-- {
+				if strings.Index(name, wildDomains[j]) >= 0 {
+					return host.AddrRep()
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (that *NpsHost) initDomains() []string {
 	domains := that.domains
 	if domains == nil {
 		domains = make([]string, 0)
-		wildDomains := make([]string, 0)
+		var wildDomains []string = nil
 		var strs = KtStr.SplitStrS(that.Domains, ",", true, 0, false)
 		for i := 0; i < len(strs); i++ {
 			str := strs[i].(string)
@@ -69,6 +123,10 @@ func (that *NpsHost) Allow(name string, wild bool) bool {
 				domains = append(domains, str)
 
 			} else {
+				if wildDomains == nil {
+					wildDomains = make([]string, 0)
+				}
+
 				wildDomains = append(wildDomains, strings.ReplaceAll(str, "*", ""))
 			}
 		}
@@ -77,6 +135,11 @@ func (that *NpsHost) Allow(name string, wild bool) bool {
 		that.domains = domains
 	}
 
+	return domains
+}
+
+func (that *NpsHost) Allow(name string, wild bool) bool {
+	domains := that.initDomains()
 	if wild {
 		wildDomains := that.wildDomains
 		if wildDomains != nil {
@@ -233,6 +296,12 @@ func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
 		if npsHost != nil {
 			// 更新代理地址
 			npsHost.addrRep = nil
+			if npsHostDirty >= math.MaxInt {
+				npsHostDirty = 0
+
+			} else {
+				npsHostDirty++
+			}
 		}
 
 	} else if cmap == TcpMap {
