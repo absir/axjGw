@@ -62,6 +62,7 @@ jobs:
           mkdir -p openwrt/files/usr/bin
           
           # 复制并重命名二进制文件
+          ls -al src/bin/
           cp src/bin/* openwrt/files/usr/bin/axjGw-agent
           cp src/bin/* axjGw-agent_${{ matrix.arch }}
 
