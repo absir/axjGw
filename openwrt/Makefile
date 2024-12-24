@@ -24,7 +24,7 @@ endef
 
 define Package/axjGw/install
 	  	$(INSTALL_DIR) $(1)/usr/bin
-	  	$(INSTALL_BIN) ./files/usr/bin/axjGw $(1)/usr/bin/axjGw
+	  	$(INSTALL_BIN) ./files/usr/bin/axjGw-agent $(1)/usr/bin/axjGw-agent
 
 	  	$(INSTALL_DIR) $(1)/etc/init.d
 	  	$(INSTALL_BIN) ./files/etc/init.d/axjGw $(1)/etc/init.d/axjGw

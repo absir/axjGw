@@ -136,7 +136,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: axjGw-agent_${{ matrix.arch }}_binary
-          path: axjGw-agent_${{ matrix.arch }}
+          path: ${{ github.workspace }}/axjGw-agent_${{ matrix.arch }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
