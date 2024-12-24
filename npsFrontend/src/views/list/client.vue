@@ -31,7 +31,7 @@ function getList() {
 }
 
 function add() {
-  if (addForm.name === '' || addForm.secret === '') {
+  if (addForm.name === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -48,7 +48,7 @@ function add() {
 }
 
 function editSubmit() {
-  if (editForm.name === '' || editForm.secret === '' || editForm.id === '') {
+  if (editForm.name === '' || editForm.id === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -144,7 +144,7 @@ onMounted(() => {
           <el-form-item label="名称" required>
             <el-input v-model="addForm.name" />
           </el-form-item>
-          <el-form-item label="秘钥" required>
+          <el-form-item label="秘钥">
             <el-input v-model="addForm.secret" />
           </el-form-item>
         </el-form>
@@ -166,7 +166,7 @@ onMounted(() => {
           <el-form-item label="名称" required>
             <el-input v-model="editForm.name" />
           </el-form-item>
-          <el-form-item label="秘钥" required>
+          <el-form-item label="秘钥">
             <el-input v-model="editForm.secret" />
           </el-form-item>
         </el-form>
