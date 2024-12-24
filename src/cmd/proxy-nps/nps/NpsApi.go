@@ -128,7 +128,7 @@ func NpsApiInit() {
 
 	// web文件
 	web := http.FileServer(http.Dir(filepath.Join(APro.Path(), "web")))
-	http.Handle("/static/", http.StripPrefix("/web/", web))
+	http.Handle("/web/", http.StripPrefix("/web/", web))
 
 	// 面板http服务
 	http.ListenAndServe(NpsConfig.AdminAddr, nil)
