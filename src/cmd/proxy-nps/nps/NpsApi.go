@@ -5,6 +5,7 @@ import (
 	"axj/Kt/KtEncry"
 	"axj/Kt/KtRand"
 	"axj/Kt/KtUnsafe"
+	"axj/Thrd/AZap"
 	"axj/Thrd/cmap"
 	"encoding/json"
 	"fmt"
@@ -132,7 +133,8 @@ func NpsApiInit() {
 	http.Handle("/web/", http.StripPrefix("/web/", web))
 
 	// 面板http服务
-	http.ListenAndServe(NpsConfig.AdminAddr, nil)
+	AZap.Logger.Info("StartAdmin: " + NpsConfig.AdminAddr)
+	go http.ListenAndServe(NpsConfig.AdminAddr, nil)
 }
 
 func regLoginedFunc(pattern string, handler func(writer http.ResponseWriter, request *http.Request)) {

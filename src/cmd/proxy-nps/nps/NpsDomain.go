@@ -257,7 +257,6 @@ func MapDel(cmap *cmap.CMap, id int) {
 }
 
 func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
-	MapSave(cmap)
 	if cmap == ClientMap {
 		npsClient, _ := value.(*NpsClient)
 		if npsClient.Secret == "" {
@@ -343,6 +342,8 @@ func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
 			}
 		}
 	}
+
+	MapSave(cmap)
 }
 
 func MapSave(cmap *cmap.CMap) {

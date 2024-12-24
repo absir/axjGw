@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"strconv"
+	"strings"
 )
 
 type NpsAcl struct {
@@ -18,8 +19,17 @@ func (that *NpsAcl) Login(ctx context.Context, in *gw.LoginReq, opts ...grpc.Cal
 	var strs []string
 	json.Unmarshal(in.Data, &strs)
 	secret := strs[0]
-	value, _ := ClientMap.Load(secret)
-	client, _ := value.(*NpsClient)
+	var client *NpsClient = nil
+	ClientMap.Range(func(key, value interface{}) bool {
+		client, _ = value.(*NpsClient)
+		if client != nil && secret == client.Secret {
+			return false
+		}
+
+		client = nil
+		return true
+	})
+
 	if client != nil {
 		// 登录成功
 		client.Cid = in.Cid
@@ -49,6 +59,11 @@ func (that *NpsAcl) Addr(ctx context.Context, in *gw.AddrReq, opts ...grpc.CallO
 
 	if name != "" {
 		// host代理
+		i := strings.LastIndexByte(name, ':')
+		if i > 0 {
+			name = name[:i]
+		}
+
 		addrRep := HostAddrRep(name)
 		return addrRep, nil
 	}
