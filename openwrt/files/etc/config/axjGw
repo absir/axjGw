@@ -1,0 +1,3 @@
+config axjGw 'settings'
+    option Proxy ''
+    option ClientKey ''

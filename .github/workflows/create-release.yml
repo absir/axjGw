@@ -1,0 +1,65 @@
+name: Upload Release
+
+on:
+  workflow_run:
+    workflows: ["Build Agent","Build Proxy NPS"]
+    types:
+      - completed
+    branches:
+      - "**"
+
+# 添加权限配置
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get Git Hash
+        id: git_hash
+        run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Download Binary Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: axjGw-agent-bin-*
+          path: artifacts/bin
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Download IPK Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: axjGw-agent-ipk-*
+          path: artifacts/ipk
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      
+      - name: Download Proxy Nps Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: proxy-nps-*
+          path: artifacts/nps
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.git_hash.outputs.hash }}
+          name: Release ${{ steps.git_hash.outputs.hash }}
+          files: |
+            artifacts/bin/**/*
+            artifacts/ipk/**/*
+            artifacts/nps/**/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
