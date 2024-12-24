@@ -1,9 +1,9 @@
-name: Build OpenWrt Plugin
+name: Build Agent
 
 on:
   push:
     branches:
-      - "**" # 对所有分支生效（或替换为具体分支名）
+      - "**"
 
 env:
   PACKAGE_NAME: axjGw
@@ -141,7 +141,7 @@ jobs:
         id: git_hash
         run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Upload Binary Artifacts
+      - name: Upload Agent Binary Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: axjGw-agent-bin-${{ matrix.arch }}

@@ -1,0 +1,49 @@
+name: Build Proxy NPS
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: linux
+            suffix:
+          - arch: win
+            suffix: .exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Get Git Hash
+        id: git_hash
+        run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build
+        run: |
+          # 安装 Go 项目依赖
+          cd src
+          go mod download
+          cd ..
+          
+          # 执行构建脚本
+          sh proxy-npsBuild.sh ${{ matrix.arch }}
+
+      - name: Upload Binary Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxy-nps-${{ matrix.arch }}
+          path: src/bin/proxy-nps-${{ matrix.arch }}${{ matrix.suffix }}
+          retention-days: 1 

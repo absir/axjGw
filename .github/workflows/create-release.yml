@@ -1,8 +1,8 @@
-name: Create Release
+name: Upload Release
 
 on:
   workflow_run:
-    workflows: ["Build OpenWrt Plugin"]
+    workflows: ["Build Agent","Build Proxy NPS"]
     types:
       - completed
     branches:
@@ -42,6 +42,14 @@ jobs:
           path: artifacts/ipk
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
+      
+      - name: Download Proxy Nps Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: proxy-nps-*
+          path: artifacts/nps
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -51,6 +59,7 @@ jobs:
           files: |
             artifacts/bin/**/*
             artifacts/ipk/**/*
+            artifacts/nps/**/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
