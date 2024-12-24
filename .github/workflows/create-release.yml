@@ -8,6 +8,11 @@ on:
     branches:
       - "**"
 
+# 添加权限配置
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   release:
     runs-on: ubuntu-latest
