@@ -12,16 +12,16 @@ const dialogVisible = ref(false)
 const dialogEditVisible = ref(false)
 
 const addForm = reactive({
-  domains: '',
-  clientId: '',
-  pAddr: '',
+  Domains: '',
+  ClientId: '',
+  PAddr: '',
 })
 
 const editForm = reactive({
-  id: '',
-  domains: '',
-  clientId: '',
-  pAddr: '',
+  Id: '',
+  Domains: '',
+  ClientId: '',
+  PAddr: '',
 })
 
 const listData = ref([])
@@ -33,7 +33,7 @@ function getList() {
 }
 
 function add() {
-  if (addForm.domains === '' || addForm.clientId === '' || addForm.pAddr === '') {
+  if (addForm.Domains === '' || addForm.ClientId === '' || addForm.PAddr === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -41,6 +41,7 @@ function add() {
     if (res === 'ok') {
       ElMessage.success('添加成功')
       dialogVisible.value = false
+      clearForm()
       getList()
     }
     else {
@@ -50,7 +51,7 @@ function add() {
 }
 
 function editSubmit() {
-  if (editForm.domains === '' || editForm.clientId === '' || editForm.pAddr === '' || editForm.id === '') {
+  if (editForm.Domains === '' || editForm.ClientId === '' || editForm.PAddr === '' || editForm.Id === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -58,6 +59,7 @@ function editSubmit() {
     if (res === 'ok') {
       ElMessage.success('修改成功')
       dialogEditVisible.value = false
+      clearForm()
       getList()
     }
     else {
@@ -67,10 +69,10 @@ function editSubmit() {
 }
 
 function edit(row: any) {
-  editForm.id = row.Id
-  editForm.domains = row.Domains
-  editForm.clientId = row.ClientId
-  editForm.pAddr = row.PAddr
+  editForm.Id = row.Id
+  editForm.Domains = row.Domains
+  editForm.ClientId = row.ClientId
+  editForm.PAddr = row.PAddr
   dialogEditVisible.value = true
 }
 
@@ -101,14 +103,18 @@ function del(row: any) {
     })
 }
 
+function clearForm() {
+  addForm.Domains = ''
+  addForm.ClientId = ''
+  addForm.PAddr = ''
+  editForm.Id = ''
+  editForm.Domains = ''
+  editForm.ClientId = ''
+  editForm.PAddr = ''
+}
+
 function handleClose(done: () => void) {
-  addForm.domains = ''
-  addForm.clientId = ''
-  addForm.pAddr = ''
-  editForm.id = ''
-  editForm.domains = ''
-  editForm.clientId = ''
-  editForm.pAddr = ''
+  clearForm()
   done()
 }
 
@@ -130,6 +136,12 @@ onMounted(() => {
           <el-table-column prop="Domains" label="域名" />
           <el-table-column prop="ClientId" label="客户端Id" />
           <el-table-column prop="PAddr" label="代理地址" />
+          <el-table-column prop="Cid" label="是否在线">
+            <template #default="{ row }">
+              <span v-if="row.Cid">在线</span>
+              <span v-else>不在线</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作">
             <template #default="{ row }">
               <el-button type="text" size="small" @click="edit(row)">
@@ -147,13 +159,13 @@ onMounted(() => {
       <div>
         <el-form :model="addForm" label-width="auto">
           <el-form-item label="域名" required>
-            <el-input v-model="addForm.domains" />
+            <el-input v-model="addForm.Domains" />
           </el-form-item>
           <el-form-item label="客户端Id" required>
-            <el-input v-model="addForm.clientId" />
+            <el-input v-model.number="addForm.ClientId" />
           </el-form-item>
           <el-form-item label="代理地址" required>
-            <el-input v-model="addForm.pAddr" />
+            <el-input v-model="addForm.PAddr" />
           </el-form-item>
         </el-form>
       </div>
@@ -172,13 +184,13 @@ onMounted(() => {
       <div>
         <el-form :model="editForm" label-width="auto">
           <el-form-item label="域名" required>
-            <el-input v-model="editForm.domains" />
+            <el-input v-model="editForm.Domains" />
           </el-form-item>
           <el-form-item label="客户端Id" required>
-            <el-input v-model="editForm.clientId" />
+            <el-input v-model.number="editForm.ClientId" />
           </el-form-item>
           <el-form-item label="代理地址" required>
-            <el-input v-model="editForm.pAddr" />
+            <el-input v-model="editForm.PAddr" />
           </el-form-item>
         </el-form>
       </div>

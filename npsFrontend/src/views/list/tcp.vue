@@ -12,16 +12,16 @@ const dialogVisible = ref(false)
 const dialogEditVisible = ref(false)
 
 const addForm = reactive({
-  addr: '',
-  clientId: '',
-  pAddr: '',
+  Addr: '',
+  ClientId: '',
+  PAddr: '',
 })
 
 const editForm = reactive({
-  id: '',
-  addr: '',
-  clientId: '',
-  pAddr: '',
+  Id: '',
+  Addr: '',
+  ClientId: '',
+  PAddr: '',
 })
 
 const listData = ref([])
@@ -33,7 +33,7 @@ function getList() {
 }
 
 function add() {
-  if (addForm.addr === '' || addForm.clientId === '' || addForm.pAddr === '') {
+  if (addForm.Addr === '' || addForm.ClientId === '' || addForm.PAddr === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -41,6 +41,7 @@ function add() {
     if (res === 'ok') {
       ElMessage.success('添加成功')
       dialogVisible.value = false
+      clearForm()
       getList()
     }
     else {
@@ -50,7 +51,7 @@ function add() {
 }
 
 function editSubmit() {
-  if (editForm.addr === '' || editForm.clientId === '' || editForm.pAddr === '' || editForm.id === '') {
+  if (editForm.Addr === '' || editForm.ClientId === '' || editForm.PAddr === '' || editForm.Id === '') {
     ElMessage.error('请填写完整')
     return
   }
@@ -58,6 +59,7 @@ function editSubmit() {
     if (res === 'ok') {
       ElMessage.success('修改成功')
       dialogEditVisible.value = false
+      clearForm()
       getList()
     }
     else {
@@ -67,10 +69,10 @@ function editSubmit() {
 }
 
 function edit(row: any) {
-  editForm.id = row.Id
-  editForm.addr = row.Addr
-  editForm.clientId = row.ClientId
-  editForm.pAddr = row.PAddr
+  editForm.Id = row.Id
+  editForm.Addr = row.Addr
+  editForm.ClientId = row.ClientId
+  editForm.PAddr = row.PAddr
   dialogEditVisible.value = true
 }
 
@@ -101,14 +103,18 @@ function del(row: any) {
     })
 }
 
+function clearForm() {
+  addForm.Addr = ''
+  addForm.ClientId = ''
+  addForm.PAddr = ''
+  editForm.Id = ''
+  editForm.Addr = ''
+  editForm.ClientId = ''
+  editForm.PAddr = ''
+}
+
 function handleClose(done: () => void) {
-  addForm.addr = ''
-  addForm.clientId = ''
-  addForm.pAddr = ''
-  editForm.id = ''
-  editForm.addr = ''
-  editForm.clientId = ''
-  editForm.pAddr = ''
+  clearForm()
   done()
 }
 
@@ -147,13 +153,13 @@ onMounted(() => {
       <div>
         <el-form :model="addForm" label-width="auto">
           <el-form-item label="服务地址" required>
-            <el-input v-model="addForm.addr" />
+            <el-input v-model="addForm.Addr" />
           </el-form-item>
           <el-form-item label="客户端Id" required>
-            <el-input v-model="addForm.clientId" />
+            <el-input v-model.number="addForm.ClientId" />
           </el-form-item>
           <el-form-item label="代理地址" required>
-            <el-input v-model="addForm.pAddr" />
+            <el-input v-model="addForm.PAddr" />
           </el-form-item>
         </el-form>
       </div>
@@ -172,13 +178,13 @@ onMounted(() => {
       <div>
         <el-form :model="editForm" label-width="auto">
           <el-form-item label="服务地址" required>
-            <el-input v-model="editForm.addr" />
+            <el-input v-model="editForm.Addr" />
           </el-form-item>
           <el-form-item label="客户端Id" required>
-            <el-input v-model="editForm.clientId" />
+            <el-input v-model.number="editForm.ClientId" />
           </el-form-item>
           <el-form-item label="代理地址" required>
-            <el-input v-model="editForm.pAddr" />
+            <el-input v-model="editForm.PAddr" />
           </el-form-item>
         </el-form>
       </div>
