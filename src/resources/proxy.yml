@@ -1,4 +1,5 @@
 Acl: 127.0.0.1:8083
+
 Servs:
   http:
     Addr: 9080
@@ -23,3 +24,6 @@ Servs:
 
 #ClientKeys:
 #  61A583A27A845A3835A32D4C: 22
+
+nps:
+  AdminPassword:admin

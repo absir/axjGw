@@ -33,9 +33,9 @@ var path = ""
 var Locker = new(sync.Mutex)
 
 /*
-APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
-		return runtime.Caller(0)
-	}, "../public")
+	APro.Caller(func(skip int) (pc uintptr, file string, line int, ok bool) {
+			return runtime.Caller(0)
+		}, "../public")
 */
 func Caller(fun func(skip int) (pc uintptr, file string, line int, ok bool), dir string) {
 	if path != "" {
@@ -226,7 +226,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 				if strings.IndexByte(arg, '=') > 0 {
 					if fun == nil {
 						f := KtCfg.ReadFunc(_cfg, &readMap)
-						*fun = f
+						fun = &f
 					}
 
 					(*fun)(arg[1:])
@@ -248,7 +248,7 @@ func Load(reader *bufio.Reader, entry string) KtCfg.Cfg {
 					// 分离参数
 					if fun == nil {
 						f := KtCfg.ReadFunc(_cfg, &readMap)
-						*fun = f
+						fun = &f
 					}
 
 					(*fun)(name + "=" + arg)

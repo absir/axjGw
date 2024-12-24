@@ -49,6 +49,7 @@ func (that *NpsAcl) Addr(ctx context.Context, in *gw.AddrReq, opts ...grpc.CallO
 	var addrRep *gw.AddrRep = nil
 	if name != "" {
 		// host代理
+		// todo 还可以缓存优化
 		HostMap.Range(func(key, value interface{}) bool {
 			npsHost, _ := value.(*NpsHost)
 			if npsHost != nil && npsHost.Allow(name, false) {
