@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+START=99
+
+start() {
+    config_load axjGw
+    config_get Proxy settings Proxy
+    config_get ClientKey settings ClientKey
+
+    echo "Starting axjGw-agent with parameters: $Proxy, $ClientKey"
+    /usr/bin/axjGw-agent -Proxy="$Proxy" -ClientKey="$ClientKey" >/tmp/axjGw.log 2>&1 &
+}
+
+stop() {
+    echo "关闭 代理服务..."
+    killall axjGw-agent
+}
