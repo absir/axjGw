@@ -58,8 +58,33 @@ func (that *NpsHost) SetId(id int) {
 	that.Id = id
 }
 
+// npsClient缓存加速
+var npsClientCurr = -1
+var npsClientDirty = 1
+var npsClientMap map[string]*NpsClient = nil
+
+func ClientSecret(secret string) *NpsClient {
+	if npsClientCurr != npsClientDirty {
+		dirty := npsClientDirty
+		clientMap := make(map[string]*NpsClient)
+		ClientMap.Range(func(key, value interface{}) bool {
+			npsClient, _ := value.(*NpsClient)
+			if npsClient != nil && npsClient.Secret != "" {
+				clientMap[npsClient.Secret] = npsClient
+			}
+
+			return true
+		})
+
+		npsClientMap = clientMap
+		npsClientCurr = dirty
+	}
+
+	return npsClientMap[secret]
+}
+
 // npsHost缓存加速
-var npsHostCurr = 0
+var npsHostCurr = -1
 var npsHostDirty = 1
 var npsHostMap map[string]*NpsHost = nil
 var npsHostWilds []*NpsHost = nil
@@ -256,6 +281,14 @@ func MapDel(cmap *cmap.CMap, id int) {
 	MapDirty(cmap, value, nil, true)
 }
 
+func nextDirty(dirty int) int {
+	if dirty >= math.MaxInt {
+		return 1
+	}
+
+	return dirty + 1
+}
+
 func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
 	if cmap == ClientMap {
 		npsClient, _ := value.(*NpsClient)
@@ -290,18 +323,13 @@ func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
 			npsClient.Cid = npsClientO.Cid
 		}
 
+		npsClientDirty = nextDirty(npsClientDirty)
+
 	} else if cmap == HostMap {
 		npsHost, _ := value.(*NpsHost)
-		if npsHost != nil {
-			// 更新代理地址
-			npsHost.addrRep = nil
-			if npsHostDirty >= math.MaxInt {
-				npsHostDirty = 0
-
-			} else {
-				npsHostDirty++
-			}
-		}
+		// 更新代理地址
+		npsHost.addrRep = nil
+		npsHostDirty = nextDirty(npsHostDirty)
 
 	} else if cmap == TcpMap {
 		npsTcp, _ := value.(*NpsTcp)
@@ -311,9 +339,7 @@ func MapDirty(cmap *cmap.CMap, value interface{}, old interface{}, del bool) {
 		}
 
 		npsTcpO, _ := old.(*NpsTcp)
-		if npsTcp != nil {
-			npsTcp.addrRep = nil
-		}
+		npsTcp.addrRep = nil
 
 		if del {
 			if npsTcpO != nil && npsTcpO.serv != nil {
@@ -406,6 +432,7 @@ func mapSave(cmap *cmap.CMap, saveFile string) {
 
 	defer file.Close()
 	file.WriteString("[")
+	i := 0
 	cmap.Range(func(key, value interface{}) bool {
 		bs, err := json.Marshal(value)
 		if err != nil {
@@ -413,6 +440,11 @@ func mapSave(cmap *cmap.CMap, saveFile string) {
 		}
 
 		if bs != nil {
+			i = i + 1
+			if i > 1 {
+				file.WriteString(",")
+			}
+
 			file.WriteString("\r\n")
 			file.Write(bs)
 		}

@@ -19,17 +19,7 @@ func (that *NpsAcl) Login(ctx context.Context, in *gw.LoginReq, opts ...grpc.Cal
 	var strs []string
 	json.Unmarshal(in.Data, &strs)
 	secret := strs[0]
-	var client *NpsClient = nil
-	ClientMap.Range(func(key, value interface{}) bool {
-		client, _ = value.(*NpsClient)
-		if client != nil && secret == client.Secret {
-			return false
-		}
-
-		client = nil
-		return true
-	})
-
+	client := ClientSecret(secret)
 	if client != nil {
 		// 登录成功
 		client.Cid = in.Cid
