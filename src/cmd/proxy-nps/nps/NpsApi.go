@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -129,8 +130,23 @@ func NpsApiInit() {
 	})
 
 	// web文件
-	web := http.FileServer(http.Dir(filepath.Join(APro.Path(), "web")))
-	http.Handle("/web/", http.StripPrefix("/web/", web))
+	webDir := filepath.Join(APro.Path(), "web")
+	webServ := http.FileServer(http.Dir(webDir))
+	// 自定义处理器以支持默认 index.html
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// 检查是否请求的是一个目录（以斜杠结尾）
+		if strings.HasSuffix(r.URL.Path, "/") {
+			// 尝试提供 index.html
+			indexPath := filepath.Join(webDir, r.URL.Path, "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				http.ServeFile(w, r, indexPath)
+				return
+			}
+		}
+
+		// 否则，正常处理请求
+		webServ.ServeHTTP(w, r)
+	})
 
 	// 面板http服务
 	AZap.Logger.Info("StartAdmin: " + NpsConfig.AdminAddr)
