@@ -131,6 +131,12 @@ onMounted(() => {
           <el-table-column prop="Id" label="Id" />
           <el-table-column prop="Name" label="名称" />
           <el-table-column prop="Secret" label="秘钥" />
+          <el-table-column prop="Cid" label="是否在线">
+            <template #default="{ row }">
+              <span v-if="row.Cid">在线</span>
+              <span v-else>不在线</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作">
             <template #default="{ row }">
               <el-button type="text" size="small" @click="edit(row)">

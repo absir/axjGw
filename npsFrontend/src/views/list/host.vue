@@ -136,12 +136,6 @@ onMounted(() => {
           <el-table-column prop="Domains" label="域名" />
           <el-table-column prop="ClientId" label="客户端Id" />
           <el-table-column prop="PAddr" label="代理地址" />
-          <el-table-column prop="Cid" label="是否在线">
-            <template #default="{ row }">
-              <span v-if="row.Cid">在线</span>
-              <span v-else>不在线</span>
-            </template>
-          </el-table-column>
           <el-table-column label="操作">
             <template #default="{ row }">
               <el-button type="text" size="small" @click="edit(row)">
